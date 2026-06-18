@@ -1,0 +1,9 @@
+version: v1.25.0
+ignore:
+  SNYK-RUBY-JWT-16755447:
+    - 'Gemfile.lock > kinde_sdk@1.7.1 > jwt@2.10.3':
+        reason: "Temporary ignore: kinde_sdk 1.7.1 pins jwt ~> 2.2; app-level hardening in config/initializers/kinde_jwt_hardening.rb restricts to asymmetric algorithms and requires kid."
+        expires: 2026-12-31T23:59:59.000Z
+    - 'Gemfile.lock > kinde_sdk@1.7.1 > oauth2@2.0.22 > jwt@2.10.3':
+        reason: "Temporary ignore: transitive path blocked by kinde_sdk pin; mitigation tracked in README and initializer."
+        expires: 2026-12-31T23:59:59.000Z

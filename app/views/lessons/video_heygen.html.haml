@@ -1,0 +1,40 @@
+- content_for :title, "Import HeyGen video"
+
+%div
+  .mb-4
+    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+  %h1.text-2xl.font-bold.mb-2 Intro video — HeyGen direct import
+  %p.text-sm.text-gray-500.mb-4
+    Save your HeyGen API key, then enter a HeyGen video ID to import that completed video.
+
+  = form_with model: @lesson, url: video_heygen_course_lesson_path(@course, @lesson), method: :get, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6 mb-4" do |f|
+    = hidden_field_tag :fetch, "1"
+    %div
+      = f.label :heygen_api_key, "HeyGen API key", class: "block text-sm font-medium mb-1"
+      = f.password_field :heygen_api_key, value: @lesson.heygen_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2"
+      %p.text-xs.text-gray-500.mt-1 Stored on the lesson so future imports work without re-entering it.
+    %div
+      = label_tag :video_id, "HeyGen video ID", class: "block text-sm font-medium mb-1"
+      = text_field_tag :video_id, @heygen_video_id.presence || params[:video_id].to_s, placeholder: "e.g. vid_qr8821", class: "w-full border border-gray-300 rounded px-3 py-2"
+      %p.text-xs.text-gray-500.mt-1 Use the video id from HeyGen (for example from a completed video response).
+    .flex.w-full.gap-2
+      = f.submit "Save & fetch video", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+
+  - if @heygen_video
+    - status = @heygen_video["status"].to_s
+    - ready = %w[completed complete success done].include?(status.downcase) && @heygen_video["video_url"].present?
+    .bg-white.border.border-gray-200.rounded.p-4.flex.items-center.justify-between.gap-3
+      %div
+        .font-medium= @heygen_video["title"].presence || "Video ##{@heygen_video['id']}"
+        .text-xs.text-gray-500
+          = "#{status.tr('_', ' ').presence || 'unknown status'}"
+          - if @heygen_video["duration"].present?
+            = " · #{@heygen_video['duration']}s"
+      - if ready
+        = button_to "Use as intro video",
+                    import_heygen_video_course_lesson_path(@course, @lesson, video_id: @heygen_video["id"]),
+                    method: :post,
+                    data: { turbo_confirm: "Download and attach this HeyGen video as the intro video?" },
+                    class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
+      - else
+        %span.inline-flex.items-center.px-3.py-1.5.rounded.bg-gray-100.text-gray-500.text-sm Not ready to import

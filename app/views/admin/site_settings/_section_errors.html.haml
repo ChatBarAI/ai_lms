@@ -1,0 +1,5 @@
+- if show_section_errors?(section)
+  .mb-4.bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+    %ul.list-disc.pl-5
+      - @site_setting.errors.full_messages.each do |msg|
+        %li= msg

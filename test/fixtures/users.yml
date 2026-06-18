@@ -1,0 +1,24 @@
+admin:
+  email: admin@example.com
+  role: 2
+  name: Admin
+
+instructor:
+  email: instructor@example.com
+  role: 1
+  name: Instructor One
+
+other_instructor:
+  email: instructor2@example.com
+  role: 1
+  name: Instructor Two
+
+student:
+  email: student@example.com
+  role: 0
+  name: Student One
+
+other_student:
+  email: student2@example.com
+  role: 0
+  name: Student Two

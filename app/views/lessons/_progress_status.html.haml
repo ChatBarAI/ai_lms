@@ -1,0 +1,33 @@
+-# Locals: progress, lesson, course, enrollment, ai_scoring_pending, user_rating
+%div{ id: dom_id(progress, :status) }
+  .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6
+    - pct = progress.completed? ? 100 : 50
+    - circ = (2 * Math::PI * 20).round(2)
+    - offset = (circ * (1 - pct / 100.0)).round(2)
+    - ring_color = progress.completed? ? "#16a34a" : "#6366f1"
+    .flex.items-center.gap-4
+      %svg{ width: "52", height: "52", viewBox: "0 0 48 48", fill: "none" }
+        %circle{ cx: "24", cy: "24", r: "20", stroke: "#e5e7eb", "stroke-width": "4", fill: "none" }
+        %circle{ cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "4", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)" }
+        %text{ x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600" }= "#{pct}%"
+      .flex-1
+        %p.font-semibold.text-sm= t("lessons.show.status", status: progress.status.to_s.humanize)
+        - if ai_scoring_pending
+          .flex.items-center.gap-1.5.mt-0.5
+            = site_favicon_img_tag(class: "w-4 h-4 shrink-0 animate-pulse")
+            %p.text-xs.text-indigo-600.font-medium Queued for marking…
+        - elsif progress.score.present?
+          %p.text-xs.text-gray-500= t("lessons.show.score", score: progress.score)
+      - if !progress.completed?
+        - unless ai_scoring_pending
+          = form_with model: progress, url: progress_path(progress.id), method: :patch, local: true do |f|
+            = f.hidden_field :status, value: "completed"
+            = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
+      - else
+        .flex.items-center.gap-2
+          %span.text-sm.font-medium.text-green-700= t("lessons.show.completed")
+          - if enrollment.fully_completed?
+            = link_to "Download Certificate", course_certificate_path(course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+
+  - if progress.completed? && lesson.ratings_enabled?
+    = render "lessons/rating_form", lesson: lesson, user_rating: user_rating

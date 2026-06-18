@@ -1,0 +1,41 @@
+= form_with model: course, class: "space-y-4 bg-white mt-3" do |f|
+  - if course.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - course.errors.full_messages.each do |msg|
+          %li= msg
+
+  .grid.grid-cols-1.gap-4
+    %div
+      = f.label :title, class: "block text-sm font-medium mb-1"
+      = f.text_field :title, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+    %div
+      = f.label :description, class: "block text-sm font-medium mb-1"
+      = f.text_area :description, rows: 4, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+    .flex.flex-col.gap-4.sm:flex-row.sm:items-end
+      - if subjects_enabled?
+        %div.flex-1
+          = f.label :subject_id, "Subject", class: "block text-sm font-medium mb-1"
+          = f.collection_select :subject_id, Subject.order(:name), :id, :name, { include_blank: "Select a subject" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+
+      %div.flex-1
+        = f.label :published_at, "Publish at", class: "block text-sm font-medium mb-1"
+        = f.datetime_local_field :published_at, title: "Leave blank to keep this course as a draft.", class: "w-full border border-gray-300 rounded px-3 py-2"
+
+    %div
+      = upload_field f, :cover_image,
+          label: "Upload cover image (PNG, JPG or WebP, max 5 MB)",
+          accept: "image/png,image/jpeg,image/webp",
+          current_attachment: course.cover_image,
+          remove_name: "course[remove_cover_image]",
+          remove_label: "Remove current cover image",
+          hint: "Cover image (optional)"
+
+    %div
+      = render "shared/tag_picker", f: f, record: course
+
+  .flex.w-full.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = link_to "Cancel", (course.persisted? ? course_path(course) : courses_path), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

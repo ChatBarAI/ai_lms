@@ -1,0 +1,39 @@
+!!!
+%html{ lang: I18n.locale.to_s, class: theme_mode_class }
+  %head
+    %title= "Admin · #{content_for(:title) || "AI LMS"}"
+    %meta{ name: "viewport", content: "width=device-width,initial-scale=1" }
+    = csrf_meta_tags
+    = csp_meta_tag
+    = site_favicon_link_tag
+    = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
+    %link{ rel: "preload", href: asset_path("application.css"), as: "style" }
+    %link{ rel: "stylesheet", href: asset_path("application.css"), media: "print", onload: "this.media='all'", "data-turbo-track": "reload" }
+    %noscript
+      = stylesheet_link_tag "application", "data-turbo-track": "reload"
+    = javascript_importmap_tags
+    = theme_style_tag
+    = theme_mode_script
+  %body{ class: "bg-[var(--page-bg)] text-[var(--page-fg)]" }
+    %nav{ class: "bg-[var(--admin-nav-bg)] text-[var(--admin-nav-fg)]" }
+      .max-w-6xl.mx-auto.px-4.py-3.flex.items-center.justify-between
+        .flex.items-center.gap-6
+          = link_to admin_root_path, class: "flex items-center gap-2" do
+            = site_logo_tag
+            %span.font-semibold= show_site_brand_name? ? "#{site_brand_name} · Admin" : "Admin"
+          - if subjects_enabled?
+            = link_to "Subjects", admin_subjects_path, class: "text-sm hover:opacity-80"
+          = link_to "Courses", admin_courses_path, class: "text-sm hover:opacity-80"
+          = link_to "Users", admin_users_path, class: "text-sm hover:opacity-80"
+          = link_to "Certificates", admin_certificates_path, class: "text-sm hover:opacity-80"
+          = link_to "Tags", admin_tags_path, class: "text-sm hover:opacity-80"
+          = link_to "Settings", edit_admin_site_setting_path, class: "text-sm hover:opacity-80"
+        .flex.items-center.gap-3
+          = link_to "Back to site", root_path, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+          %span.text-sm.opacity-70= current_user.email
+    %main.max-w-6xl.mx-auto.px-4.py-2
+      - flash.each do |type, msg|
+        - level = (type.to_s == "notice" ? "bg-green-50 text-green-800 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200")
+        .mb-4.px-4.py-2.border.rounded{ class: level }
+          = msg
+      = yield

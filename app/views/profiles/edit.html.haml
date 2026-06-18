@@ -1,0 +1,22 @@
+- content_for :title, "Edit profile"
+
+%h1.text-2xl.font-bold.mb-6 Edit profile
+
+.max-w-lg.bg-white.border.border-gray-200.rounded-lg.p-6
+  = form_with model: current_user, url: profile_path, method: :patch, class: "space-y-5" do |f|
+    .space-y-1
+      = f.label :name, "Display name", class: "block text-sm font-medium text-gray-700"
+      = f.text_field :name, class: "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500", placeholder: "Your name"
+      %p.text-xs.text-gray-500 Leave blank to display your email address instead.
+
+    .space-y-1
+      %p.block.text-sm.font-medium.text-gray-700 Avatar
+      = upload_field f, :avatar,
+          label: "Upload avatar (PNG, JPG, GIF or WebP, max 5 MB)",
+          accept: "image/png,image/jpeg,image/gif,image/webp",
+          current_attachment: (current_user.avatar.attached? ? current_user.avatar : nil),
+          preview_class: "h-24 w-24 rounded-full object-cover border border-gray-200"
+
+    .flex.items-center.gap-3
+      = f.submit "Save changes", class: "w-full px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer"
+      = link_to "Cancel", profile_path, class: "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"

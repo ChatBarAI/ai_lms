@@ -1,0 +1,43 @@
+- content_for :title, "Import Synthesia video"
+
+%div
+  .mb-4
+    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+  %h1.text-2xl.font-bold.mb-2 Intro video — Synthesia download
+  %p.text-sm.text-gray-500.mb-4
+    Provide a Synthesia API key, then choose a completed video to attach as this lesson's intro video.
+
+  = form_with model: @lesson, url: video_synthesia_course_lesson_path(@course, @lesson), method: :get, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6 mb-4" do |f|
+    = hidden_field_tag :fetch, "1"
+    %div
+      = f.label :synthesia_api_key, "Synthesia API key", class: "block text-sm font-medium mb-1"
+      = f.password_field :synthesia_api_key, value: @lesson.synthesia_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2"
+      %p.text-xs.text-gray-500.mt-1 Stored on the lesson so future imports work without re-entering it.
+    .flex.w-full.gap-2
+      = f.submit "Save & fetch videos", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+
+  - if @synthesia_videos
+    - if @synthesia_videos.empty?
+      .bg-white.border.border-gray-200.rounded.p-4.text-sm.text-gray-500 No Synthesia videos found yet.
+    - else
+      %h2.text-sm.font-semibold.mb-2 Available Synthesia videos
+      %ul.space-y-2
+        - @synthesia_videos.each do |video|
+          - ready = video["status"] == "complete" && video["download"].present?
+          %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.justify-between.gap-3
+            %div
+              .font-medium= video["title"].presence || "Video ##{video['id']}"
+              .text-xs.text-gray-500
+                = "#{video['status'].to_s.tr('_', ' ').presence || 'unknown status'}"
+                - if video["duration"].present?
+                  = " · #{video['duration']}"
+                - if video["createdAt"].present?
+                  = " · created #{Time.zone.at(video['createdAt'].to_i).to_fs(:db)}"
+            - if ready
+              = button_to "Use as intro video",
+                          import_synthesia_video_course_lesson_path(@course, @lesson, video_id: video["id"]),
+                          method: :post,
+                          data: { turbo_confirm: "Download and attach this Synthesia video as the intro video?" },
+                          class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
+            - else
+              %span.inline-flex.items-center.px-3.py-1.5.rounded.bg-gray-100.text-gray-500.text-sm Not ready to import

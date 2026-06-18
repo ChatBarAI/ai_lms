@@ -1,0 +1,100 @@
+- return unless lesson.cbai_api_key.present? && can?(:manage, lesson)
+
+- recent_tasks = lesson.question_generation_tasks.recent.limit(5)
+
+- title_attr  = "The lesson title and body are sent to ChatBar AI automatically. "
+- title_attr += "Optionally add a focus below to narrow the questions to a specific topic or section. "
+- title_attr += "Generated questions arrive asynchronously and will appear in the list below."
+
+%section.mb-6.bg-white.border.border-indigo-200.rounded.p-4{:title => title_attr}
+  %h2.text-lg.font-semibold.text-indigo-700.mb-2 Generate questions with ChatBar AI
+  %p.text-sm.text-gray-600.mb-3
+
+
+  = form_with url: course_lesson_question_generation_tasks_path(@course, lesson),
+              scope: :question_generation_task, method: :post, local: true,
+              class: "space-y-3" do |f|
+    .grid.grid-cols-1.gap-3
+      %div
+        = f.label :prompt, "Focus (optional)", class: "block text-sm font-medium text-gray-700"
+        = f.text_area :prompt, rows: 2,
+                       placeholder: "e.g. focus on the section about compound interest — leave blank to cover the whole lesson",
+                       class: "w-full border border-gray-300 rounded px-3 py-2 text-sm"
+
+      .grid.grid-cols-1.sm:grid-cols-3.gap-3
+        %div
+          = f.label :count, "Number of questions", class: "block text-sm font-medium text-gray-700"
+          = f.number_field :count, value: 5, min: 1, max: 20,
+                            class: "w-full border border-gray-300 rounded px-3 py-2 text-sm"
+        %div
+          = f.label :kind, "Question kind", class: "block text-sm font-medium text-gray-700"
+          = f.select :kind,
+                     [["Multiple choice", "multiple_choice"], ["True / false", "true_false"], ["Free text", "free_text"], ["Mixed", "mix"]],
+                     {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white text-sm"
+        %div
+          = f.label :strategy, "Strategy", class: "block text-sm font-medium text-gray-700"
+          = f.select :strategy,
+                     [["Vector similarity (fast)", "vector_similarity"], ["Maximum accuracy (slow)", "maximum_accuracy"]],
+                     {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white text-sm"
+
+    .flex.justify-end
+      = f.submit "Generate questions",
+                  class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors"
+
+  %details.mt-3.text-xs
+    %summary.cursor-pointer.text-indigo-600.hover:text-indigo-800.font-medium Preview prompt template
+    %pre.mt-2.p-3.bg-gray-50.border.border-gray-200.rounded.text-gray-700.overflow-x-auto.whitespace-pre-wrap= question_generation_prompt_preview(lesson)
+
+  - if recent_tasks.any?
+    - has_active_tasks = recent_tasks.any? { |t| t.pending? || t.queued? }
+    .mt-4.border-t.border-gray-100.pt-3{ data: (has_active_tasks ? { qgt_polling: "1" } : {}) }
+      %h3.text-sm.font-semibold.text-gray-700.mb-2 Recent generation tasks
+      - if has_active_tasks
+        %p.text-xs.text-indigo-600.mb-2.animate-pulse Checking for results automatically…
+      %ul.space-y-1
+        - recent_tasks.each do |t|
+          %li.text-xs.text-gray-600.flex.items-center.justify-between
+            %span
+              %span.font-medium= t.status.humanize
+              = " · #{time_ago_in_words(t.created_at)} ago"
+              - if t.questions_created_count.to_i.positive?
+                = " · #{pluralize(t.questions_created_count, 'question')} added"
+            - if t.error_message.present?
+              %span.text-red-600.truncate.ml-2{ title: t.error_message }= t.error_message.truncate(60)
+          - if Rails.env.development? && (t.pending? || t.queued?)
+            %li.mt-1
+              %details.text-xs
+                %summary.cursor-pointer.text-amber-600.hover:text-amber-800.font-medium [DEV] Paste callback JSON to process manually
+                = form_with url: simulate_course_lesson_question_generation_task_path(@course, lesson, t),
+                            method: :post, local: true, class: "mt-2 space-y-2" do |f|
+                  = f.text_area :payload, rows: 8,
+                                placeholder: '{"questions": [...]}',
+                                class: "block w-full rounded border-gray-300 shadow-sm text-xs font-mono"
+                  = f.submit "Process payload",
+                              class: "px-2 py-1 rounded text-xs bg-amber-500 text-white hover:bg-amber-600 cursor-pointer"
+
+  - if recent_tasks.any? { |t| t.pending? || t.queued? }
+    :javascript
+      (function () {
+        var INTERVAL_MS = 5000;
+        var timer;
+
+        function shouldPoll() {
+          return !!document.querySelector('[data-qgt-polling="1"]');
+        }
+
+        function poll() {
+          if (!shouldPoll()) { clearInterval(timer); return; }
+          Turbo.visit(window.location.href, { action: "replace" });
+        }
+
+        function start() {
+          if (!shouldPoll()) return;
+          clearInterval(timer);
+          timer = setInterval(poll, INTERVAL_MS);
+        }
+
+        start();
+        document.addEventListener("turbo:load", start);
+        document.addEventListener("turbo:before-visit", function () { clearInterval(timer); }, { once: true });
+      })();

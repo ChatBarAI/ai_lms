@@ -1,0 +1,23 @@
+- content_for :title, "Materials"
+.mb-4
+  = link_to "← #{@lesson.title}", course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold= "Materials · #{@lesson.title}"
+  - if can?(:create, LessonMaterial.new(lesson: @lesson))
+    = link_to "New material", new_course_lesson_lesson_material_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+
+- if @lesson_materials.any?
+  %ol.space-y-2
+    - @lesson_materials.each do |m|
+      %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.gap-3
+        %span.font-mono.text-sm.text-gray-500.w-8.text-right.tabular-nums= "#{m.position}."
+        .flex-1
+          %p.font-medium= m.title
+          %p.text-xs.text-gray-500= "#{m.kind_label}#{' · required' if m.required?}"
+        .flex.flex-wrap.gap-2.items-center
+          - if can?(:update, m)
+            = link_to "Edit", edit_course_lesson_lesson_material_path(@course, @lesson, m), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+          - if can?(:destroy, m)
+            = button_to "Delete", course_lesson_lesson_material_path(@course, @lesson, m), method: :delete, data: { turbo_confirm: "Delete?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer"
+- else
+  %p.text-gray-500 No materials yet.

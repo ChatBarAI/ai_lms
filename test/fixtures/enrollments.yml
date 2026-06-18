@@ -1,0 +1,5 @@
+student_in_algebra:
+  user: student
+  course: algebra
+  role: 0
+  enrolled_at: <%= 1.week.ago.to_fs(:db) %>

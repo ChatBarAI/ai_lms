@@ -1,0 +1,159 @@
+- content_for :title, "Certificate Layout — #{@course.title}"
+
+- setting = SiteSetting.current
+- template = @course.certificate_template.attached? ? @course.certificate_template : (setting.certificate_template.attached? ? setting.certificate_template : nil)
+- template_url = template ? rails_blob_path(template) : (File.exist?(Rails.root.join("app/assets/images/chatbar-ai-certificate.jpg")) ? image_path("chatbar-ai-certificate.jpg") : nil)
+
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold Certificate layout · #{@course.title}
+  .flex.items-center.gap-2
+    = link_to "← Back to course", edit_admin_course_path(@course), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+
+%p.text-sm.text-gray-500.mb-4
+  Click on the preview to position the selected field. Adjust the size, alignment and weight in the side panel. Layout coordinates are stored as percentages of the page, so they remain accurate at any rendered size.
+
+- unless template_url
+  .mb-4.bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-3.text-sm
+    No certificate template uploaded for this course or as a site default. Showing a plain background — upload a template image on the
+    = link_to "course edit page", edit_admin_course_path(@course), class: "underline"
+    \ or in
+    = link_to "site settings", edit_admin_site_setting_path, class: "underline"
+    \.
+
+= form_with model: @course, url: certificate_layout_admin_course_path(@course), method: :patch, html: { id: "cert-layout-form", data: { turbo: false } } do |f|
+
+  .grid.grid-cols-1.lg:grid-cols-3.gap-6
+
+    -# ── Preview pane ─────────────────────────────────────────────────────
+    .lg:col-span-2
+      .relative.border.border-gray-300.rounded.overflow-hidden.bg-white.shadow-sm{ id: "cert-preview", style: "aspect-ratio: 841.89 / 595.28;" }
+        - if template_url
+          %img.absolute.inset-0.w-full.h-full.object-fill.pointer-events-none{ src: template_url, alt: "Template" }
+        - else
+          .absolute.inset-0.bg-gradient-to-br.from-indigo-50.to-white
+
+        -# Field markers — positioned via JS
+        - Course::CERTIFICATE_FIELDS.each do |field|
+          - cfg = @layout[field]
+          .cert-field.absolute.cursor-move.select-none.whitespace-nowrap.transition{ data: { field: field }, style: "left: #{cfg['x']}%; top: #{cfg['y']}%; transform: translate(-50%, -50%); font-size: #{cfg['size']}px; font-weight: #{cfg['bold'] ? 700 : 400};" }
+            %span.field-text= preview_text_for(field, @course)
+
+    -# ── Controls pane ────────────────────────────────────────────────────
+    .space-y-3
+      %p.text-sm.font-medium.text-gray-700 Select a field, then click on the preview to position it.
+
+      - Course::CERTIFICATE_FIELDS.each_with_index do |field, idx|
+        - cfg = @layout[field]
+        .field-row.border.border-gray-200.rounded.p-3.bg-white{ data: { field: field } }
+          .flex.items-center.justify-between.mb-2
+            %label.inline-flex.items-center.gap-2.text-sm.font-semibold.cursor-pointer
+              %input.field-select{ type: "radio", name: "selected_field", value: field, checked: idx == 0 }
+              %span= field.humanize
+
+          .grid.grid-cols-4.gap-2.text-xs
+            %label.flex.flex-col
+              %span.text-gray-500.mb-0.5 X %
+              = number_field_tag "layout[#{field}][x]", cfg["x"], step: "any", min: 0, max: 100, class: "border border-gray-300 rounded px-2 py-1 text-xs cert-input", data: { field: field, prop: "x" }
+            %label.flex.flex-col
+              %span.text-gray-500.mb-0.5 Y %
+              = number_field_tag "layout[#{field}][y]", cfg["y"], step: "any", min: 0, max: 100, class: "border border-gray-300 rounded px-2 py-1 text-xs cert-input", data: { field: field, prop: "y" }
+            %label.flex.flex-col
+              %span.text-gray-500.mb-0.5 Size
+              = number_field_tag "layout[#{field}][size]", cfg["size"], step: 1, min: 6, max: 120, class: "border border-gray-300 rounded px-2 py-1 text-xs cert-input", data: { field: field, prop: "size" }
+            %label.flex.flex-col
+              %span.text-gray-500.mb-0.5 Align
+              = select_tag "layout[#{field}][align]", options_for_select([%w[left left], %w[center center], %w[right right]], cfg["align"]), class: "border border-gray-300 rounded px-2 py-1 text-xs cert-input bg-white", data: { field: field, prop: "align" }
+
+          %label.mt-2.inline-flex.items-center.gap-2.text-xs.text-gray-600
+            -# Hidden field ensures bold=0 sent when checkbox unchecked
+            = hidden_field_tag "layout[#{field}][bold]", "0"
+            = check_box_tag "layout[#{field}][bold]", "1", cfg["bold"], class: "cert-input rounded border-gray-300", data: { field: field, prop: "bold" }
+            %span Bold
+
+      .pt-3.flex.gap-2
+        = f.submit "Save layout", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+        = link_to "Reset to defaults", certificate_layout_admin_course_path(@course, reset: 1), data: { turbo_method: :patch, turbo_confirm: "Reset layout to defaults?" }, class: "px-4 py-2 rounded border border-gray-300 hover:bg-gray-50"
+
+:javascript
+  (function() {
+    const preview = document.getElementById("cert-preview");
+    const fieldsEls = preview.querySelectorAll(".cert-field");
+    const selectRadios = document.querySelectorAll(".field-select");
+    const inputs = document.querySelectorAll(".cert-input");
+
+    function selectedField() {
+      const r = document.querySelector(".field-select:checked");
+      return r ? r.value : null;
+    }
+
+    function fieldEl(name) {
+      return preview.querySelector(`.cert-field[data-field="${name}"]`);
+    }
+
+    function fieldRow(name) {
+      return document.querySelector(`.field-row[data-field="${name}"]`);
+    }
+
+    function updateFromInput(field, prop) {
+      const row = fieldRow(field);
+      const xEl = row.querySelector('[data-prop="x"]');
+      const yEl = row.querySelector('[data-prop="y"]');
+      const sizeEl = row.querySelector('[data-prop="size"]');
+      const alignEl = row.querySelector('[data-prop="align"]');
+      const boldEl = row.querySelector('input[type=checkbox][data-prop="bold"]');
+      const el = fieldEl(field);
+      el.style.left = `${xEl.value}%`;
+      el.style.top = `${yEl.value}%`;
+      el.style.fontSize = `${sizeEl.value}px`;
+      el.style.fontWeight = boldEl.checked ? "700" : "400";
+      el.style.textAlign = alignEl.value;
+    }
+
+    function highlight() {
+      const cur = selectedField();
+      fieldsEls.forEach(el => {
+        if (el.dataset.field === cur) {
+          el.style.outline = "2px dashed #6366f1";
+          el.style.background = "rgba(99,102,241,0.10)";
+          el.style.padding = "2px 4px";
+        } else {
+          el.style.outline = "";
+          el.style.background = "";
+          el.style.padding = "";
+        }
+      });
+    }
+
+    inputs.forEach(inp => {
+      inp.addEventListener("input", () => {
+        updateFromInput(inp.dataset.field, inp.dataset.prop);
+      });
+      inp.addEventListener("change", () => {
+        updateFromInput(inp.dataset.field, inp.dataset.prop);
+      });
+    });
+
+    selectRadios.forEach(r => r.addEventListener("change", highlight));
+
+    preview.addEventListener("click", (e) => {
+      const field = selectedField();
+      if (!field) return;
+      const rect = preview.getBoundingClientRect();
+      const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+      const row = fieldRow(field);
+      const xEl = row.querySelector('[data-prop="x"]');
+      const yEl = row.querySelector('[data-prop="y"]');
+      xEl.value = xPct.toFixed(2);
+      yEl.value = yPct.toFixed(2);
+      updateFromInput(field, "x");
+    });
+
+    highlight();
+  })();
+
+:css
+  .cert-field {
+    color: #1a202c;
+    pointer-events: none;
+  }

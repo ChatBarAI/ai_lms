@@ -1,0 +1,21 @@
+= form_with model: tag, url: (tag.persisted? ? admin_tag_path(tag) : admin_tags_path), class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+  - if tag.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - tag.errors.full_messages.each do |msg|
+          %li= msg
+
+  .flex.flex-col.gap-4.sm:flex-row.sm:items-end
+    %div.flex-1
+      = f.label :name, class: "block text-sm font-medium mb-1"
+      = f.text_field :name, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+    %div
+      = f.label :color, "Colour", class: "block text-sm font-medium mb-1"
+      .flex.items-center.gap-2
+        %input{ type: "color", value: f.object.color.presence || "#6366f1", oninput: "this.nextElementSibling.value=this.value", class: "h-10 w-16 cursor-pointer border border-gray-300 rounded p-0.5" }
+        = f.text_field :color, oninput: "this.previousElementSibling.value=this.value", class: "w-28 border border-gray-300 rounded px-3 py-2 font-mono text-sm", placeholder: "#6366f1", maxlength: 7
+
+  .flex.w-full.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = link_to "Cancel", admin_tags_path, class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

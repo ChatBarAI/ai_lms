@@ -1,0 +1,5 @@
+- content_for :title, @lesson_material.title
+.mb-4
+  = link_to "← Back to lesson", course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+%h1.text-2xl.font-bold.mb-4= @lesson_material.title
+= render "material", material: @lesson_material, course: @course, lesson: @lesson, enrollment: current_user&.enrollments&.find_by(course_id: @course.id)

@@ -1,0 +1,198 @@
+- content_for :title, @lesson.title
+
+.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show" } }
+  .flex.flex-wrap.gap-2.items-center
+    = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+      ← Course
+    - if can?(:update, @lesson)
+      - if @lesson.published?
+        = button_to t("common.unpublish"), unpublish_course_lesson_path(@course, @lesson), method: :post, data: { turbo_confirm: t(".unpublish_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer transition-colors"
+      - else
+        = button_to t("common.publish_now"), publish_course_lesson_path(@course, @lesson), method: :post, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 cursor-pointer transition-colors"
+      = link_to t(".edit", **terms), edit_course_lesson_path(@course, @lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+      = link_to t(".questions"), course_lesson_questions_path(@course, @lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+
+.bg-white.border.border-gray-200.rounded-lg.p-2.sm:p-6.mb-6.flow-root
+  - poster_url = (@lesson.poster_image.attached? ? rails_blob_path(@lesson.poster_image) : nil)
+  - if @lesson.intro_video.attached?
+    %video.w-full.mb-6.rounded-lg.border.border-gray-200{ controls: true, preload: "metadata", poster: poster_url }
+      %source{ src: rails_blob_path(@lesson.intro_video, disposition: "inline"), type: @lesson.intro_video.content_type }
+  - elsif (video = lesson_video_embed(@lesson.video_url, poster_url: poster_url))
+    = video
+
+  - if @lesson.cover_image.attached?
+    = image_tag @lesson.cover_image, class: "w-full sm:float-right sm:ml-4 sm:w-auto sm:max-w-96 object-contain mb-4 sm:mb-2"
+  .flex.items-center.gap-4.mb-4
+    %h1.text-2xl.font-bold= @lesson.title
+    = render "shared/tags", record: @lesson
+
+  - if @lesson.body.present?
+    .prose.max-w-none= simple_format(@lesson.body)
+  - else
+    %p.text-gray-400.italic= t(".no_content")
+
+- if @lesson.anam_enabled? && @anam_session_token.present?
+  = render "anam_embed", lesson: @lesson, session_token: @anam_session_token
+- elsif @lesson.cbai_enabled?
+  = render "cbai_embed", lesson: @lesson
+- elsif @lesson.custom_tutor_enabled?
+  = render "custom_tutor_embed", lesson: @lesson
+
+- if @lesson.lesson_materials.any?
+  #lesson-materials.mb-6
+    %h2.text-lg.font-semibold.mb-3 Materials
+    - @lesson.lesson_materials.each do |m|
+      = render "lesson_materials/material", material: m, course: @course, lesson: @lesson, enrollment: @enrollment
+
+- if @enrollment
+  .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{ id: "lesson-status" }
+    - pct = @progress.completed? ? 100 : 50
+    - circ = (2 * Math::PI * 20).round(2)
+    - offset = (circ * (1 - pct / 100.0)).round(2)
+    - ring_color = @progress.completed? ? "#16a34a" : "#6366f1"
+    - status_chart_dialog_id = "status-chart-dialog-#{@progress.id}"
+    .flex.items-stretch.gap-4
+      %svg.self-center.shrink-0{ width: "52", height: "52", viewBox: "0 0 48 48", fill: "none" }
+        %circle{ cx: "24", cy: "24", r: "20", stroke: "#e5e7eb", "stroke-width": "4", fill: "none" }
+        %circle{ cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "4", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)" }
+        %text{ x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600" }= "#{pct}%"
+      .flex.items-stretch.gap-4
+        - if @quiz_attempts.present? && @quiz_attempts.size > 1
+          - graph_width = 180.0
+          - graph_height = 56.0
+          - graph_padding = 8.0
+          - graph_bottom = (graph_height - graph_padding).round(1)
+          - graph_left = graph_padding.round(1)
+          - graph_right = (graph_width - graph_padding).round(1)
+          - pass_mark = @lesson.effective_pass_mark.to_f.clamp(0.0, 100.0)
+          - pass_y = (graph_height - graph_padding - (pass_mark / 100.0 * (graph_height - (graph_padding * 2)))).round(1)
+          - x_step = @quiz_attempts.size > 1 ? ((graph_width - (graph_padding * 2)) / (@quiz_attempts.size - 1)) : 0.0
+          - points = @quiz_attempts.each_with_index.map do |attempt, idx|
+          -   x = (graph_padding + (idx * x_step)).round(1)
+          -   y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+          -   y = (graph_height - graph_padding - (y_val / 100.0 * (graph_height - (graph_padding * 2)))).round(1)
+          -   "#{x},#{y}"
+          - end.join(" ")
+          - area_points = "#{graph_left},#{graph_bottom} #{points} #{graph_right},#{graph_bottom}"
+        .min-w-0.flex-1.flex.items-stretch.gap-3
+          .min-w-0.flex-1
+            .flex.items-center.gap-2
+              %p.font-semibold.text-sm= t(".status", status: @progress.status.to_s.humanize)
+            - if @ai_scoring_pending
+              .flex.items-center.gap-1.5.mt-0.5{ data: { controller: "scoring-channel", "scoring-channel-progress-id-value": @progress.id } }
+                .w-2.h-2.rounded-full.bg-indigo-500.animate-pulse
+                %p.text-xs.text-indigo-600.font-medium Queued for marking…
+            - elsif @progress.score.present?
+              %p.text-xs.text-gray-500= t(".score", score: @progress.score)
+            - if @quiz_attempts.present?
+              %p.text-xs.text-gray-500.mt-1= "#{terms[:quiz]} attempts: #{@quiz_attempts.count}"
+          - if @quiz_attempts.present? && @quiz_attempts.size > 1
+            .shrink-0.self-stretch.flex.items-stretch.pl-2.border-l.border-gray-200.relative.overflow-visible{ data: { controller: "chart-tooltip status-modal", status_modal_dialog_id_value: status_chart_dialog_id } }
+              .pointer-events-none.fixed.hidden.z-50.max-w-xs.rounded.bg-slate-900.px-3.py-2.text-xs.leading-5.font-medium.text-white.shadow-lg.whitespace-pre-line{ data: { chart_tooltip_target: "tooltip" } }
+              %button.h-full.w-full.text-left.cursor-zoom-in{ type: "button", data: { action: "click->status-modal#open" }, "aria-label": "Open larger marks chart" }
+                %svg.h-full{ width: "170", height: "56", viewBox: "0 0 180 56", fill: "none", role: "img", "aria-label": "#{terms[:quiz]} attempt score trend", preserveAspectRatio: "none" }
+                  %line{ x1: graph_left.to_s, y1: graph_bottom.to_s, x2: graph_right.to_s, y2: graph_bottom.to_s, stroke: "#e5e7eb", "stroke-width": "1" }
+                  %line{ x1: graph_left.to_s, y1: pass_y.to_s, x2: graph_right.to_s, y2: pass_y.to_s, stroke: "#16a34a", "stroke-width": "1", "stroke-dasharray": "3 2", "stroke-opacity": "0.9" }
+                  %text{ x: graph_right.to_s, y: (pass_y - 1).to_s, "text-anchor": "end", fill: "#15803d", "font-size": "7" }= "Pass #{pass_mark.round}%"
+                  %polygon{ points: area_points, fill: "#818cf8", "fill-opacity": "0.22" }
+                  %polyline{ points: points, fill: "none", stroke: "#4f46e5", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" }
+                  - @quiz_attempts.each_with_index do |attempt, idx|
+                    - x = (graph_padding + (idx * x_step)).round(1)
+                    - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+                    - y = (graph_height - graph_padding - (y_val / 100.0 * (graph_height - (graph_padding * 2)))).round(1)
+                    - attempt_time = (attempt.completed_at || attempt.submitted_at)
+                    - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
+                    - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
+                    - tooltip_text = "Attempt ##{attempt.attempt_number} - #{attempt_score}\n#{attempt_date}"
+                    %circle{ cx: x.to_s, cy: y.to_s, r: "2.5", fill: "#4f46e5", "pointer-events": "none" }
+                    %circle{ cx: x.to_s, cy: y.to_s, r: "8", fill: "transparent", stroke: "transparent", "pointer-events": "all", tabindex: "0", role: "button", "aria-label": tooltip_text, data: { tooltip: tooltip_text, action: "mouseenter->chart-tooltip#show mousemove->chart-tooltip#move mouseleave->chart-tooltip#hide focus->chart-tooltip#show blur->chart-tooltip#hide" } }
+      - if !@progress.completed?
+        - unless @ai_scoring_pending
+          .self-center.ml-auto
+            = form_with model: @progress, url: progress_path(@progress.id), method: :patch, local: true do |f|
+              = f.hidden_field :status, value: "completed"
+              = f.submit t(".mark_complete"), data: { turbo_confirm: t(".confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
+      - else
+        .flex.items-center.gap-2.self-center.ml-auto
+          %span.text-sm.font-medium.text-green-700= t(".completed")
+          - if @enrollment.fully_completed?
+            = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+
+  - if @quiz_attempts.present? && @quiz_attempts.size > 1
+    .fixed.inset-0.z-50.hidden{ id: status_chart_dialog_id, data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "#{status_chart_dialog_id}-title", "aria-hidden": "true" }
+      .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+      .absolute.bg-white.rounded-xl.shadow-2xl.border.border-indigo-200{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(94vw,52rem)", tabindex: "-1", data: { dialog_target: "panel" } }
+        .px-6.pt-6.pb-4
+          .flex.items-start.justify-between.gap-3
+            %div
+              %h3.font-semibold.text-gray-900{ id: "#{status_chart_dialog_id}-title" }= "#{terms[:quiz]} Mark Trend"
+            %button.text-gray-500.hover:text-gray-700{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" }
+              %svg.w-5.h-5{ xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", "stroke-width": "2" }
+                %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "M6 18 18 6M6 6l12 12" }
+        .px-6.pb-6.relative{ data: { controller: "chart-tooltip", chart_tooltip_target: "bounds" } }
+          .pointer-events-none.absolute.hidden.z-50.max-w-sm.rounded.bg-slate-900.px-3.5.py-2.5.text-xs.leading-5.font-medium.text-white.shadow-lg.whitespace-pre-line{ data: { chart_tooltip_target: "tooltip" } }
+          - graph_width_large = 760.0
+          - graph_height_large = 260.0
+          - graph_padding_large = 30.0
+          - graph_bottom_large = (graph_height_large - graph_padding_large).round(1)
+          - graph_left_large = graph_padding_large.round(1)
+          - graph_right_large = (graph_width_large - graph_padding_large).round(1)
+          - graph_plot_height_large = (graph_height_large - (graph_padding_large * 2))
+          - pass_mark_large = @lesson.effective_pass_mark.to_f.clamp(0.0, 100.0)
+          - pass_y_large = (graph_height_large - graph_padding_large - (pass_mark_large / 100.0 * graph_plot_height_large)).round(1)
+          - x_step_large = @quiz_attempts.size > 1 ? ((graph_width_large - (graph_padding_large * 2)) / (@quiz_attempts.size - 1)) : 0.0
+          - axis_markers = [0, 25, 50, 75, 100]
+          - attempt_label_step = [(@quiz_attempts.size / 10.0).ceil, 1].max
+          - points_large = @quiz_attempts.each_with_index.map do |attempt, idx|
+          -   x = (graph_padding_large + (idx * x_step_large)).round(1)
+          -   y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+          -   y = (graph_height_large - graph_padding_large - (y_val / 100.0 * graph_plot_height_large)).round(1)
+          -   "#{x},#{y}"
+          - end.join(" ")
+          - area_points_large = "#{graph_left_large},#{graph_bottom_large} #{points_large} #{graph_right_large},#{graph_bottom_large}"
+          %svg.w-full.h-auto{ viewBox: "0 0 760 260", fill: "none", role: "img", "aria-label": "Large #{terms[:quiz_l]} attempt score trend chart" }
+            - axis_markers.each do |marker|
+              - marker_y = (graph_height_large - graph_padding_large - (marker / 100.0 * graph_plot_height_large)).round(1)
+              %line{ x1: graph_left_large.to_s, y1: marker_y.to_s, x2: graph_right_large.to_s, y2: marker_y.to_s, stroke: "#cbd5e1", "stroke-width": "1", "stroke-opacity": (marker == 0 ? "0.28" : "0.2"), "stroke-dasharray": (marker == 0 ? nil : "4 4") }
+              %text{ x: (graph_left_large - 6).to_s, y: (marker_y + 4).to_s, "text-anchor": "end", fill: "#6b7280", "font-size": "11" }= "#{marker}%"
+            %line{ x1: graph_left_large.to_s, y1: graph_bottom_large.to_s, x2: graph_right_large.to_s, y2: graph_bottom_large.to_s, stroke: "#cbd5e1", "stroke-width": "1", "stroke-opacity": "0.35" }
+            %line{ x1: graph_left_large.to_s, y1: pass_y_large.to_s, x2: graph_right_large.to_s, y2: pass_y_large.to_s, stroke: "#16a34a", "stroke-width": "1.5", "stroke-dasharray": "6 4", "stroke-opacity": "0.9" }
+            %text{ x: graph_right_large.to_s, y: (pass_y_large - 6).to_s, "text-anchor": "end", fill: "#15803d", "font-size": "12", "font-weight": "600" }= "Pass #{pass_mark_large.round}%"
+            %polygon{ points: area_points_large, fill: "#818cf8", "fill-opacity": "0.2" }
+            %polyline{ points: points_large, fill: "none", stroke: "#4338ca", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }
+            - @quiz_attempts.each_with_index do |attempt, idx|
+              - x = (graph_padding_large + (idx * x_step_large)).round(1)
+              - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+              - y = (graph_height_large - graph_padding_large - (y_val / 100.0 * graph_plot_height_large)).round(1)
+              - attempt_time = (attempt.completed_at || attempt.submitted_at)
+              - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
+              - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
+              - tooltip_text = "Attempt ##{attempt.attempt_number} - #{attempt_score}\n#{attempt_date}"
+              %circle{ cx: x.to_s, cy: y.to_s, r: "4", fill: "#4338ca", "pointer-events": "none" }
+              %circle{ cx: x.to_s, cy: y.to_s, r: "12", fill: "transparent", stroke: "transparent", "pointer-events": "all", tabindex: "0", role: "button", "aria-label": tooltip_text, data: { tooltip: tooltip_text, action: "mouseenter->chart-tooltip#show mousemove->chart-tooltip#move mouseleave->chart-tooltip#hide focus->chart-tooltip#show blur->chart-tooltip#hide" } }
+              - if idx % attempt_label_step == 0 || idx == @quiz_attempts.size - 1
+                %line{ x1: x.to_s, y1: graph_bottom_large.to_s, x2: x.to_s, y2: (graph_bottom_large + 4).to_s, stroke: "#9ca3af", "stroke-width": "1" }
+                %text{ x: x.to_s, y: (graph_bottom_large + 16).to_s, "text-anchor": "middle", fill: "#6b7280", "font-size": "10" }= "##{attempt.attempt_number}"
+            %text{ x: ((graph_left_large + graph_right_large) / 2.0).round(1).to_s, y: (graph_bottom_large + 28).to_s, "text-anchor": "middle", fill: "#374151", "font-size": "11", "font-weight": "600" } Attempt Number
+
+- materials_ok = @lesson.lesson_materials_complete_for?(@enrollment)
+- if @questions.any? || @retry_mode
+  #lesson-quiz
+    - if materials_ok
+      - if @retry_mode && @questions.empty?
+        .bg-green-50.border.border-green-200.text-green-800.rounded.p-4.text-sm.mb-6
+          %p.font-semibold ✓ All questions answered correctly — nothing left to retry!
+      - elsif !@ai_scoring_pending
+        = render "quiz", lesson: @lesson, questions: @questions, progress: @progress, retry_mode: @retry_mode, collapsed: (@enrollment && @progress&.completed?)
+    - else
+      .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.mb-6
+        %p.font-semibold.mb-1= "Complete the required materials to unlock the #{terms[:quiz_l]}."
+        %p.text-xs= "Mark each required material above as complete, then the #{terms[:quiz_l]} will appear here."
+
+- if @enrollment
+  - if @progress.completed? && @lesson.ratings_enabled?
+    = render "rating_form", lesson: @lesson, user_rating: @user_rating
+- elsif user_signed_in?
+  .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+    %p.flex-1= t(".enrol_prompt", **terms)
+    = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"

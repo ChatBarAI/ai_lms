@@ -1,0 +1,5 @@
+- content_for :title, "New lesson"
+
+%h1.text-2xl.font-bold.mb-4 New lesson
+.p-4.bg-white.border.border-gray-200.rounded-lg
+    = render "form", lesson: @lesson, course: @course

@@ -1,0 +1,25 @@
+= form_with model: user, url: (user.persisted? ? admin_user_path(user) : admin_users_path), class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+  - if user.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - user.errors.full_messages.each do |msg|
+          %li= msg
+
+  %div
+    = f.label :email, class: "block text-sm font-medium mb-1"
+    = f.email_field :email, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :name, class: "block text-sm font-medium mb-1"
+    = f.text_field :name, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :role, class: "block text-sm font-medium mb-1"
+    = f.select :role, User.roles.keys.map { |r| [ r.humanize, r ] }, {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+  %div
+    = f.label :organization_id, "Organization", class: "block text-sm font-medium mb-1"
+    = f.collection_select :organization_id, Organization.by_name, :id, :name, { include_blank: "—" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+  %div
+    = f.label :password, (user.persisted? ? "New password (leave blank to keep current)" : "Password"), class: "block text-sm font-medium mb-1"
+    = f.password_field :password, class: "border border-gray-300 rounded px-3 py-2"
+  .flex.gap-2
+    = f.submit class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+    = link_to "Cancel", admin_users_path, class: "px-4 py-2 rounded border border-gray-300 hover:bg-gray-50"

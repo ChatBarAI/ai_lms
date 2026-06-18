@@ -1,0 +1,38 @@
+%section{ id: "theme", class: "scroll-mt-24", data: { site_settings_section: "theme" } }
+  = form_with model: @site_setting, url: admin_site_setting_path, method: :patch, data: { turbo: false }, class: "rounded-xl border border-gray-200 bg-white p-6 shadow-sm" do |f|
+    = hidden_field_tag :section, "theme"
+
+    .flex.items-baseline.justify-between.gap-3
+      %div
+        %h2.text-lg.font-semibold.text-gray-900 Theme
+        %p.text-sm.text-gray-500 Base palette for light and dark modes.
+      %button{ type: "button", data: { action: "click->site-settings#reset", site_settings_reset_set: "palette" }, class: "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer" } Reset palette
+
+    = render "section_errors", section: "theme"
+
+    .mt-5
+      %fieldset.mb-5
+        %legend.block.text-sm.font-medium.mb-2 Mode
+        .flex.flex-wrap.gap-4
+          - %w[system light dark].each do |mode|
+            %label.inline-flex.items-center.gap-2.text-sm
+              = f.radio_button :theme_mode, mode
+              %span.capitalize= mode
+
+      - color_groups = [["Page background", :page_bg_light, :page_bg_dark], ["Page text", :page_fg_light, :page_fg_dark], ["Card / Panel background", :card_bg_light, :card_bg_dark], ["Top nav background", :nav_bg_light, :nav_bg_dark], ["Top nav text", :nav_fg_light, :nav_fg_dark], ["Admin nav background", :admin_nav_bg_light, :admin_nav_bg_dark], ["Admin nav text", :admin_nav_fg_light, :admin_nav_fg_dark]]
+      .grid.grid-cols-1.sm:grid-cols-2.gap-x-10.gap-y-4
+        - color_groups.each do |label, light_field, dark_field|
+          %div
+            %div.text-sm.font-medium.mb-1= label
+            .flex.items-center.gap-4
+              %label.flex.flex-1.items-center.gap-1.5.text-xs.text-gray-600
+                %span Light
+                = f.color_field light_field, class: "h-8 w-12 shrink-0 border border-gray-300 rounded cursor-pointer", data: { action: "input->site-settings#sync", site_settings_color_key: light_field }
+                = f.text_field light_field, class: "flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs font-mono", data: { action: "input->site-settings#sync", site_settings_color_key: light_field }
+              %label.flex.flex-1.items-center.gap-1.5.text-xs.text-gray-600
+                %span Dark
+                = f.color_field dark_field, class: "h-8 w-12 shrink-0 border border-gray-300 rounded cursor-pointer", data: { action: "input->site-settings#sync", site_settings_color_key: dark_field }
+                = f.text_field dark_field, class: "flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs font-mono", data: { action: "input->site-settings#sync", site_settings_color_key: dark_field }
+
+    .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
+      = f.submit "Save theme", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

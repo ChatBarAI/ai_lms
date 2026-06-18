@@ -1,0 +1,22 @@
+= link_to course_path(course), class: "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-indigo-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-indigo-500" do
+  .relative
+    - if course.cover_image.attached?
+      = image_tag course.cover_image, class: "w-full h-40 object-cover"
+    - else
+      = default_meta_card_image_tag(class: "w-full h-40 object-cover")
+    - if course.tags.any?
+      .absolute.bottom-2.right-2.flex.flex-wrap.justify-end.gap-1
+        - course.tags.each do |tag|
+          %span.inline-flex.items-center.px-3.py-1.rounded-full.text-xs.font-medium{ style: "background-color: #{tag.color}; color: #{tag.text_color}" }= tag.name
+  .p-4
+    - lesson_count = course.lessons.published.count
+    .flex.items-start.justify-between.gap-2
+      %h3.font-semibold= course.title
+      %span.inline-flex.items-center.gap-1.flex-shrink-0.px-2.py-0.5.rounded-full.text-xs.font-medium.bg-indigo-50.text-indigo-700.border.border-indigo-200.dark:bg-indigo-900.dark:text-indigo-100.dark:border-indigo-700{ title: t("courses.card.lessons_count", count: lesson_count, **terms) }
+        = image_tag "lesson.png", alt: "", class: "w-3 h-3 flex-shrink-0"
+        = lesson_count
+    - unless local_assigns[:hide_subject]
+      - if subjects_enabled? && course.subject
+        %p.text-sm.text-gray-500.mt-1= course.subject.name
+    - if course.description.present?
+      %p.text-sm.text-gray-600.mt-2.line-clamp-2.dark:text-gray-400= course.description

@@ -1,0 +1,35 @@
+-# Reusable modal dialog — uses the same fixed-overlay/centered-panel pattern as the AI tutor.
+-#
+-# Locals:
+-#   title   (required) – heading text
+-#   body    (optional) – plain-text body; yield block used if omitted
+-#   kind    (optional) – :notice (green, default) or :alert (amber)
+-#   open    (optional) – true to auto-open immediately (default true)
+
+- kind  ||= :notice
+- open  = open.nil? ? true : open
+- icon_colour = kind.to_s == "alert" ? "text-amber-500" : "text-green-500"
+- border_colour = kind.to_s == "alert" ? "border-amber-200" : "border-green-200"
+- hidden_class = open ? "" : "hidden"
+- title_id = "dialog-title-#{SecureRandom.hex(4)}"
+
+.fixed.inset-0.z-50{ data: { controller: "dialog", dialog_open_value: open.to_s }, class: hidden_class, role: "dialog", "aria-modal": "true", "aria-labelledby": title_id, "aria-hidden": (!open).to_s }
+  -# Backdrop — click closes the dialog
+  .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+  -# Panel — centred exactly as the AI tutor popup
+  .absolute.bg-white.rounded-xl.shadow-2xl.border{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,28rem)", class: border_colour, tabindex: "-1", data: { dialog_target: "panel" } }
+    .px-6.pt-6.pb-5
+      .flex.items-start.gap-3.mb-3
+        - if kind.to_s == "alert"
+          %svg.w-6.h-6.flex-shrink-0{ class: icon_colour, xmlns: "http://www.w3.org/2000/svg", fill: "none", viewbox: "0 0 24 24", stroke: "currentColor", "stroke-width": "2", "aria-hidden": "true" }
+            %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" }
+        - else
+          %svg.w-6.h-6.flex-shrink-0{ class: icon_colour, xmlns: "http://www.w3.org/2000/svg", fill: "none", viewbox: "0 0 24 24", stroke: "currentColor", "stroke-width": "2", "aria-hidden": "true" }
+            %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "m9 12 2 2 4-4M7.835 4.697a3.42 3.42 0 0 0 1.946-.806 3.42 3.42 0 0 1 4.438 0 3.42 3.42 0 0 0 1.946.806 3.42 3.42 0 0 1 3.138 3.138 3.42 3.42 0 0 0 .806 1.946 3.42 3.42 0 0 1 0 4.438 3.42 3.42 0 0 0-.806 1.946 3.42 3.42 0 0 1-3.138 3.138 3.42 3.42 0 0 0-1.946.806 3.42 3.42 0 0 1-4.438 0 3.42 3.42 0 0 0-1.946-.806 3.42 3.42 0 0 1-3.138-3.138 3.42 3.42 0 0 0-.806-1.946 3.42 3.42 0 0 1 0-4.438 3.42 3.42 0 0 0 .806-1.946 3.42 3.42 0 0 1 3.138-3.138z" }
+        %h3.font-semibold.text-gray-900{ id: title_id }= title
+      - if local_assigns[:body].present?
+        %p.text-sm.text-gray-600= body
+      - else
+        .text-sm.text-gray-600= yield
+    .px-6.pb-5.flex.justify-end
+      %button.px-4.py-2.rounded-lg.bg-indigo-600.text-white.text-sm.font-medium.hover:bg-indigo-700.transition-colors{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" } } OK

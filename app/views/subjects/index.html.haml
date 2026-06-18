@@ -1,0 +1,12 @@
+- content_for :title, "Subjects"
+
+%h1.text-2xl.font-bold.mb-4 Subjects
+
+.grid.grid-cols-1.sm:grid-cols-2.md:grid-cols-3.gap-4
+  - @subjects.each do |subject|
+    = link_to subject_path(subject), class: "block bg-white border border-gray-200 rounded-lg p-4 hover:border-indigo-300" do
+      %h3.font-semibold= subject.name
+      %p.text-sm.text-gray-500.mt-1
+        = pluralize(subject.courses.count, "course")
+      - if subject.description.present?
+        %p.text-sm.text-gray-600.mt-2.line-clamp-2= subject.description

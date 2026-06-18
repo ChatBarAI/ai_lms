@@ -1,0 +1,75 @@
+- url = material.persisted? ? course_lesson_lesson_material_path(course, lesson, material) : course_lesson_lesson_materials_path(course, lesson)
+
+= form_with model: material, url: url, multipart: true, class: "space-y-4 bg-white mt-3" do |f|
+  - if material.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - material.errors.full_messages.each do |msg|
+          %li= msg
+
+  %div
+    = f.label :title, class: "block text-sm font-medium mb-1"
+    = f.text_field :title, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+  .space-y-4{ data: { controller: "material-kind" } }
+    .grid.grid-cols-1.sm:grid-cols-3.gap-4
+      %div
+        = f.label :kind, class: "block text-sm font-medium mb-1"
+        = f.select :kind,
+          [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML", "raw_html"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"]],
+            {},
+            class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
+            data: { action: "change->material-kind#toggle" }
+      %div
+        = f.label :position, class: "block text-sm font-medium mb-1"
+        = f.number_field :position, class: "w-full border border-gray-300 rounded px-3 py-2"
+      %div.pt-1
+        = toggle_switch_field f, :required,
+            label: "Required before #{terms[:quiz_l]}"
+
+    %div{ data: { material_kind_target: "pdf" }, class: ("hidden" if material.kind != "pdf") }
+      = upload_field f, :document,
+          label: "PDF file — max 25 MB",
+          accept: "application/pdf",
+          preview_type: :file,
+          current_attachment: material.document
+
+    %div{ data: { material_kind_target: "html", controller: "trix-insert-html" } }
+      = f.label :body, "Rich text content", class: "block text-sm font-medium mb-1"
+      = f.rich_text_area :body, class: "block w-full border border-gray-300 rounded"
+      .flex.justify-end.mt-2
+        %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800.hover:bg-gray-200.border.border-gray-200{ type: "button", data: { action: "trix-insert-html#toggle" } } &lt;&gt; Insert HTML
+      .hidden.mt-2.p-3.bg-gray-50.border.border-gray-200.rounded{ data: { trix_insert_html_target: "panel" } }
+        %p.text-xs.text-gray-500.mb-2 HTML will be converted to Trix's document model. Some formatting may be lost.
+        %textarea.w-full.font-mono.text-sm.border.border-gray-300.rounded.px-2.py-1{ rows: 6, placeholder: "<p>Your HTML here…</p>", data: { trix_insert_html_target: "input" } }
+        .flex.gap-2.mt-2
+          %button.px-3.py-1.text-sm.rounded.bg-indigo-600.text-white.hover:bg-indigo-700{ type: "button", data: { action: "trix-insert-html#insert" } } Insert
+          %button.px-3.py-1.text-sm.rounded.border.border-gray-300.hover:bg-gray-50{ type: "button", data: { action: "trix-insert-html#cancel" } } Cancel
+
+    %div{ data: { material_kind_target: "rawhtml" }, class: ("hidden" if material.kind != "raw_html") }
+      = f.label :raw_html_content, "Raw HTML", class: "block text-sm font-medium mb-1"
+      = f.text_area :raw_html_content, rows: 16, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm", placeholder: "<p>Paste or write HTML here…</p>"
+      %p.text-xs.text-gray-500.mt-1 HTML is sanitised on save. Allowed tags: headings, paragraphs, lists, tables, links, images, code blocks.
+
+    %div{ data: { material_kind_target: "audioupload" }, class: ("hidden" if material.kind != "audio_upload") }
+      = upload_field f, :audio_file,
+          label: "Audio file — mp3, wav, ogg, aac, m4a, flac — max 50 MB",
+          accept: "audio/mpeg,audio/vnd.wave,audio/x-wav,audio/ogg,audio/aac,audio/mp4,audio/x-m4a,audio/webm,audio/flac",
+          preview_type: :file,
+          current_attachment: material.audio_file
+
+    %div{ data: { material_kind_target: "audiourl" }, class: ("hidden" if material.kind != "audio_url") }
+      = f.label :url, "Audio URL", class: "block text-sm font-medium mb-1"
+      = f.url_field :url, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "https://example.com/audio.mp3"
+      %p.text-xs.text-gray-500.mt-1 Direct link to an mp3 or other audio file.
+
+    %div{ data: { material_kind_target: "imageupload" }, class: ("hidden" if material.kind != "image_upload") }
+      = upload_field f, :image_file,
+          label: "Image file — png, jpeg, webp, gif — max 10 MB",
+          accept: "image/png,image/jpeg,image/webp,image/gif",
+          preview_type: :image,
+          current_attachment: material.image_file
+
+  .flex.w-full.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = link_to "Cancel", edit_course_lesson_path(course, lesson), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

@@ -1,0 +1,23 @@
+- content_for :title, Lesson.model_name.human(count: 2)
+
+.mb-4
+  = link_to "← #{@course.title}", course_path(@course), class: "text-sm text-gray-500 hover:text-gray-700"
+
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold= t(".heading", **terms)
+  - if can?(:create, Lesson.new(course: @course))
+    = link_to t(".add", **terms), new_course_lesson_path(@course), class: "px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm"
+
+- if @lessons.any?
+  %ol.space-y-2
+    - @lessons.each do |lesson|
+      %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.justify-between
+        .flex.items-center.gap-3.min-w-0
+          - if lesson.cover_image.attached?
+            = image_tag lesson.cover_image, class: "h-12 w-16 object-cover rounded flex-shrink-0"
+          - else
+            = default_meta_card_image_tag(class: "h-12 w-16 object-cover rounded flex-shrink-0")
+          = link_to lesson.title, course_lesson_path(@course, lesson), class: "font-medium truncate"
+        %span.text-xs.text-gray-500= lesson.published? ? t("common.published") : t("common.draft")
+- else
+  %p.text-gray-500= t(".empty", **terms)

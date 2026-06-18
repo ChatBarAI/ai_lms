@@ -1,0 +1,9 @@
+.px-3.pt-3
+  .overflow-x-auto
+    .flex.min-w-max.items-end.gap-1
+      - site_settings_section_nav_items.each do |key, title, _subtitle|
+        - active = @active_section.to_s == key
+        - base_class = "-mb-px whitespace-nowrap rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+        - active_class = active ? "border-indigo-600 bg-white text-indigo-700" : "border-transparent text-gray-600 hover:border-gray-300 hover:text-indigo-600"
+        %button{ type: "button", class: "#{base_class} #{active_class}", data: { action: "click->site-settings#activateTab", site_settings_tab_key: key } }
+          = title

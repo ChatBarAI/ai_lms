@@ -1,0 +1,48 @@
+- content_for :title, "Certificates"
+
+.flex.items-center.justify-between.mb-1
+  %h1.text-2xl.font-bold Certificates
+
+= search_form_for @q, url: admin_certificates_path, html: { class: "mb-2 flex flex-wrap items-end justify-end gap-3" } do |f|
+  .flex.flex-col
+    = f.label :user_email_or_user_name_cont, "Search", class: "text-xs text-gray-500"
+    = f.search_field :user_email_or_user_name_cont, placeholder: "name or email", class: "border border-gray-300 rounded px-2 py-1 text-sm"
+  .flex.flex-col
+    = f.label :course_title_cont, "Course", class: "text-xs text-gray-500"
+    = f.search_field :course_title_cont, placeholder: "course title", class: "border border-gray-300 rounded px-2 py-1 text-sm"
+  .flex.gap-2
+    = f.submit "Apply", class: "px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer"
+    = link_to "Reset", admin_certificates_path, class: "px-3 py-1.5 rounded bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 border border-gray-200"
+
+.overflow-x-auto.bg-white.border.border-gray-200.rounded
+  %table.w-full.text-sm
+    %thead.bg-gray-50
+      %tr
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Recipient
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Course
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= sort_link @q, :issued_at, "Issued"
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Token
+        %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2
+    %tbody
+      - @certificates.each do |cert|
+        %tr.border-t.border-gray-100
+          %td.px-3.py-2.font-medium
+            %div= cert.user.name.presence || cert.user.email
+            %div.text-xs.text-gray-400= cert.user.email if cert.user.name.present?
+          %td.px-3.py-2= cert.course.title
+          %td.px-3.py-2.text-gray-500= l(cert.issued_at.to_date, format: :long)
+          %td.px-3.py-2.font-mono.text-xs.text-gray-400= cert.token
+          %td.px-3.py-2.text-right
+            .flex.flex-wrap.justify-end.gap-2
+              = link_to "Verify",
+                        verify_certificate_url(cert.token),
+                        target: "_blank",
+                        rel: "noopener",
+                        class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100"
+              = button_to "Revoke",
+                          admin_certificate_path(cert),
+                          method: :delete,
+                          data: { turbo_confirm: "Revoke this certificate? The recipient will lose access." },
+                          class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
+
+.mt-4= raw @pagy.series_nav if @pagy.pages > 1

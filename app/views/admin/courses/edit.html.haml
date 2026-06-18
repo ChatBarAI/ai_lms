@@ -1,0 +1,49 @@
+- content_for :title, "Edit course"
+
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold= "Edit · #{@course.title}"
+  = link_to admin_courses_path, class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+    ← All courses
+
+.mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    Main content
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    = render "form", course: @course
+
+.bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    .flex.items-center.gap-2
+      Lessons in this course
+      = link_to "Add lesson", new_course_lesson_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    - if @lessons.any?
+      %ol.mt-3.space-y-2
+        - @lessons.each_with_index do |lesson, index|
+          %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.justify-between.gap-3
+            .min-w-0
+              .text-sm.font-medium.truncate= lesson.title
+              .text-xs.text-gray-500
+                = "Lesson #{index + 1}"
+                - unless lesson.published?
+                  = " · draft"
+            .flex.flex-wrap.gap-2.items-center
+              = link_to "View", course_lesson_path(@course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+              = link_to "Edit", edit_course_lesson_path(@course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+    - else
+      .mt-3.bg-gray-50.border.border-gray-200.rounded.p-4.text-sm.text-gray-500
+        No lessons yet. Add the first lesson for this course.
+
+.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    .flex.items-center.gap-2
+      Certificate
+      - if @course.certificate_template.attached?
+        %span.text-xs.text-green-700.bg-green-100.px-2.py-0.5.rounded-full Template uploaded
+      - else
+        %span.text-xs.text-gray-500.bg-gray-100.px-2.py-0.5.rounded-full No template
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    = render "certificate_section", course: @course

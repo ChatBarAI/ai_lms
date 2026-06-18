@@ -1,0 +1,54 @@
+%section{ id: "general", class: "scroll-mt-24", data: { site_settings_section: "general" } }
+  = form_with model: @site_setting, url: admin_site_setting_path, method: :patch, data: { turbo: false }, class: "rounded-xl border border-gray-200 bg-white p-6 shadow-sm" do |f|
+    = hidden_field_tag :section, "general"
+
+    %h2.text-lg.font-semibold.text-gray-900 General
+
+    = render "section_errors", section: "general"
+
+    .mt-5.grid.grid-cols-1.gap-5.lg:grid-cols-2
+      .space-y-4
+        = toggle_switch_field f, :subjects_enabled,
+            label: "Enable Subjects (group courses under subjects)"
+
+        %div
+          = f.label :pass_mark, "Default pass mark (%)", class: "block text-sm font-medium mb-1"
+          = f.number_field :pass_mark, min: 0, max: 100, class: "w-32 border border-gray-300 rounded px-3 py-2"
+          %p.text-xs.text-gray-500.mt-1 Individual lessons can override this.
+
+      .space-y-4
+        %h3.text-sm.font-semibold.text-gray-700 Authentication policy (Kinde)
+
+        = toggle_switch_field f, :allow_guest_access,
+            label: "Allow guest access to published catalogue"
+
+        = toggle_switch_field f, :kinde_google_sign_in_enabled,
+            label: "Enable Google sign-in",
+            checkbox_options: { data: { site_settings_target: "googleSignInToggle", action: "change->site-settings#refreshAuthOrgCta" } }
+
+        = toggle_switch_field f, :kinde_microsoft_sign_in_enabled,
+            label: "Enable Microsoft sign-in",
+            checkbox_options: { data: { site_settings_target: "microsoftSignInToggle", action: "change->site-settings#refreshAuthOrgCta" } }
+
+        = toggle_switch_field f, :self_service_sign_up_enabled,
+            label: "Allow self-service sign up"
+
+        .space-y-1{ data: { site_settings_target: "googleJitGroup" } }
+          = toggle_switch_field f, :kinde_google_jit_provisioning_enabled,
+              label: "Google via Kinde: auto-create LMS users (JIT)"
+          %p.text-xs.text-gray-500.ml-7 If off, Google sign-in only works for existing LMS accounts.
+
+        .space-y-1{ data: { site_settings_target: "microsoftJitGroup" } }
+          = toggle_switch_field f, :kinde_microsoft_jit_provisioning_enabled,
+              label: "Microsoft Entra via Kinde: auto-create LMS users (JIT)"
+          %p.text-xs.text-gray-500.ml-7 Recommended on for enterprise SSO onboarding.
+
+        %div{ class: "mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-200 dark:bg-amber-300/20 dark:text-amber-50", data: { site_settings_target: "authOrgCta" } }
+          %p.font-medium Organization SSO setup (for org-specific SSO)
+          %p.mt-1 Required for per-organization SSO links and domain-based routing. Not required for global Google/Microsoft sign-in buttons.
+          .mt-2.flex.flex-wrap.gap-2
+            = link_to "Manage organizations", admin_organizations_path, class: "inline-flex items-center rounded border border-amber-500 bg-amber-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-amber-500"
+            = link_to "Create organization", new_admin_organization_path, class: "inline-flex items-center rounded border border-amber-500 bg-amber-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-amber-500"
+
+    .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
+      = f.submit "Save general", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

@@ -1,0 +1,98 @@
+= form_with model: lesson, url: (lesson.persisted? ? course_lesson_path(course, lesson) : course_lessons_path(course)), class: "space-y-4 bg-white mt-3" do |f|
+  - if lesson.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - lesson.errors.full_messages.each do |msg|
+          %li= msg
+
+  .grid.grid-cols-1.gap-4{ data: { controller: "ai-tutor-provider" } }
+    %div
+      = f.label :title, class: "block text-sm font-medium mb-1"
+      = f.text_field :title, class: "w-full border border-gray-300 rounded px-3 h-10"
+
+    %div
+      = f.label :body, "Lesson description", class: "block text-sm font-medium mb-1"
+      = f.text_area :body, rows: 10, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+    
+    
+    .grid.grid-cols-1.gap-4.xl:grid-cols-4
+      %div
+        = f.label :ai_tutor_provider, "AI tutor provider", class: "block text-sm font-medium mb-1"
+        = f.select :ai_tutor_provider, [["ChatBar AI", "chatbar"], ["Anam Avatar", "anam"], ["Custom embed", "custom"], ["No AI Tutor", "none"]], {}, title: "Choose which tutor integration this lesson should use.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white", data: { action: "change->ai-tutor-provider#update", "ai-tutor-provider-target": "providerSelect" }
+      %div{ data: { "ai-tutor-provider-target": "displayField" } }
+        = f.label :cbai_display_mode, "AI Tutor display", class: "block text-sm font-medium mb-1"
+        = f.select :cbai_display_mode, [["Pop up", "popup"], ["Slide-in", "drawer"], ["None", "none"]], {}, title: "Choose how the tutor opens, or disable it for this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
+      %div{ data: { "ai-tutor-provider-target": "chatbarFields" } }
+        = f.label :cbai_api_key, "ChatBar AI API key", class: "block text-sm font-medium mb-1"
+        = f.text_field :cbai_api_key, value: lesson.cbai_api_key, autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", inputmode: "text", title: "Provide the ChatBar AI API key to fetch the instance details automatically and save its token on this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10"
+      %div{ data: { "ai-tutor-provider-target": "anamFields" } }
+        = f.label :anam_api_key, "Anam API key", class: "block text-sm font-medium mb-1"
+        = f.text_field :anam_api_key, value: lesson.anam_api_key, autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", inputmode: "text", title: "Stored server-side only and used to mint short-lived Anam session tokens.", class: "w-full border border-gray-300 rounded px-3 h-10"
+      %div{ data: { "ai-tutor-provider-target": "anamFields" } }
+        = f.label :anam_persona_id, "Anam persona ID", class: "block text-sm font-medium mb-1"
+        = f.text_field :anam_persona_id, placeholder: "e.g. 7c1f...", title: "Persona ID from the Anam lab used when creating the session token.", class: "w-full border border-gray-300 rounded px-3 h-10"
+      %div{ data: { "ai-tutor-provider-target": "customFields" } }
+        = f.label :custom_tutor_embed_type, "Embed type", class: "block text-sm font-medium mb-1"
+        = f.select :custom_tutor_embed_type, [["iFrame (URL)", "iframe"], ["Script tag", "script"]], {}, title: "iFrame loads the URL in a sandboxed panel. Script tag lets you paste the widget provider embed code.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white", data: { action: "change->ai-tutor-provider#update", "ai-tutor-provider-target": "customEmbedTypeSelect" }
+      %div{ data: { "ai-tutor-provider-target": "customUrlField" } }
+        = f.label :custom_tutor_embed_url, "Custom tutor URL", class: "block text-sm font-medium mb-1"
+        = f.url_field :custom_tutor_embed_url, placeholder: "https://", spellcheck: false, autocapitalize: "none", autocorrect: "off", title: "HTTPS URL to load in an iframe.", class: "w-full border border-gray-300 rounded px-3 h-10"
+      %div{ data: { "ai-tutor-provider-target": "customScriptField" } }
+        = f.label :custom_tutor_embed_script, "Custom tutor script", class: "block text-sm font-medium mb-1"
+        = f.text_area :custom_tutor_embed_script, rows: 6, placeholder: "<script src=\"https://example.com/widget.js\"></script>", spellcheck: false, autocapitalize: "none", autocorrect: "off", title: "Paste your provider script tag or inline JS for the tutor widget.", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+        %p.mt-1.text-xs.text-gray-500
+          Script mode provides default mount ids:
+          %code auto_ai_search_bot
+          ,
+          %code ai_search_bot
+          ,
+          %code custom_ai_tutor_mount
+
+    .flex.flex-col.gap-4.sm:flex-row.sm:items-end
+      %div.flex-1
+        = f.label :position, class: "block text-sm font-medium mb-1"
+        = f.number_field :position, title: "The order this lesson appears within the course.", class: "w-full border border-gray-300 rounded px-3 h-10"
+
+      %div.flex-1
+        = f.label :quiz_layout, "#{terms[:quiz]} layout", class: "block text-sm font-medium mb-1"
+        = f.select :quiz_layout, [["Scrolling (all questions)", "scrolling"], ["One at a time", "one_at_a_time"]], {}, title: "How #{terms[:quiz_l]} questions are presented to students.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
+
+    .flex.flex-col.gap-4.sm:flex-row.sm:items-end
+      %div.flex-1{:title => "Retry incorrect only (students redo only wrong questions)"}
+        = toggle_switch_field f, :retry_incorrect_only,
+            label: "Enable retry mode"
+      %div.flex-1
+        = toggle_switch_field f, :ratings_enabled,
+            label: "Enable lesson ratings"
+      %div.flex-1{:title => "Free-text pass level (1 easy/relaxed markeing to 10 hard/exact marking)"}
+        = f.label :free_text_pass_level, "Free-text pass level", class: "block text-sm font-medium mb-1"
+        = f.number_field :free_text_pass_level, min: 1, max: 10, title: "Minimum AI score (out of 10) for a free-text answer to count as correct in retry mode. Default 6.", class: "w-full border border-gray-300 rounded px-3 h-10"
+
+      %div.flex-1
+        = f.label :published_at, "Publish at", class: "block text-sm font-medium mb-1"
+        = f.datetime_local_field :published_at, title: "Leave blank to keep this lesson as a draft.", class: "w-full border border-gray-300 rounded px-3 h-10"
+
+      %div.flex-1
+        = f.label :pass_mark, "Pass mark % (optional)", class: "block text-sm font-medium mb-1"
+        = f.number_field :pass_mark, min: 0, max: 100, placeholder: "Site default (#{SiteSetting.current.pass_mark}%)", title: "Leave blank to use the site-wide default pass mark.", class: "w-full border border-gray-300 rounded px-3 h-10"
+
+      %div.flex-1{:title => "Estimated time required to complete in minutes"}
+        = f.label :duration_minutes, "Duration", class: "block text-sm font-medium mb-1"
+        = f.number_field :duration_minutes, min: 1, placeholder: "e.g. 30", title: "Estimated lesson duration in minutes.", class: "w-full border border-gray-300 rounded px-3 h-10"
+
+    .flex.flex-col.gap-4.lg:flex-row.lg:items-start
+      .flex-1
+        = render "shared/tag_picker", f: f, record: lesson
+
+      .flex-1
+        = upload_field f, :cover_image,
+            label: "Upload lesson image (PNG, JPG or WebP, max 5 MB)",
+            accept: "image/png,image/jpeg,image/webp",
+            current_attachment: lesson.cover_image,
+            remove_name: "lesson[remove_cover_image]",
+            remove_label: "Remove current lesson image",
+            hint: "Lesson image (optional)"
+
+  .flex.w-full.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = link_to "Cancel", (lesson.persisted? ? course_lesson_path(course, lesson) : course_path(course)), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

@@ -1,0 +1,23 @@
+intro_q1:
+  lesson: intro
+  prompt: What is 1 + 1?
+  kind: 0
+  correct_answer: "2"
+  points: 1
+  position: 1
+
+intro_q2:
+  lesson: intro
+  prompt: What is 2 + 2?
+  kind: 0
+  correct_answer: "4"
+  points: 1
+  position: 2
+
+intro_q_free:
+  lesson: advanced
+  prompt: Explain the commutative property.
+  kind: 2
+  correct_answer: Addition order does not change the sum.
+  points: 2
+  position: 1

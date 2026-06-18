@@ -1,0 +1,47 @@
+acme:
+  name: Acme Corp
+  slug: acme-corp
+  contact_email: hr@acme.example.com
+
+globex:
+  name: Globex
+  slug: globex
+
+# Org with SSO configured (Microsoft Entra)
+entra_org:
+  name: Entra Corp
+  slug: entra-corp
+  kinde_connection_id: conn_test_entra_001
+  kinde_connection_provider: microsoft
+  sso_auto_enroll: true
+  sso_domain: entra-corp.example.com
+  sso_required: false
+  sso_domain: entra-corp.example.com
+
+# Org with SSO required — email/password sign-in blocked
+sso_required_org:
+  name: Locked Corp
+  slug: locked-corp
+  kinde_connection_id: conn_test_locked_003
+  kinde_connection_provider: microsoft
+  sso_auto_enroll: true
+  sso_required: true
+  sso_domain: locked-corp.example.com
+
+# Org with SSO configured but auto-enrol disabled
+closed_org:
+  name: Closed Corp
+  slug: closed-corp
+  kinde_connection_id: conn_test_closed_002
+  kinde_connection_provider: microsoft
+  sso_auto_enroll: false
+  sso_required: false
+
+# Org with SSO configured (Google Workspace)
+google_org:
+  name: Google Corp
+  slug: google-corp
+  kinde_connection_id: conn_test_google_004
+  kinde_connection_provider: google
+  sso_auto_enroll: true
+  sso_required: false

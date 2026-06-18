@@ -1,0 +1,25 @@
+- content_for :title, "Questions"
+
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold= "Questions · #{@lesson.title}"
+  .flex.items-center.gap-2
+    = link_to course_lesson_path(@course, @lesson), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+      ← View lesson
+    = link_to "New question", new_course_lesson_question_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+
+= render "ai_generate", lesson: @lesson
+
+- if @questions.any?
+  %ol.space-y-2{ data: { controller: "questions-sortable", "questions-sortable-url-value": reorder_course_lesson_questions_path(@course, @lesson) } }
+    - @questions.each_with_index do |q, idx|
+      %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.gap-3{ data: { question_id: q.id } }
+        %span.cursor-grab.text-gray-400.select-none.text-lg.leading-none{ data: { sortable_handle: true }, title: "Drag to reorder" } ⋮⋮
+        %span.font-mono.text-sm.text-gray-500.w-8.text-right.tabular-nums{ data: { question_number: true } }= "#{idx + 1}."
+        .flex-1
+          %p.font-medium= q.prompt
+          %p.text-xs.text-gray-500= "#{q.kind.humanize} · #{q.points || 0} pts · answer: #{q.correct_answer}"
+        .flex.flex-wrap.gap-2.items-center
+          = link_to "Edit", edit_course_lesson_question_path(@course, @lesson, q), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+          = button_to "Delete", course_lesson_question_path(@course, @lesson, q), method: :delete, data: { turbo_confirm: "Delete?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
+- else
+  %p.text-gray-500 No questions yet.

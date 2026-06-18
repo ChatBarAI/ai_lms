@@ -1,0 +1,73 @@
+= form_with model: question, url: (question.persisted? ? course_lesson_question_path(course, lesson, question) : course_lesson_questions_path(course, lesson)), class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+  - if question.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - question.errors.full_messages.each do |msg|
+          %li= msg
+
+  .grid.grid-cols-1.gap-4
+    %div
+      = f.label :prompt, class: "block text-sm font-medium mb-1"
+      = f.text_area :prompt, rows: 3, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+    %div
+      = f.label :kind, class: "block text-sm font-medium mb-1"
+      = f.select :kind, Question.kinds.keys.map { |k| [ k.humanize, k ] }, {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+
+    %div#choices-field
+      = f.label :choices_list, "Choices (one per line; for multiple choice)", class: "block text-sm font-medium mb-1"
+      %textarea{ name: "question[choices_list][]_blob", id: "question_choices_blob", rows: 4, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm" }= question.choices_list.join("\n")
+      %p.text-xs.text-gray-500.mt-1 Will be split into individual choices on save.
+
+    %div
+      = f.label :correct_answer, class: "block text-sm font-medium mb-1"
+      = f.text_field :correct_answer, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+    %div
+      = f.label :points, class: "block text-sm font-medium mb-1"
+      = f.number_field :points, class: "border border-gray-300 rounded px-3 py-2"
+
+  .flex.w-full.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = link_to "Cancel", course_lesson_questions_path(course, lesson), class: "px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 text-center"
+
+:javascript
+  (function () {
+    var CHOICES_HIDDEN_KINDS = ["free_text", "true_false"];
+
+    function toggleChoices(selectEl) {
+      var field = document.getElementById("choices-field");
+      if (!field) return;
+      if (CHOICES_HIDDEN_KINDS.includes(selectEl.value)) {
+        field.style.display = "none";
+      } else {
+        field.style.display = "";
+      }
+    }
+
+    function initChoicesToggle() {
+      var kindSelect = document.getElementById("question_kind");
+      if (!kindSelect) return;
+      toggleChoices(kindSelect);
+      kindSelect.addEventListener("change", function () { toggleChoices(this); });
+    }
+
+    document.addEventListener("DOMContentLoaded", initChoicesToggle);
+    document.addEventListener("turbo:load", initChoicesToggle);
+  })();
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target.closest("form");
+    if (!form) return;
+    var blob = form.querySelector("#question_choices_blob");
+    if (!blob) return;
+    var lines = blob.value.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+    lines.forEach(function (l) {
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "question[choices_list][]";
+      input.value = l;
+      form.appendChild(input);
+    });
+    blob.disabled = true;
+  });

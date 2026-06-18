@@ -1,0 +1,9 @@
+math:
+  name: Mathematics
+  slug: mathematics
+  description: Numbers and shapes
+
+science:
+  name: Science
+  slug: science
+  description: How things work
