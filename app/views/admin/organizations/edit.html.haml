@@ -1,0 +1,4 @@
+- content_for :title, "Edit #{@organization.name}"
+
+%h1.text-2xl.font-bold.mb-4 Edit organization
+= render "form", organization: @organization

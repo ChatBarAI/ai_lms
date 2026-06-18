@@ -1,0 +1,43 @@
+%section{ id: "buttons", class: "scroll-mt-24", data: { site_settings_section: "buttons" } }
+  = form_with model: @site_setting, url: admin_site_setting_path, method: :patch, data: { turbo: false }, class: "rounded-xl border border-gray-200 bg-white p-6 shadow-sm" do |f|
+    = hidden_field_tag :section, "buttons"
+
+    .flex.items-baseline.justify-between.gap-3
+      %div
+        %h2.text-lg.font-semibold.text-gray-900 Buttons
+        %p.text-sm.text-gray-500 Colors for primary, success, and danger intents.
+      %button{ type: "button", data: { action: "click->site-settings#reset", site_settings_reset_set: "buttons" }, class: "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer" } Reset buttons
+
+    = render "section_errors", section: "buttons"
+
+    - button_groups = [["Primary (Save / Submit)", :btn_primary_bg_light, :btn_primary_fg_light, :btn_primary_bg_dark, :btn_primary_fg_dark], ["Success (Enrol / Publish)", :btn_success_bg_light, :btn_success_fg_light, :btn_success_bg_dark, :btn_success_fg_dark], ["Danger (Delete / Unpublish)", :btn_danger_bg_light, :btn_danger_fg_light, :btn_danger_bg_dark, :btn_danger_fg_dark]]
+    .mt-5.space-y-5
+      - button_groups.each do |label, bg_l, fg_l, bg_d, fg_d|
+        %div
+          %div.text-sm.font-medium.mb-2= label
+          .grid.grid-cols-1.sm:grid-cols-2.gap-x-10.gap-y-3
+            %div
+              %div.text-xs.text-gray-500.mb-1 Light mode
+              .flex.items-center.gap-3
+                %label.flex.flex-1.items-center.gap-1.5.text-xs.text-gray-600
+                  %span BG
+                  = f.color_field bg_l, class: "h-8 w-12 shrink-0 border border-gray-300 rounded cursor-pointer", data: { action: "input->site-settings#sync", site_settings_color_key: bg_l }
+                  = f.text_field bg_l, class: "flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs font-mono", data: { action: "input->site-settings#sync", site_settings_color_key: bg_l }
+                %label.flex.flex-1.items-center.gap-1.5.text-xs.text-gray-600
+                  %span TXT
+                  = f.color_field fg_l, class: "h-8 w-12 shrink-0 border border-gray-300 rounded cursor-pointer", data: { action: "input->site-settings#sync", site_settings_color_key: fg_l }
+                  = f.text_field fg_l, class: "flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs font-mono", data: { action: "input->site-settings#sync", site_settings_color_key: fg_l }
+            %div
+              %div.text-xs.text-gray-500.mb-1 Dark mode
+              .flex.items-center.gap-3
+                %label.flex.flex-1.items-center.gap-1.5.text-xs.text-gray-600
+                  %span BG
+                  = f.color_field bg_d, class: "h-8 w-12 shrink-0 border border-gray-300 rounded cursor-pointer", data: { action: "input->site-settings#sync", site_settings_color_key: bg_d }
+                  = f.text_field bg_d, class: "flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs font-mono", data: { action: "input->site-settings#sync", site_settings_color_key: bg_d }
+                %label.flex.flex-1.items-center.gap-1.5.text-xs.text-gray-600
+                  %span TXT
+                  = f.color_field fg_d, class: "h-8 w-12 shrink-0 border border-gray-300 rounded cursor-pointer", data: { action: "input->site-settings#sync", site_settings_color_key: fg_d }
+                  = f.text_field fg_d, class: "flex-1 min-w-0 border border-gray-300 rounded px-2 py-1 text-xs font-mono", data: { action: "input->site-settings#sync", site_settings_color_key: fg_d }
+
+    .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
+      = f.submit "Save button colors", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

@@ -1,0 +1,26 @@
+- content_for :title, "Upload video"
+
+%div
+  .mb-4
+    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+  %h1.text-2xl.font-bold.mb-2 Intro video — direct upload
+  %p.text-sm.text-gray-500.mb-4 Upload an mp4, webm or ogg file (max 100 MB). The file is stored on the LMS and served to learners directly.
+
+  = form_with model: @lesson, url: video_upload_course_lesson_path(@course, @lesson), method: :patch, multipart: true, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+    - if @lesson.errors.any?
+      .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+        %ul.list-disc.pl-5
+          - @lesson.errors.full_messages.each do |msg|
+            %li= msg
+
+    %div
+      = upload_field f, :intro_video,
+          label: "Video file",
+          accept: "video/mp4,video/webm,video/ogg",
+          preview_type: :file,
+          current_attachment: @lesson.intro_video,
+          required: true
+
+    .flex.w-full.gap-2
+      = f.submit "Upload", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+      = link_to "Cancel", edit_course_lesson_path(@course, @lesson), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

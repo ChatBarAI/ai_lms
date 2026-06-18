@@ -1,0 +1,62 @@
+- content_for :title, @course.title
+
+.mb-4.flex.items-center.justify-end
+  .flex.flex-wrap.gap-2.items-center
+    = link_to courses_path, class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+      = t(".back", **terms)
+    - if can?(:update, @course)
+      - if @course.published?
+        = button_to t("common.unpublish"), unpublish_course_path(@course), method: :post, data: { turbo_confirm: t(".unpublish_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer transition-colors"
+      - else
+        = button_to t("common.publish_now"), publish_course_path(@course), method: :post, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 cursor-pointer transition-colors"
+      = link_to t("common.edit"), edit_course_path_for(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+    - if can?(:destroy, @course)
+      = button_to t("common.delete"), course_path(@course), method: :delete, data: { turbo_confirm: t(".delete_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
+
+.bg-white.border.border-gray-200.rounded-lg.p-6.mb-6
+  - if @course.cover_image.attached?
+    = image_tag @course.cover_image, class: "float-right ml-4 mb-2 object-contain max-w-full sm:max-w-96"
+  %h1.text-2xl.font-bold.mb-1= @course.title
+  %p.text-sm.text-gray-500
+    - if subjects_enabled? && @course.subject
+      = @course.subject.name
+    - if @course.published?
+      · #{t(".published_on", date: l(@course.published_at.to_date, format: :long))}
+    - else
+      · #{content_tag(:span, t("common.draft"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800")}
+  - if @course.description.present?
+    %p.text-gray-700.mt-4= simple_format(@course.description)
+
+  .mt-6.clear-both
+    - if user_signed_in?
+      - if @enrollment
+        - pct = @enrollment.completion_percentage.to_i
+        - circ = (2 * Math::PI * 20).round(2)
+        - offset = (circ * (1 - pct / 100.0)).round(2)
+        - ring_color = pct >= 100 ? "#16a34a" : "#6366f1"
+        .flex.flex-wrap.items-center.gap-3
+          %svg{ width: "48", height: "48", viewBox: "0 0 48 48", fill: "none" }
+            %circle{ cx: "24", cy: "24", r: "20", stroke: "#e5e7eb", "stroke-width": "4", fill: "none" }
+            %circle{ cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "4", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)" }
+            %text{ x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600" }= "#{pct}%"
+          - if @enrollment.fully_completed?
+            = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+          = button_to t(".unenrol"), course_enrollment_path(@course, @enrollment), method: :delete, data: { turbo_confirm: t(".unenrol_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer transition-colors"
+      - else
+        .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+          %p.flex-1= t(".enrol_prompt", **terms)
+          = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
+    - else
+      .bg-blue-50.border.border-blue-200.text-blue-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+        %p.flex-1= t(".signin_prompt", **terms)
+        = link_to t(".signin_cta"), new_user_session_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+
+%section
+  .flex.items-center.justify-between.mb-3
+    %h2.text-lg.font-semibold= t(".lessons_heading", **terms)
+  - if @lessons.any?
+    .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
+      - @lessons.each_with_index do |lesson, i|
+        = render "lessons/card", lesson: lesson, index: i + 1, enrollment: @enrollment, queued_for_marking_lesson_ids: @queued_for_marking_lesson_ids, show_course_info: false
+  - else
+    %p.text-gray-500= t(".no_lessons", **terms)

@@ -1,0 +1,28 @@
+- content_for :title, @tag.name
+
+.mb-6.flex.items-center.gap-3
+  = link_to "← Back", :back, class: "text-sm text-gray-500 hover:text-gray-700"
+  %span.inline-flex.items-center.px-3.py-1.rounded-full.text-sm.font-medium{ style: "background-color: #{@tag.color}; color: #{@tag.text_color}" }
+    = @tag.name
+
+- if @courses.empty? && @lessons.empty?
+  .bg-white.border.border-gray-200.rounded-lg.p-8.text-center.text-gray-500
+    No published content tagged with "#{@tag.name}" yet.
+
+- if @courses.any?
+  %section.mb-8
+    %h2.text-lg.font-semibold.mb-3
+      Courses
+      %span.text-sm.font-normal.text-gray-400.ml-1= "(#{@courses.size})"
+    .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
+      - @courses.each do |course|
+        = render "courses/card", course: course
+
+- if @lessons.any?
+  %section
+    %h2.text-lg.font-semibold.mb-3
+      Lessons
+      %span.text-sm.font-normal.text-gray-400.ml-1= "(#{@lessons.size})"
+    .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
+      - @lessons.each do |lesson|
+        = render "lessons/card", lesson: lesson

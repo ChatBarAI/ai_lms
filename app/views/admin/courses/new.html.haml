@@ -1,0 +1,13 @@
+- content_for :title, "New course"
+
+.flex.items-center.justify-between.mb-4
+	%h1.text-2xl.font-bold New course
+	= link_to admin_courses_path, class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+		← All courses
+
+.mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
+	%h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+		Main content
+		= collapsible_icon_badge
+	%div{data: { collapsible_target: "content" }}
+		= render "form", course: @course

@@ -1,0 +1,107 @@
+- content_for :title, "Edit lesson"
+
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold= "Edit · #{@lesson.title}"
+  = link_to course_lesson_path(@course, @lesson), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+    ← View lesson
+
+.mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    Intro video
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    - current = lesson_current_video_summary(@lesson)
+    - if current
+      .bg-white.border.border-gray-200.rounded.p-3.mt-3.mb-3.flex.items-center.justify-between
+        %div
+          .text-sm.font-medium= current[:label]
+          - if current[:detail]
+            .text-xs.text-gray-500= current[:detail]
+        = button_to "Remove video", destroy_video_course_lesson_path(@course, @lesson), method: :delete, data: { turbo_confirm: "Remove the current intro video?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
+    - else
+      %p.text-sm.text-gray-500.mt-3.mb-3 No intro video set. Choose a source:
+
+    .grid.grid-cols-1.sm:grid-cols-2.xl:grid-cols-5.gap-3
+      = link_to video_youtube_course_lesson_path(@course, @lesson), class: "relative block bg-white border border-gray-200 rounded-lg p-4 pr-12 hover:border-indigo-400 hover:shadow-sm" do
+        = image_tag "youtube-icon.png", alt: "YouTube", class: "absolute top-3 right-3 h-6 w-6 object-contain"
+        .font-semibold.mb-1 YouTube
+        %p.text-xs.text-gray-500 Paste a YouTube / Vimeo / direct video URL.
+
+      = link_to video_chatbar_course_lesson_path(@course, @lesson), class: "relative block bg-white border border-gray-200 rounded-lg p-4 pr-12 hover:border-indigo-400 hover:shadow-sm" do
+        = image_tag "chatbar-icon.png", alt: "ChatBar AI", class: "absolute top-3 right-3 h-6 w-6 object-contain"
+        .font-semibold.mb-1 ChatBar AI
+        %p.text-xs.text-gray-500 Import a session recording from a ChatBar AI instance.
+      = link_to video_synthesia_course_lesson_path(@course, @lesson), class: "relative block bg-white border border-gray-200 rounded-lg p-4 pr-12 hover:border-indigo-400 hover:shadow-sm" do
+        = image_tag "synthesia-icon.png", alt: "Synthesia", class: "absolute top-3 right-3 h-6 w-6 object-contain"
+        .font-semibold.mb-1 Synthesia
+        %p.text-xs.text-gray-500 List videos from Synthesia and import one as the intro video.
+      = link_to video_heygen_course_lesson_path(@course, @lesson), class: "relative block bg-white border border-gray-200 rounded-lg p-4 pr-12 hover:border-indigo-400 hover:shadow-sm" do
+        = image_tag "heygen-icon.svg", alt: "HeyGen", class: "absolute top-3 right-3 h-6 w-6 object-contain"
+        .font-semibold.mb-1 HeyGen
+        %p.text-xs.text-gray-500 Enter a HeyGen video ID and import it as the intro video.
+      = link_to video_upload_course_lesson_path(@course, @lesson), class: "block bg-white border border-gray-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-sm" do
+        .font-semibold.mb-1 Direct upload
+        %p.text-xs.text-gray-500 Upload an mp4, webm or ogg file (max 100 MB).
+
+    - if current
+      .mt-6.pt-6.border-t.border-gray-200{:title => "Optional thumbnail shown before the intro video plays. Learners click it to start playback."}
+        = form_with model: @lesson, url: poster_course_lesson_path(@course, @lesson), method: :patch, multipart: true do |f|
+          - if f.object.errors.where(:poster_image).any?
+            .mb-3.bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+              = f.object.errors.where(:poster_image).map(&:full_message).join(", ")
+          = upload_field f, :poster_image,
+              hint: "Poster image (optional)",
+              label: "PNG, JPEG, WEBP or GIF — max 5 MB",
+              accept: "image/png,image/jpeg,image/webp,image/gif",
+              current_attachment: @lesson.poster_image,
+              preview_class: "max-w-xs rounded border border-gray-200"
+          .flex.items-center.gap-2.mt-3
+            = f.submit (@lesson.poster_image.attached? ? "Replace poster" : "Upload poster"), class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-sm"
+            - if @lesson.poster_image.attached?
+              = button_to "Remove", destroy_poster_course_lesson_path(@course, @lesson), method: :delete, data: { turbo_confirm: "Remove the poster image?" }, class: "px-4 py-2 rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 cursor-pointer text-sm"
+
+.bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    .flex.items-center.gap-2
+      = "Materials (readings & listenings)"
+      %span.inline-flex.items-center.px-1.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-500= @lesson.lesson_materials.size
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    %p.text-sm.text-gray-500.mt-3.mb-3= "Optional PDFs, rich text, raw HTML, image uploads, or audio that students complete before the #{terms[:quiz_l]}. Drag to reorder."
+    - if @lesson.lesson_materials.any?
+      %ol.space-y-2.mb-3{ data: { controller: "materials-sortable", "materials_sortable_url_value": reorder_course_lesson_lesson_materials_path(@course, @lesson) } }
+        - @lesson.lesson_materials.each_with_index do |m, idx|
+          %li.bg-gray-50.border.border-gray-200.rounded.p-2.flex.items-center.gap-3{ data: { material_id: m.id } }
+            %span.cursor-grab.text-gray-400.select-none.text-lg.leading-none.px-1{ data: { sortable_handle: true }, title: "Drag to reorder" } ⋮⋮
+            %span.font-mono.text-xs.text-gray-500.w-6.text-right.tabular-nums{ data: { material_number: true } }= "#{idx + 1}."
+            .flex-1
+              %p.text-sm.font-medium= m.title
+              %p.text-xs.text-gray-500= "#{m.kind_label}#{' · required' if m.required?}"
+            = link_to "Edit", edit_course_lesson_lesson_material_path(@course, @lesson, m), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+            = button_to "Delete", course_lesson_lesson_material_path(@course, @lesson, m), method: :delete, data: { turbo_confirm: "Delete material?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer"
+    - else
+      %p.text-sm.text-gray-500.italic.mb-3 No materials yet.
+    = link_to "+ Add material", new_course_lesson_lesson_material_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+
+.bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    .flex.items-center.gap-2
+      = "Questions"
+      %span.inline-flex.items-center.px-1.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-500= @lesson.questions.size
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    - if @lesson.questions.any?
+      %p.text-sm.text-gray-500.mt-3.mb-3= "#{@lesson.questions.size} question#{'s' unless @lesson.questions.size == 1} — manage, reorder, and AI-generate on the Questions page."
+    - else
+      %p.text-sm.text-gray-500.italic.mt-3.mb-3 No questions yet.
+    .flex.flex-wrap.gap-2.mt-1
+      = link_to "Manage questions", course_lesson_questions_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+      = link_to "+ New question", new_course_lesson_question_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+
+.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
+  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+    Lesson details
+    = collapsible_icon_badge
+  %div{data: { collapsible_target: "content" }}
+    = render "form", lesson: @lesson, course: @course
+

@@ -1,0 +1,15 @@
+.mt-3.space-y-3
+  %p.text-xs.text-gray-500
+    Upload a blank certificate image for this course. Once uploaded, click "Position certificate fields" to choose where the student name, course title, date and certificate number appear.
+
+  = form_with model: course, class: "space-y-3" do |f|
+    = upload_field f, :certificate_template,
+        label: "Upload certificate template (PNG or JPG, max 10 MB)",
+        accept: "image/png,image/jpeg",
+        current_attachment: course.certificate_template,
+        remove_name: "course[remove_certificate_template]",
+        remove_label: "Remove template (will fall back to the global default)",
+        remove_actions: (course.persisted? ? link_to("Position certificate fields", certificate_layout_course_path(course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors") : nil),
+        hint: "Recommended: A4 landscape (2480 × 1754 px at 300 dpi)."
+    .flex.w-full.gap-2
+      = f.submit "Save certificate template", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"

@@ -1,0 +1,17 @@
+- content_for :title, "Site settings"
+- defaults_json = site_settings_default_sets.to_json
+- active_section = @active_section.presence || "general"
+
+%div{ data: { controller: "site-settings", site_settings_defaults_value: defaults_json, site_settings_active_section_value: active_section } }
+
+  = render "section_nav"
+
+  .space-y-6
+    = render "general"
+    = render "branding"
+    = render "theme"
+    = render "buttons"
+    = render "terminology"
+    = render "hero"
+    = render "certificates"
+    = render "integration"

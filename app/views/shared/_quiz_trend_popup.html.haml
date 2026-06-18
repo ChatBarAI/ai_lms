@@ -1,0 +1,112 @@
+-# Locals:
+-# - attempts: Array of QuizAttempt-like objects
+-# - pass_mark: Numeric pass threshold (0..100)
+-# - dialog_id: unique DOM id for modal
+-# - title: popup title
+-# - mini_width / mini_height (optional)
+- attempts ||= []
+- return if attempts.size < 2
+- pass_mark = pass_mark.to_f.clamp(0.0, 100.0)
+- title ||= "#{terms[:quiz]} Mark Trend"
+- pass_marks = attempts.map { |attempt| attempt.lesson&.effective_pass_mark }.compact.map(&:to_f).uniq.sort
+- resolved_pass_mark = pass_marks.size == 1 ? pass_marks.first : pass_mark
+- show_shared_pass_line = pass_marks.size <= 1
+- mini_width ||= 170.0
+- mini_height ||= 56.0
+- mini_padding = 8.0
+- mini_bottom = (mini_height - mini_padding).round(1)
+- mini_left = mini_padding.round(1)
+- mini_right = (mini_width - mini_padding).round(1)
+- mini_plot_height = (mini_height - (mini_padding * 2))
+- mini_pass_y = (mini_height - mini_padding - (resolved_pass_mark / 100.0 * mini_plot_height)).round(1)
+- mini_x_step = attempts.size > 1 ? ((mini_width - (mini_padding * 2)) / (attempts.size - 1)) : 0.0
+- mini_points = attempts.each_with_index.map do |attempt, idx|
+-   x = (mini_padding + (idx * mini_x_step)).round(1)
+-   y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+-   y = (mini_height - mini_padding - (y_val / 100.0 * mini_plot_height)).round(1)
+-   "#{x},#{y}"
+- end.join(" ")
+- mini_area_points = "#{mini_left},#{mini_bottom} #{mini_points} #{mini_right},#{mini_bottom}"
+
+.relative.overflow-visible{ data: { controller: "chart-tooltip status-modal", status_modal_dialog_id_value: dialog_id } }
+  .pointer-events-none.fixed.hidden.z-50.max-w-xs.rounded.bg-slate-900.px-3.py-2.text-xs.leading-5.font-medium.text-white.shadow-lg.whitespace-pre-line{ data: { chart_tooltip_target: "tooltip" } }
+  %button.w-full.text-left.cursor-zoom-in{ type: "button", data: { action: "click->status-modal#open" }, "aria-label": "Open larger #{terms[:quiz_l]} marks chart" }
+    %svg.h-10.w-full{ viewBox: "0 0 #{mini_width.to_i} #{mini_height.to_i}", fill: "none", role: "img", "aria-label": "#{terms[:quiz]} attempt score trend", preserveAspectRatio: "none" }
+      %line{ x1: mini_left.to_s, y1: mini_bottom.to_s, x2: mini_right.to_s, y2: mini_bottom.to_s, stroke: "#e5e7eb", "stroke-width": "1" }
+      - if show_shared_pass_line
+        %line{ x1: mini_left.to_s, y1: mini_pass_y.to_s, x2: mini_right.to_s, y2: mini_pass_y.to_s, stroke: "#16a34a", "stroke-width": "1", "stroke-dasharray": "3 2", "stroke-opacity": "0.9" }
+        %text{ x: mini_right.to_s, y: (mini_pass_y - 1).to_s, "text-anchor": "end", fill: "#15803d", "font-size": "7" }= "Pass #{resolved_pass_mark.round}%"
+      %polygon{ points: mini_area_points, fill: "#818cf8", "fill-opacity": "0.22" }
+      %polyline{ points: mini_points, fill: "none", stroke: "#4f46e5", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" }
+      - attempts.each_with_index do |attempt, idx|
+        - x = (mini_padding + (idx * mini_x_step)).round(1)
+        - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+        - y = (mini_height - mini_padding - (y_val / 100.0 * mini_plot_height)).round(1)
+        - lesson_name = attempt.lesson&.title.presence || "#{terms[:lesson]} ##{attempt.lesson_id}"
+        - lesson_pass_mark = attempt.lesson&.effective_pass_mark
+        - lesson_pass_text = lesson_pass_mark.present? ? "Pass #{lesson_pass_mark.to_f.round}%" : nil
+        - attempt_time = (attempt.completed_at || attempt.submitted_at)
+        - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
+        - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
+        - tooltip_text = "#{lesson_name} - #{attempt_score}#{lesson_pass_text.present? ? " (#{lesson_pass_text})" : ""}\n#{attempt_date}"
+        %circle{ cx: x.to_s, cy: y.to_s, r: "2.5", fill: "#4f46e5", "pointer-events": "none" }
+        %circle{ cx: x.to_s, cy: y.to_s, r: "8", fill: "transparent", stroke: "transparent", "pointer-events": "all", tabindex: "0", role: "button", "aria-label": tooltip_text, data: { tooltip: tooltip_text, action: "mouseenter->chart-tooltip#show mousemove->chart-tooltip#move mouseleave->chart-tooltip#hide focus->chart-tooltip#show blur->chart-tooltip#hide" } }
+
+.fixed.inset-0.z-50.hidden{ id: dialog_id, data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "#{dialog_id}-title", "aria-hidden": "true" }
+  .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+  .absolute.bg-white.rounded-xl.shadow-2xl.border.border-indigo-200{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(94vw,52rem)", tabindex: "-1", data: { dialog_target: "panel" } }
+    .px-6.pt-6.pb-4
+      .flex.items-start.justify-between.gap-3
+        %div
+          %h3.font-semibold.text-gray-900{ id: "#{dialog_id}-title" }= title
+        %button.text-gray-500.hover:text-gray-700{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" }
+          %svg.w-5.h-5{ xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", "stroke-width": "2" }
+            %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "M6 18 18 6M6 6l12 12" }
+    .px-6.pb-6.relative{ data: { controller: "chart-tooltip", chart_tooltip_target: "bounds" } }
+      .pointer-events-none.absolute.hidden.z-50.max-w-sm.rounded.bg-slate-900.px-3.5.py-2.5.text-xs.leading-5.font-medium.text-white.shadow-lg.whitespace-pre-line{ data: { chart_tooltip_target: "tooltip" } }
+      - graph_width = 760.0
+      - graph_height = 260.0
+      - graph_padding = 30.0
+      - graph_bottom = (graph_height - graph_padding).round(1)
+      - graph_left = graph_padding.round(1)
+      - graph_right = (graph_width - graph_padding).round(1)
+      - graph_plot_height = (graph_height - (graph_padding * 2))
+      - pass_y = (graph_height - graph_padding - (resolved_pass_mark / 100.0 * graph_plot_height)).round(1)
+      - x_step = attempts.size > 1 ? ((graph_width - (graph_padding * 2)) / (attempts.size - 1)) : 0.0
+      - axis_markers = [0, 25, 50, 75, 100]
+      - attempt_label_step = [(attempts.size / 10.0).ceil, 1].max
+      - points = attempts.each_with_index.map do |attempt, idx|
+      -   x = (graph_padding + (idx * x_step)).round(1)
+      -   y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+      -   y = (graph_height - graph_padding - (y_val / 100.0 * graph_plot_height)).round(1)
+      -   "#{x},#{y}"
+      - end.join(" ")
+      - area_points = "#{graph_left},#{graph_bottom} #{points} #{graph_right},#{graph_bottom}"
+      %svg.w-full.h-auto{ viewBox: "0 0 760 260", fill: "none", role: "img", "aria-label": "Large #{terms[:quiz_l]} attempt score trend chart" }
+        - axis_markers.each do |marker|
+          - marker_y = (graph_height - graph_padding - (marker / 100.0 * graph_plot_height)).round(1)
+          %line{ x1: graph_left.to_s, y1: marker_y.to_s, x2: graph_right.to_s, y2: marker_y.to_s, stroke: "#cbd5e1", "stroke-width": "1", "stroke-opacity": (marker == 0 ? "0.28" : "0.2"), "stroke-dasharray": (marker == 0 ? nil : "4 4") }
+          %text{ x: (graph_left - 6).to_s, y: (marker_y + 4).to_s, "text-anchor": "end", fill: "#6b7280", "font-size": "11" }= "#{marker}%"
+        %line{ x1: graph_left.to_s, y1: graph_bottom.to_s, x2: graph_right.to_s, y2: graph_bottom.to_s, stroke: "#cbd5e1", "stroke-width": "1", "stroke-opacity": "0.35" }
+        - if show_shared_pass_line
+          %line{ x1: graph_left.to_s, y1: pass_y.to_s, x2: graph_right.to_s, y2: pass_y.to_s, stroke: "#16a34a", "stroke-width": "1.5", "stroke-dasharray": "6 4", "stroke-opacity": "0.9" }
+          %text{ x: graph_right.to_s, y: (pass_y - 6).to_s, "text-anchor": "end", fill: "#15803d", "font-size": "12", "font-weight": "600" }= "Pass #{resolved_pass_mark.round}%"
+        %polygon{ points: area_points, fill: "#818cf8", "fill-opacity": "0.2" }
+        %polyline{ points: points, fill: "none", stroke: "#4338ca", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }
+        - attempts.each_with_index do |attempt, idx|
+          - x = (graph_padding + (idx * x_step)).round(1)
+          - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
+          - y = (graph_height - graph_padding - (y_val / 100.0 * graph_plot_height)).round(1)
+          - lesson_name = attempt.lesson&.title.presence || "#{terms[:lesson]} ##{attempt.lesson_id}"
+          - lesson_pass_mark = attempt.lesson&.effective_pass_mark
+          - lesson_pass_text = lesson_pass_mark.present? ? "Pass #{lesson_pass_mark.to_f.round}%" : nil
+          - attempt_time = (attempt.completed_at || attempt.submitted_at)
+          - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
+          - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
+          - tooltip_text = "#{lesson_name} - #{attempt_score}#{lesson_pass_text.present? ? " (#{lesson_pass_text})" : ""}\n#{attempt_date}"
+          %circle{ cx: x.to_s, cy: y.to_s, r: "4", fill: "#4338ca", "pointer-events": "none" }
+          %circle{ cx: x.to_s, cy: y.to_s, r: "12", fill: "transparent", stroke: "transparent", "pointer-events": "all", tabindex: "0", role: "button", "aria-label": tooltip_text, data: { tooltip: tooltip_text, action: "mouseenter->chart-tooltip#show mousemove->chart-tooltip#move mouseleave->chart-tooltip#hide focus->chart-tooltip#show blur->chart-tooltip#hide" } }
+          - if idx % attempt_label_step == 0 || idx == attempts.size - 1
+            %line{ x1: x.to_s, y1: graph_bottom.to_s, x2: x.to_s, y2: (graph_bottom + 4).to_s, stroke: "#9ca3af", "stroke-width": "1" }
+            %text{ x: x.to_s, y: (graph_bottom + 16).to_s, "text-anchor": "middle", fill: "#6b7280", "font-size": "10" }= "##{idx + 1}"
+        %text{ x: ((graph_left + graph_right) / 2.0).round(1).to_s, y: (graph_bottom + 28).to_s, "text-anchor": "middle", fill: "#374151", "font-size": "11", "font-weight": "600" } Attempt Sequence (All Lessons)

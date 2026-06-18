@@ -1,0 +1,22 @@
+- content_for :title, "Set video URL"
+
+%div
+  .mb-4
+    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+  %h1.text-2xl.font-bold.mb-2 Intro video — YouTube / URL
+  %p.text-sm.text-gray-500.mb-4 Paste the full URL of a YouTube or Vimeo video, or a direct mp4/webm/ogg file. The player is embedded at the top of the lesson.
+
+  = form_with model: @lesson, url: video_youtube_course_lesson_path(@course, @lesson), method: :patch, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+    - if @lesson.errors.any?
+      .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+        %ul.list-disc.pl-5
+          - @lesson.errors.full_messages.each do |msg|
+            %li= msg
+
+    %div
+      = f.label :video_url, "Video URL", class: "block text-sm font-medium mb-1"
+      = f.url_field :video_url, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "https://www.youtube.com/watch?v=..."
+
+    .flex.w-full.gap-2
+      = f.submit "Save URL", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+      = link_to "Cancel", edit_course_lesson_path(@course, @lesson), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

@@ -1,0 +1,92 @@
+# User-facing strings live here. Adding a new language? Copy this file to
+# e.g. config/locales/es.yml, change `en:` to `es:`, translate the values,
+# then add :es to `config.i18n.available_locales` in config/application.rb.
+#
+# Want to call lessons "modules" (or anything else) without translating the
+# whole file? Override just the model name — the %{lesson} / %{lessons}
+# interpolations throughout this file pick it up automatically:
+#
+#   activerecord:
+#     models:
+#       lesson:
+#         one: "Module"
+#         other: "Modules"
+#
+# Sentence-case mid-sentence words use %{lesson_l} / %{lessons_l} (lowercased
+# by app/helpers/terminology_helper.rb).
+
+en:
+  activerecord:
+    models:
+      lesson:
+        one: "Lesson"
+        other: "Lessons"
+      course:
+        one: "Course"
+        other: "Courses"
+      subject:
+        one: "Subject"
+        other: "Subjects"
+      quiz:
+        one: "Quiz"
+        other: "Quizzes"
+    attributes:
+      lesson:
+        title: "Title"
+        body: "Body"
+        duration_minutes: "Duration (minutes)"
+      course:
+        title: "Title"
+        description: "Description"
+
+  common:
+    draft: "draft"
+    published: "published"
+    edit: "Edit"
+    delete: "Delete"
+    unpublish: "Unpublish"
+    publish_now: "Publish now"
+
+  lessons:
+    index:
+      heading: "%{lessons}"
+      add: "Add %{lesson_l}"
+      empty: "No %{lessons_l} yet."
+    card:
+      duration: "%{count} min"
+      done: "✓ completed"
+      in_progress: "in progress"
+      queued_for_marking: "queued for marking"
+    show:
+      edit: "Edit %{lesson_l}"
+      questions: "Edit questions"
+      unpublish_confirm: "Unpublish this %{lesson_l}?"
+      no_content: "No content yet."
+      progress: "Progress"
+      status: "Status: %{status}"
+      score: "Score: %{score}%%"
+      mark_complete: "Mark complete"
+      confirm_mark_complete: "Mark this lesson as completed?"
+      completed: "✓ completed"
+      enrol_prompt: "Enrol in this course to track progress and rate %{lessons_l}."
+      enrol_now: "Enrol now"
+
+  courses:
+    show:
+      back: "← %{courses}"
+      unpublish_confirm: "Unpublish this %{course_l}?"
+      delete_confirm: "Delete this %{course_l}?"
+      published_on: "published %{date}"
+      enrolled: "Enrolled · %{percent}%% complete"
+      unenrol: "Unenrol"
+      unenrol_confirm: "Unenrol from this %{course_l}?"
+      enrol_prompt: "Enrol in this %{course_l} to start tracking %{lesson_l} progress and ratings."
+      enrol_now: "Enrol now"
+      signin_prompt: "Sign in to enrol in this %{course_l} and track your progress."
+      signin_cta: "Sign in to enrol"
+      lessons_heading: "%{lessons}"
+      no_lessons: "No published %{lessons_l} yet."
+    card:
+      lessons_count:
+        one: "%{count} %{lesson_l}"
+        other: "%{count} %{lessons_l}"

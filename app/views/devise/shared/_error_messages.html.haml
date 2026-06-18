@@ -1,0 +1,7 @@
+- if resource.errors.any?
+  .mb-4.rounded.border.border-red-200.bg-red-50.px-4.py-3.text-sm.text-red-800
+    %p.font-medium
+      = "#{pluralize(resource.errors.count, "error")} prohibited this #{resource.class.model_name.human.downcase} from being saved:"
+    %ul.list-disc.list-inside.mt-1
+      - resource.errors.full_messages.each do |message|
+        %li= message

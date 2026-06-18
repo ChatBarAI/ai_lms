@@ -1,0 +1,22 @@
+algebra:
+  title: Algebra
+  slug: algebra
+  subject: math
+  owner: instructor
+  description: Variables and equations
+  published_at: <%= 1.month.ago.to_fs(:db) %>
+
+draft_course:
+  title: Draft Course
+  slug: draft-course
+  subject: math
+  owner: instructor
+  description: Not published yet
+
+other_owner_course:
+  title: Physics 101
+  slug: physics-101
+  subject: science
+  owner: other_instructor
+  description: Mechanics basics
+  published_at: <%= 1.month.ago.to_fs(:db) %>

@@ -1,0 +1,57 @@
+- acknowledged = local_assigns.fetch(:acknowledged, material.acknowledged_by?(enrollment))
+%section.bg-white.border.border-gray-200.rounded-lg.p-4.mb-4{ id: "material-#{material.id}" }
+  .flex.items-center.justify-between.mb-3.gap-3
+    %div
+      %h3.font-semibold= material.title
+      %p.text-xs.text-gray-500
+        = material.kind_label
+        - if material.required?
+          %span.ml-1.inline-flex.items-center.px-1.5.py-0.5.rounded.bg-amber-100.text-amber-800 Required
+    - if enrollment
+      - if acknowledged
+        %span.inline-flex.items-center.gap-1.text-sm.text-green-700
+          %span.text-base ✓
+          Marked as complete
+      - else
+        = button_to "Mark as complete", acknowledge_course_lesson_lesson_material_path(course, lesson, material), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-sm"
+
+  %hr.border-gray-200.mb-3
+  - case material.kind
+  - when "pdf"
+    - if material.document.attached?
+      %object.w-full.border.border-gray-200.rounded{ data: rails_blob_path(material.document, disposition: "inline"), type: "application/pdf", style: "height: 70vh; min-height: 480px;" }
+        %p.p-4.text-sm
+          Your browser can't display this PDF.
+          = link_to "Download #{material.document.filename}", rails_blob_path(material.document, disposition: "attachment"), class: "text-indigo-600 hover:underline"
+      .flex.justify-end.mt-2
+        = link_to "Open in new tab", rails_blob_path(material.document, disposition: "inline"), target: "_blank", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+  - when "html"
+    .prose.max-w-none= material.body
+  - when "raw_html"
+    .prose.max-w-none= material.raw_html_content.html_safe
+  - when "audio_upload"
+    - if material.audio_file.attached?
+      %audio.w-full.rounded{ controls: true, preload: "metadata" }
+        %source{ src: rails_blob_path(material.audio_file, disposition: "inline"), type: material.audio_file.content_type }
+        %p.text-sm.p-2 Your browser does not support audio playback.
+      .flex.justify-end.mt-2
+        = link_to "Download #{material.audio_file.filename}", rails_blob_path(material.audio_file, disposition: "attachment"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    - else
+      %p.text-sm.text-gray-500.italic No audio file attached.
+  - when "audio_url"
+    - if material.url.present?
+      %audio.w-full.rounded{ controls: true, preload: "metadata" }
+        %source{ src: material.url }
+        %p.text-sm.p-2
+          Your browser does not support audio playback.
+          = link_to "Open audio", material.url, class: "text-indigo-600 hover:underline"
+    - else
+      %p.text-sm.text-gray-500.italic No audio URL set.
+  - when "image_upload"
+    - if material.image_file.attached?
+      .rounded-lg.border.border-gray-200.bg-gray-50.p-2
+        = image_tag material.image_file, class: "max-h-[70vh] w-auto max-w-full mx-auto rounded object-contain"
+      .flex.justify-end.mt-2
+        = link_to "Open in new tab", rails_blob_path(material.image_file, disposition: "inline"), target: "_blank", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    - else
+      %p.text-sm.text-gray-500.italic No image file attached.

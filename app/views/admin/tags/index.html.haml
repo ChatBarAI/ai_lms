@@ -1,0 +1,20 @@
+- content_for :title, "Tags"
+
+.mb-6.flex.items-center.justify-between
+  %h1.text-2xl.font-bold Tags
+  = link_to "New tag", new_admin_tag_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+
+- if @tags.empty?
+  .bg-white.border.border-gray-200.rounded-lg.p-8.text-center.text-gray-500
+    No tags yet.
+- else
+  .bg-white.border.border-gray-200.rounded-lg.divide-y.divide-gray-100
+    - @tags.each do |tag|
+      .flex.items-center.justify-between.px-4.py-3
+        .flex.items-center.gap-3
+          %span{ class: "inline-block h-5 w-5 rounded border border-black/10", style: "background-color: #{tag.color}" }
+          = link_to tag.name, tag_path(tag), class: "font-medium hover:text-indigo-600"
+          %span.text-xs.font-mono.text-gray-400= tag.color
+        .flex.items-center.gap-2
+          = link_to "Edit", edit_admin_tag_path(tag), class: "text-sm text-indigo-600 hover:text-indigo-800"
+          = button_to "Delete", admin_tag_path(tag), method: :delete, data: { turbo_confirm: "Delete tag \"#{tag.name}\"? It will be removed from all courses and lessons." }, class: "text-sm text-red-600 hover:text-red-800 bg-transparent border-0 cursor-pointer p-0"

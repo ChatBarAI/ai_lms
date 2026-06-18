@@ -1,0 +1,58 @@
+- content_for :title, "Users"
+
+.flex.items-center.justify-between.mb-4
+  %h1.text-2xl.font-bold Users
+  .flex.items-center.gap-2
+    = link_to "Organizations", admin_organizations_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    = link_to "Export CSV", export_admin_users_path(request.query_parameters), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    = link_to "New user", new_admin_user_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+
+= search_form_for @q, url: admin_users_path, html: { class: "mb-2 flex flex-wrap items-end justify-end gap-3" } do |f|
+  .flex.flex-col
+    = f.label :email_or_name_cont, "Search", class: "text-xs text-gray-500"
+    = f.search_field :email_or_name_cont, placeholder: "email or name", class: "border border-gray-300 rounded px-2 py-1 text-sm"
+  .flex.flex-col
+    = f.label :role_eq, "Role", class: "text-xs text-gray-500"
+    = f.select :role_eq, User.roles.map { |k, v| [ k, v ] }, { include_blank: "Any" }, class: "border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+  .flex.flex-col
+    = f.label :organization_id_eq, "Organization", class: "text-xs text-gray-500"
+    = f.collection_select :organization_id_eq, @organizations, :id, :name, { include_blank: "Any" }, class: "border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+  .flex.flex-col
+    = f.label :last_sign_in_at_gteq, "Active since", class: "text-xs text-gray-500"
+    = f.date_field :last_sign_in_at_gteq, class: "border border-gray-300 rounded px-2 py-1 text-sm"
+  .flex.gap-2
+    = f.submit "Apply", class: "px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer"
+    = link_to "Reset", admin_users_path, class: "px-3 py-1.5 rounded bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 border border-gray-200"
+
+.overflow-x-auto.bg-white.border.border-gray-200.rounded
+  %table.w-full.text-sm
+    %thead.bg-gray-50
+      %tr
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= sort_link @q, :email
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= sort_link @q, :name
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= sort_link @q, :role
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Organization
+        %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Enrol.
+        %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Done
+        %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Avg %
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= sort_link @q, :last_sign_in_at, "Last sign-in"
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Last activity
+        %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2
+    %tbody
+      - @users.each do |u|
+        %tr.border-t.border-gray-100
+          %td.px-3.py-2.font-medium= link_to u.email, admin_user_path(u), class: "text-indigo-600 hover:underline"
+          %td.px-3.py-2.text-gray-600= u.name
+          %td.px-3.py-2= u.role
+          %td.px-3.py-2.text-gray-600= u.organization&.name || "—"
+          %td.px-3.py-2.text-right= u.enrollments.size
+          %td.px-3.py-2.text-right= u.completed_lessons_count
+          %td.px-3.py-2.text-right= u.average_score&.round(1) || "—"
+          %td.px-3.py-2.text-gray-500= u.last_sign_in_at&.strftime("%Y-%m-%d") || "—"
+          %td.px-3.py-2.text-gray-500= u.last_activity_at&.strftime("%Y-%m-%d") || "—"
+          %td.px-3.py-2.text-right
+            .flex.flex-wrap.justify-end.gap-2
+              = link_to "View", admin_user_path(u), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100"
+              = link_to "Edit", edit_admin_user_path(u), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+
+.mt-4= raw @pagy.series_nav if @pagy.pages > 1

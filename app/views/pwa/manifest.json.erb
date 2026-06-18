@@ -1,0 +1,48 @@
+{
+  "id": "/",
+  "name": "<%= site_brand_name %>",
+  "short_name": "<%= truncate(site_brand_name, length: 12, omission: "") %>",
+  "description": "<%= site_brand_name %> learning platform",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "theme_color": "<%= pwa_theme_color %>",
+  "background_color": "<%= pwa_background_color %>",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "<%= pwa_icon_path(kind: "192", v: pwa_asset_version) %>",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "<%= pwa_icon_path(kind: "512", v: pwa_asset_version) %>",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "<%= pwa_icon_path(kind: "maskable-512", v: pwa_asset_version) %>",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Courses",
+      "short_name": "Courses",
+      "url": "/courses"
+    },
+    {
+      "name": "My Learning",
+      "short_name": "Learning",
+      "url": "/me"
+    }
+  ],
+  "screenshots": <%= raw(pwa_manifest_screenshots.to_json) %>
+}

@@ -1,0 +1,3 @@
+- content_for :title, "Edit subject"
+%h1.text-2xl.font-bold.mb-4= "Edit · #{@subject.name}"
+= render "form", subject: @subject

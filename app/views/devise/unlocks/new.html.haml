@@ -1,0 +1,10 @@
+.max-w-md.mx-auto
+  %h1.text-2xl.font-semibold.mb-6 Resend unlock instructions
+  = form_for(resource, as: resource_name, url: unlock_path(resource_name), html: { method: :post }) do |f|
+    = render "devise/shared/error_messages", resource: resource
+    .mb-4
+      = f.label :email, class: "block text-sm font-medium text-gray-700 mb-1"
+      = f.email_field :email, autofocus: true, autocomplete: "email", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+    .mb-4
+      = f.submit "Resend unlock instructions", class: "w-full inline-flex justify-center px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 cursor-pointer"
+  = render "devise/shared/links"

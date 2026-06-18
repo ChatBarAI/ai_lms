@@ -1,0 +1,51 @@
+- content_for :title, "Your Certificate — #{@course.title}"
+
+.max-w-2xl.mx-auto
+
+  .mb-6.flex.items-center.justify-between
+    = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+      ← Back to course
+    .flex.gap-2
+      = link_to "Download PDF",
+                course_certificate_path(@course, format: :pdf),
+                class: "inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+      %button.inline-flex.items-center.px-4.py-2.rounded.border.border-gray-300.text-gray-700.text-sm.font-medium.hover:bg-gray-50{ type: "button", onclick: "window.print()" }
+        Print
+
+  -# Certificate preview card
+  .bg-white.border-2.border-indigo-200.rounded-lg.p-10.text-center.shadow-sm{ id: "certificate-preview" }
+    - setting = SiteSetting.current
+    %h1.text-2xl.font-bold.text-gray-900.mb-2= setting.certificate_heading.presence || "Certificate of Completion"
+    %hr.border-indigo-200.mb-6/
+
+    %p.text-gray-500.text-sm.mb-3= setting.certificate_body.presence || "This certifies that"
+    %p.text-3xl.font-bold.text-gray-900.mb-3= @certificate.user.name.presence || @certificate.user.email
+    %p.text-gray-500.text-sm.mb-3 has successfully completed
+    %p.text-xl.font-semibold.text-gray-800.mb-8= @course.title
+
+    %hr.border-indigo-200.mb-6/
+
+    .flex.items-end.justify-between.text-xs.text-gray-400
+      %div
+        %p.mb-1 Issued on
+        %p.font-medium.text-gray-600= l(@certificate.issued_at.to_date, format: :long)
+      - if setting.certificate_signatory_name.present?
+        %div.text-right
+          %p.mb-1 &nbsp;
+          %p.font-semibold.text-gray-700= setting.certificate_signatory_name
+          - if setting.certificate_signatory_title.present?
+            %p.text-gray-500= setting.certificate_signatory_title
+      %div.text-right
+        %p.mb-1 Certificate No.
+        %p.font-mono.text-gray-500= @certificate.token
+
+  .mt-4.text-center.text-xs.text-gray-400
+    Verify this certificate at
+    = link_to verify_certificate_url(@certificate.token), verify_certificate_url(@certificate.token), class: "text-indigo-600 hover:underline break-all"
+
+:css
+  @media print {
+    nav, header, footer, .mb-6, .mt-4 { display: none !important; }
+    #certificate-preview { border: 2px solid #c7d2fe; box-shadow: none; }
+    body { background: white; }
+  }

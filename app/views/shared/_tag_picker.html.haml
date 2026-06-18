@@ -1,0 +1,27 @@
+/ Renders a tag picker for the given form builder |f| and taggable object |record|.
+/ Usage: = render "shared/tag_picker", f: f, record: course
+- all_tags = Tag.all
+/ Hidden field ensures tag_ids: [] is submitted when every checkbox is unchecked,
+/ so clearing all tags on a record works correctly.
+= hidden_field_tag "#{f.object_name}[tag_ids][]", ""
+%label.block.text-sm.font-medium.mb-1 Tags
+.rounded.border.border-gray-300.p-3
+  - if all_tags.any?
+    %fieldset
+      %legend.sr-only Tags
+      .flex.flex-wrap.gap-3
+        - all_tags.each do |tag|
+          - checked = record.tag_ids.include?(tag.id)
+          = toggle_switch_tag "#{f.object_name}[tag_ids][]",
+              label: tag.name,
+              value: tag.id,
+              checked: checked,
+              include_hidden: false,
+              id: "#{f.object_name}_tag_#{tag.id}",
+              wrapper_class: "inline-flex items-center gap-2",
+              label_class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+              label_style: "background-color: #{tag.color}; color: #{tag.text_color}"
+  - else
+    %p.text-sm.text-gray-500
+      No tags defined yet.
+      = link_to "Create tags in Admin", admin_tags_path, class: "underline"

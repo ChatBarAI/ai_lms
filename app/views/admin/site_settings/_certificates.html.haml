@@ -1,0 +1,40 @@
+%section{ title: "Configure the default certificate template and signatory details", id: "certificates", class: "scroll-mt-24", data: { site_settings_section: "certificates" } }
+  = form_with model: @site_setting, url: admin_site_setting_path, method: :patch, data: { turbo: false }, class: "rounded-xl border border-gray-200 bg-white p-6 shadow-sm" do |f|
+    = hidden_field_tag :section, "certificates"
+
+    %h2.text-lg.font-semibold.text-gray-900 Certificates
+
+    = render "section_errors", section: "certificates"
+
+    .mt-5.grid.grid-cols-1.gap-x-10.gap-y-5.sm:grid-cols-2
+      .space-y-5
+        %div
+          = f.label :certificate_heading, "Heading", class: "block text-sm font-medium mb-1"
+          = f.text_field :certificate_heading, placeholder: "Certificate of Completion", class: "w-full border border-gray-300 rounded px-3 py-2"
+
+        %div
+          = f.label :certificate_body, "Preamble", class: "block text-sm font-medium mb-1"
+          = f.text_field :certificate_body, placeholder: "This certifies that", class: "w-full border border-gray-300 rounded px-3 py-2"
+
+        %div
+          = f.label :certificate_signatory_name, "Signatory name", class: "block text-sm font-medium mb-1"
+          = f.text_field :certificate_signatory_name, placeholder: "Jane Smith", class: "w-full border border-gray-300 rounded px-3 py-2"
+
+        %div
+          = f.label :certificate_signatory_title, "Signatory title", class: "block text-sm font-medium mb-1"
+          = f.text_field :certificate_signatory_title, placeholder: "Director of Learning", class: "w-full border border-gray-300 rounded px-3 py-2"
+
+      .space-y-5
+        %div
+          = upload_field f, :certificate_template,
+              label: "Upload certificate template (PNG or JPG, max 10 MB)",
+              accept: "image/png,image/jpeg",
+              preview_type: :image,
+              current_attachment: @site_setting.certificate_template,
+              remove_name: "site_setting[remove_certificate_template]",
+              remove_label: "Remove template (certificates will use a plain background)",
+              preview_class: "h-24 w-auto rounded border border-gray-200 object-cover"
+          %p.text-xs.text-gray-500.mt-1 Recommended size: A4 landscape (2480 x 1754 px at 300 dpi).
+
+    .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
+      = f.submit "Save certificates", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

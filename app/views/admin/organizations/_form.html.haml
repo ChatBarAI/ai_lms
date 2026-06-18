@@ -1,0 +1,52 @@
+= form_with model: organization, url: (organization.persisted? ? admin_organization_path(organization) : admin_organizations_path), class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+  - if organization.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - organization.errors.full_messages.each do |msg|
+          %li= msg
+
+  %div
+    = f.label :name, class: "block text-sm font-medium mb-1"
+    = f.text_field :name, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :slug, class: "block text-sm font-medium mb-1"
+    = f.text_field :slug, placeholder: "leave blank to auto-generate", class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :contact_email, class: "block text-sm font-medium mb-1"
+    = f.email_field :contact_email, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :notes, class: "block text-sm font-medium mb-1"
+    = f.text_area :notes, rows: 4, class: "w-full border border-gray-300 rounded px-3 py-2"
+
+  %hr.my-2
+  %h3.text-sm.font-semibold.text-gray-700.mb-3 Enterprise SSO (Kinde)
+  %div
+    = f.label :kinde_connection_id, "Kinde Connection ID", class: "block text-sm font-medium mb-1"
+    = f.text_field :kinde_connection_id, placeholder: "conn_01…", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+    %p.text-xs.text-gray-500.mt-1 Found in Kinde dashboard → Settings → Connections → Enterprise.
+  %div
+    = f.label :kinde_connection_provider, "Provider label", class: "block text-sm font-medium mb-1"
+    = f.select :kinde_connection_provider,
+        [["Microsoft (Entra ID)", "microsoft"], ["Google Workspace", "google"], ["Other", "other"]],
+        {},
+        class: "w-full border border-gray-300 rounded px-3 py-2"
+  = toggle_switch_field f, :sso_auto_enroll,
+      label: "Auto-create LMS account on first SSO sign-in"
+
+  = toggle_switch_field f, :sso_required,
+      label: "Require SSO - block email/password sign-in for this org's users"
+  %span.ml-1.text-xs.text-amber-600 Requires a connection ID to be set
+  %div
+    = f.label :sso_domain, "Email domain (for auto-redirect)", class: "block text-sm font-medium mb-1"
+    = f.text_field :sso_domain, placeholder: "contoso.com", class: "w-full border border-gray-300 rounded px-3 py-2"
+    %p.text-xs.text-gray-500.mt-1 When set, typing an email with this domain on the sign-in page redirects straight to SSO. Only takes effect when SSO Required is on.
+  - if organization.persisted? && organization.sso_configured?
+    %div
+      %p.text-sm.font-medium.mb-1 SSO sign-in URL
+      - app_url = SiteSetting.current.app_url.presence || "https://your-domain.com"
+      %code.block.bg-gray-50.border.border-gray-200.rounded.px-3.py-2.text-sm= organization.sso_login_url(app_url)
+      %p.text-xs.text-gray-500.mt-1 Share this URL with your client's staff to bookmark.
+
+  .flex.w-full.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = link_to "Cancel", admin_organizations_path, class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

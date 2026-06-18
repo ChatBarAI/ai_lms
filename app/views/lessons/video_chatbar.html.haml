@@ -1,0 +1,37 @@
+- content_for :title, "Import recording"
+
+%div
+  .mb-4
+    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+  %h1.text-2xl.font-bold.mb-2 Intro video — ChatBar AI download
+  %p.text-sm.text-gray-500.mb-4
+    Provide your ChatBar AI instance's owner API key, then pick a recording to attach as this lesson's intro video.
+
+  = form_with model: @lesson, url: video_chatbar_course_lesson_path(@course, @lesson), method: :get, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6 mb-4" do |f|
+    = hidden_field_tag :fetch, "1"
+    %div
+      = f.label :cbai_api_key, "CBAI API key", class: "block text-sm font-medium mb-1"
+      = f.password_field :cbai_api_key, value: @lesson.cbai_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2"
+      %p.text-xs.text-gray-500.mt-1 Stored on the lesson so future imports work without re-entering it.
+    .flex.w-full.gap-2
+      = f.submit "Save & fetch recordings", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+
+  - if @recordings
+    - if @recordings.empty?
+      .bg-white.border.border-gray-200.rounded.p-4.text-sm.text-gray-500 No recordings found on this CBAI instance yet.
+    - else
+      %h2.text-sm.font-semibold.mb-2 Available recordings
+      %ul.space-y-2
+        - @recordings.each do |rec|
+          %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.justify-between
+            %div
+              .font-medium= rec["name"].presence || "Recording ##{rec['id']}"
+              .text-xs.text-gray-500
+                = "#{rec['format']&.upcase} · #{rec['duration']}s"
+                - if rec["recorded_at"]
+                  = " · recorded #{rec['recorded_at']}"
+            = button_to "Use as intro video",
+                        import_recording_course_lesson_path(@course, @lesson, recording_id: rec["id"]),
+                        method: :post,
+                        data: { turbo_confirm: "Download and attach this recording as the intro video?" },
+                        class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"

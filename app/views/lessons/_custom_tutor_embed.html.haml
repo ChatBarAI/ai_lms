@@ -1,0 +1,37 @@
+-# Embeds a custom AI tutor.
+-# iframe mode:  shows a button that opens the URL in a sandboxed iframe popup/drawer.
+-# script mode: injects a <script> tag and provides a mount div for the widget.
+- root_id = "custom_tutor_launcher_#{lesson.id}"
+- mount_id = "custom_tutor_mount_#{lesson.id}"
+- embed_type = lesson.custom_tutor_embed_type_or_default
+- display_mode = lesson.cbai_display_mode_or_default
+
+.bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{ id: root_id, data: { controller: "custom-tutor-embed", custom_tutor_embed_display_mode_value: display_mode, custom_tutor_embed_embed_url_value: lesson.custom_tutor_embed_url, custom_tutor_embed_embed_type_value: embed_type } }
+  .flex.flex-wrap.items-start.justify-between.gap-3
+    .min-w-0.flex-1
+      .flex.flex-wrap.items-baseline.gap-x-3.gap-y-0.5
+        %h3.font-semibold.shrink-0 AI tutor
+        - if embed_type == "script"
+          %p.text-sm.text-gray-500.flex-none.max-w-full Powered by your custom integration.
+        - else
+          %p.text-sm.text-gray-500.flex-none.max-w-full Ask anything about this lesson.
+    %button.inline-flex.items-center.gap-2.px-3.py-1.5.rounded.bg-indigo-600.text-white.hover:bg-indigo-700.cursor-pointer.text-sm.shrink-0{ type: "button", data: { action: "click->custom-tutor-embed#open", custom_tutor_embed_target: "openButton" } }
+      = site_favicon_img_tag
+      Ask AI tutor
+
+  .fixed.inset-0.z-50.hidden{ data: { custom_tutor_embed_target: "overlay" }, role: "dialog", aria: { modal: "true", labelledby: "#{root_id}_title" } }
+    %div{ data: { action: "click->custom-tutor-embed#close" }, class: "absolute inset-0 backdrop-blur-[1px] bg-transparent" }
+    %div{ data: { custom_tutor_embed_target: "panel" }, class: "absolute bg-white shadow-xl flex flex-col" }
+      .flex.items-center.justify-between.px-4.py-3.border-b.border-gray-200
+        %h3.font-semibold{ id: "#{root_id}_title" } AI tutor
+        %button.w-8.h-8.inline-flex.items-center.justify-center.rounded-full.bg-red-500.hover:bg-red-600.text-white.cursor-pointer.transition-colors.focus:outline-none.focus:ring-2.focus:ring-red-400.focus:ring-offset-1{ type: "button", aria: { label: "Close" }, data: { action: "click->custom-tutor-embed#close" } }
+          %svg{ xmlns: "http://www.w3.org/2000/svg", viewbox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2.5", "stroke-linecap": "round", "stroke-linejoin": "round", width: "16", height: "16", "aria-hidden": "true" }
+            %line{ x1: "18", y1: "6", x2: "6", y2: "18" }
+            %line{ x1: "6", y1: "6", x2: "18", y2: "18" }
+      - if embed_type == "script"
+        .flex-1.overflow-auto.p-4
+          %textarea.hidden{ data: { custom_tutor_embed_target: "scriptSource" } }= lesson.custom_tutor_embed_script
+          %div{ id: mount_id, data: { custom_tutor_embed_target: "mount" } }
+      - else
+        .flex-1.overflow-hidden
+          %iframe.w-full.h-full.border-0{ data: { custom_tutor_embed_target: "frame" }, allow: "microphone; camera", referrerpolicy: "no-referrer", sandbox: "allow-scripts allow-same-origin allow-forms allow-popups" }

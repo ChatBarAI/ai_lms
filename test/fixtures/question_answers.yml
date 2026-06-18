@@ -1,0 +1,6 @@
+scored_answer:
+  enrollment: student_in_algebra
+  question: intro_q_free
+  answer_text: Order of addition does not matter.
+  ai_score: 9
+  scored_at: <%= 1.hour.ago.to_fs(:db) %>

@@ -1,0 +1,17 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Unmaintained Dependency",
+      "warning_code": 122,
+      "fingerprint": "21ab0fe00fdd5899ffc405cff75aadb91b805ee996a614f7e27b08a287e9062d",
+      "check_name": "EOLRails",
+      "message": "Support for Rails 7.2.3.1 ends on 2026-08-09",
+      "file": "Gemfile.lock",
+      "line": 310,
+      "confidence": "Weak",
+      "note": "Temporary exception: project cannot upgrade to Rails 8 yet. Revisit before 2026-08-09."
+    }
+  ],
+  "updated": "2026-06-11 11:08:07 +0200",
+  "brakeman_version": "8.0.4"
+}

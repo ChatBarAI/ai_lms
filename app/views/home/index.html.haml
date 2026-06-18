@@ -1,0 +1,32 @@
+- content_for :title, "Home"
+
+.bg-white.border.border-gray-200.rounded-lg.p-8.mb-8
+  .flex.flex-col.items-start.gap-4.sm:flex-row.sm:items-center.sm:justify-between
+    - hero = render_hero_content(site_setting)
+    - if hero
+      .flex-1.hero-prose= hero
+    - else
+      %h1.text-xl.font-bold Learn with an AI tutor
+    - if site_setting.allow_guest_access? || user_signed_in?
+      .flex.w-full.flex-col.gap-3.sm:w-auto.sm:flex-row.sm:items-center
+        - if subjects_enabled?
+          = link_to "Browse subjects", subjects_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
+        = link_to "All courses", courses_path, class: "w-full text-center px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 sm:w-auto"
+    - else
+      .flex.w-full.sm:w-auto
+        = link_to "Sign in to access courses", new_user_session_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
+
+- if site_setting.allow_guest_access? || user_signed_in?
+  %section
+    %h2.text-xl.font-semibold.mb-3 Recently published
+    - if @recent_items&.any?
+      .flex.flex-wrap.justify-center.gap-4
+        - @recent_items.each do |item|
+          %div{class: "min-w-[320px] max-w-[364px] flex-1"}
+            - if item.is_a?(Course)
+              = render "courses/card", course: item
+            - else
+              = render "lessons/card", lesson: item
+    - else
+      %p.text-gray-500 No published courses yet.
+- else

@@ -1,0 +1,2 @@
+- collapsed = local_assigns.fetch(:collapsed, false)
+= render "quiz_#{lesson.quiz_layout_or_default}", lesson: lesson, questions: questions, progress: progress, retry_mode: retry_mode, collapsed: collapsed

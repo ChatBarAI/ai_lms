@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+/* Shared switch-style checkbox used by toggle_switch_field/toggle_switch_tag. */
+.cb-toggle-track {
+  position: relative;
+  width: 1.75rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background-color: rgb(229 231 235); /* gray-200 */
+  transition: background-color 150ms ease;
+}
+
+.cb-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(209 213 219); /* gray-300 */
+  background: #fff;
+  transition: transform 150ms ease;
+}
+
+.peer:focus-visible + .cb-toggle-track {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 2px rgb(147 197 253); /* blue-300 */
+}
+
+.peer:checked + .cb-toggle-track {
+  background-color: rgb(37 99 235); /* blue-600 */
+}
+
+.peer:checked + .cb-toggle-track::after {
+  transform: translateX(100%);
+  border-color: #fff;
+}
+
+html.theme-dark .cb-toggle-track {
+  background-color: rgb(75 85 99); /* gray-600 */
+}
+
+html.theme-dark .peer:focus-visible + .cb-toggle-track {
+  box-shadow: 0 0 0 2px rgb(30 64 175); /* blue-800 */
+}
+
+html.theme-dark .peer:checked + .cb-toggle-track {
+  background-color: rgb(37 99 235); /* blue-600 */
+}
+
+/* Native <dialog> backdrop overlay */
+dialog::backdrop {
+  background-color: rgb(17 24 39 / 0.5); /* gray-900/50 */
+  backdrop-filter: blur(2px);
+}
+
+/* Tailwind `dark:` variant matches when <html> has class theme-dark */
+@custom-variant dark (&:where(html.theme-dark *, html.theme-dark));
+
+/* ─── DARK MODE OVERRIDES ──────────────────────────────────────────────────
+   These apply when <html> has class "theme-dark". For mode=system the layout
+   ships class "theme-system" and a tiny inline script swaps it to theme-light
+   or theme-dark based on prefers-color-scheme before paint.
+   Unlayered CSS (outside any @layer) wins over Tailwind's @layer utilities
+   in the cascade, so no !important is needed except where noted.
+   ────────────────────────────────────────────────────────────────────────── */
+
+html.theme-dark {
+
+  /* Color scheme — makes browser chrome (scrollbars, date pickers) go dark */
+  color-scheme: dark;
+
+}
+
+html.theme-dark {
+
+  /* ── Backgrounds ───────────────────────────────────────────────── */
+  /* .bg-white is handled by the --card-bg CSS variable in theme_style_tag */
+  .bg-gray-50  { background-color: rgb(17 24 39); }  /* gray-900 – sections     */
+  .bg-gray-100 { background-color: rgb(55 65 81); }  /* gray-700 – badges/pills */
+  .bg-gray-200 { background-color: rgb(75 85 99); }  /* gray-600                */
+
+  /* Keep logo image bg white so the logo stays visible on dark nav */
+  img.bg-white { background-color: rgb(255 255 255); }
+
+  /* Status/notification panel backgrounds */
+  .bg-green-50  { background-color: rgb(6 78 59 / 0.25); }
+  .bg-green-100 { background-color: rgb(6 78 59 / 0.30); }
+  .bg-amber-50  { background-color: rgb(120 53 15 / 0.25); }
+  .bg-amber-100 { background-color: rgb(120 53 15 / 0.30); }
+  .bg-red-50    { background-color: rgb(127 29 29 / 0.25); }
+  .bg-red-100   { background-color: rgb(127 29 29 / 0.30); }
+  .bg-blue-50   { background-color: rgb(23 37 84 / 0.25); }
+  .bg-blue-100  { background-color: rgb(23 37 84 / 0.30); }
+
+  /* ── Borders ───────────────────────────────────────────────────── */
+  .border-gray-100   { border-color: rgb(55 65 81); }
+  .border-gray-200   { border-color: rgb(55 65 81); }
+  .border-gray-300   { border-color: rgb(75 85 99); }
+  .border-green-200  { border-color: rgb(21 128 61 / 0.5); }
+  .border-amber-200  { border-color: rgb(180 83 9 / 0.5); }
+  .border-amber-300  { border-color: rgb(180 83 9 / 0.5); }
+  .border-red-200    { border-color: rgb(185 28 28 / 0.5); }
+  .border-blue-200   { border-color: rgb(29 78 216 / 0.5); }
+  .border-indigo-200 { border-color: rgb(99 102 241 / 0.5); }
+
+  /* ── Text ──────────────────────────────────────────────────────── */
+  .text-gray-900 { color: rgb(243 244 246); }  /* gray-100 */
+  .text-gray-800 { color: rgb(229 231 235); }  /* gray-200 */
+  .text-gray-700 { color: rgb(209 213 219); }  /* gray-300 */
+  .text-gray-600 { color: rgb(156 163 175); }  /* gray-400 */
+  .text-gray-500 { color: rgb(156 163 175); }  /* gray-400 */
+  .text-gray-400 { color: rgb(107 114 128); }  /* gray-500 */
+
+  .text-green-700  { color: rgb(134 239 172); }
+  .text-green-800  { color: rgb(134 239 172); }
+  .text-indigo-600 { color: rgb(129 140 248); }
+  .text-indigo-700 { color: rgb(165 180 252); }
+  .text-amber-600  { color: rgb(252 211 77); }
+  .text-amber-700  { color: rgb(252 211 77); }
+  .text-amber-800  { color: rgb(252 211 77); }
+  .text-red-600    { color: rgb(252 165 165); }
+  .text-red-800    { color: rgb(252 165 165); }
+  .text-blue-800   { color: rgb(147 197 253); }
+
+  /* ── Hover overrides ───────────────────────────────────────────── */
+  .hover\:bg-gray-50:hover      { background-color: rgb(55 65 81); }
+  .hover\:bg-gray-200:hover     { background-color: rgb(75 85 99); }
+  .hover\:bg-indigo-50:hover    { background-color: rgb(49 46 129 / 0.25); } /* subtle indigo tint */
+  .hover\:bg-amber-100:hover    { background-color: rgb(120 53 15 / 0.40); }
+  .hover\:bg-amber-200:hover    { background-color: rgb(180 83 9 / 0.40); }
+  .hover\:text-gray-900:hover   { color: rgb(255 255 255); }
+  .hover\:text-gray-700:hover   { color: rgb(209 213 219); }
+  .hover\:text-indigo-800:hover { color: rgb(165 180 252); }
+  .hover\:border-indigo-300:hover { border-color: rgb(99 102 241 / 0.7); }
+  .hover\:border-indigo-400:hover { border-color: rgb(99 102 241); }
+
+  /* ── Form controls ─────────────────────────────────────────────── */
+  input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  textarea,
+  select {
+    background-color: rgb(55 65 81);    /* gray-700 */
+    border-color:     rgb(75 85 99);    /* gray-600 */
+    color:            rgb(243 244 246); /* gray-100 */
+  }
+
+  input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"])::placeholder,
+  textarea::placeholder {
+    color: rgb(156 163 175); /* gray-400 */
+  }
+
+  /* ── Code / pre blocks ─────────────────────────────────────────── */
+  pre {
+    background-color: rgb(17 24 39);    /* gray-900 */
+    border-color:     rgb(55 65 81);    /* gray-700 */
+    color:            rgb(209 213 219); /* gray-300 */
+  }
+
+}
+
+/* ─── HERO PROSE ───────────────────────────────────────────────────────────
+   Scoped typographic styles for the home-page hero section.
+   These restore sensible defaults that Tailwind Preflight resets.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.hero-prose {
+  line-height: 1.625;
+
+  & h1 { font-size: 1.5rem;   font-weight: 700; margin-bottom: 0.5rem; }
+  & h2 { font-size: 1.25rem;  font-weight: 600; margin-bottom: 0.5rem; }
+  & h3 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.375rem; }
+  & h4, & h5, & h6 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+
+  & p { margin-bottom: 0.75rem; }
+  & p:last-child { margin-bottom: 0; }
+
+  & strong { font-weight: 700; }
+  & em     { font-style: italic; }
+  & del    { text-decoration: line-through; }
+  & mark   { background-color: #fef08a; padding: 0.1em 0.15em; border-radius: 0.2em; }
+  & sup    { font-size: 0.75em; vertical-align: super; }
+
+  & a { color: #4f46e5; text-decoration: underline; }
+  & a:hover { color: #4338ca; }
+
+  & code {
+    font-family: ui-monospace, monospace;
+    font-size: 0.875em;
+    background-color: #f3f4f6;
+    padding: 0.15em 0.35em;
+    border-radius: 0.25rem;
+  }
+
+  & pre {
+    background-color: #1f2937;
+    color: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    & code { background: transparent; padding: 0; font-size: 0.875rem; color: inherit; }
+  }
+
+  & blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+  }
+
+  & ul { list-style-type: disc;     padding-left: 1.5rem; margin-bottom: 0.75rem; }
+  & ol { list-style-type: decimal;  padding-left: 1.5rem; margin-bottom: 0.75rem; }
+  & li { margin-bottom: 0.25rem; }
+
+  & hr { border-color: #e5e7eb; margin: 1rem 0; }
+
+  & table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.875rem; }
+  & th { background-color: #f9fafb; font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; }
+  & td { padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; }
+}
+
+html.theme-dark .hero-prose {
+  & a { color: #818cf8; }
+  & a:hover { color: #a5b4fc; }
+  & code { background-color: rgb(55 65 81); color: rgb(243 244 246); }
+  & blockquote { border-color: rgb(75 85 99); color: rgb(156 163 175); }
+  & hr { border-color: rgb(75 85 99); }
+  & th { background-color: rgb(31 41 55); border-color: rgb(75 85 99); }
+  & td { border-color: rgb(75 85 99); }
+}

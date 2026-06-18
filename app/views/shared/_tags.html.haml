@@ -1,0 +1,7 @@
+/ Renders coloured tag badges for the given taggable record.
+/ Usage: = render "shared/tags", record: @course
+- if record.tags.any?
+  .flex.flex-wrap.gap-1.5
+    - record.tags.each do |tag|
+      = link_to tag_path(tag), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity", style: "background-color: #{tag.color}; color: #{tag.text_color}" do
+        = tag.name
