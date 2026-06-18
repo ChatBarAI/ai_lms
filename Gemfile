@@ -20,7 +20,7 @@ gem "tailwindcss-rails"
 gem "redis", ">= 4.0.1"
 
 # Background job processing
-gem "sidekiq", "~> 7.0"
+gem "sidekiq", "~> 8.1"
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
 # gem "kredis"

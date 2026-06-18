@@ -109,7 +109,7 @@ GEM
       xpath (~> 3.2)
     cgi (0.5.1)
     concurrent-ruby (1.3.7)
-    connection_pool (2.5.5)
+    connection_pool (3.0.2)
     crass (1.0.6)
     csv (3.3.5)
     date (3.5.1)
@@ -410,12 +410,12 @@ GEM
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 4.0)
       websocket (~> 1.0)
-    sidekiq (7.3.10)
-      base64
-      connection_pool (>= 2.3.0, < 3)
-      logger
-      rack (>= 2.2.4, < 3.3)
-      redis-client (>= 0.23.0, < 1)
+    sidekiq (8.1.6)
+      connection_pool (>= 3.0.0)
+      json (>= 2.16.0)
+      logger (>= 1.7.0)
+      rack (>= 3.2.0)
+      redis-client (>= 0.29.0)
     snaky_hash (2.0.6)
       hashie (>= 0.1.0, < 6)
       version_gem (>= 1.1.8, < 3)
@@ -520,7 +520,7 @@ DEPENDENCIES
   redis (>= 4.0.1)
   rubocop-rails-omakase
   selenium-webdriver
-  sidekiq (~> 7.0)
+  sidekiq (~> 8.1)
   sprockets-rails
   stimulus-rails
   tailwindcss-rails
