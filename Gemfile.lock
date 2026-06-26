@@ -502,7 +502,7 @@ DEPENDENCIES
   image_processing (~> 1.2)
   importmap-rails
   kinde_sdk
-  minitest (~> 5.25)
+  minitest
   minitest-mock
   omniauth
   omniauth-google-oauth2

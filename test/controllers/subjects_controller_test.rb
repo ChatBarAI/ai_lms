@@ -16,4 +16,16 @@ class SubjectsControllerTest < ActionDispatch::IntegrationTest
     get subject_path(subjects(:math))
     assert_no_match(/Draft Course/, response.body)
   end
+
+  test "show filters courses by signed in user's course languages" do
+    courses(:algebra).update!(locale: "en")
+    student = users(:student)
+    student.update!(course_locales: [ "de" ])
+    sign_in student
+
+    get subject_path(subjects(:math))
+
+    assert_response :success
+    assert_no_match(/Algebra/, response.body)
+  end
 end

@@ -18,6 +18,39 @@ class UserTest < ActiveSupport::TestCase
     assert user.student?
   end
 
+  test "locale defaults to English" do
+    user = User.new(email: "locale@example.com", password: generated_password)
+    assert_equal "en", user.locale
+  end
+
+  test "allows supported locales" do
+    user = User.new(email: "german@example.com", password: generated_password, locale: "de")
+    assert user.valid?, user.errors.full_messages.inspect
+  end
+
+  test "course locale preferences default to all supported locales" do
+    user = User.new(email: "course-locales@example.com", password: generated_password)
+    assert_equal %w[en de], user.course_locales
+  end
+
+  test "course locale preferences reject unsupported locales" do
+    user = User.new(email: "bad-course-locales@example.com", password: generated_password, course_locales: [ "en", "fr" ])
+    assert_not user.valid?
+    assert_includes user.errors[:course_locales], "contains unsupported locales"
+  end
+
+  test "course locale preferences remove blanks and duplicates" do
+    user = User.new(email: "clean-course-locales@example.com", password: generated_password, course_locales: [ "", "de", "de" ])
+    assert user.valid?, user.errors.full_messages.inspect
+    assert_equal [ "de" ], user.course_locales
+  end
+
+  test "rejects unsupported locales" do
+    user = User.new(email: "invalid-locale@example.com", password: generated_password, locale: "fr")
+    assert_not user.valid?
+    assert_includes user.errors[:locale], "is not included in the list"
+  end
+
   # --- User.from_kinde ---
 
   KINDE_USER = {

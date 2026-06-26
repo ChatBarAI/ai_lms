@@ -7,6 +7,19 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Algebra/, response.body)
   end
 
+  test "index filters published courses by signed in user's course languages" do
+    courses(:other_owner_course).update!(locale: "de")
+    student = users(:student)
+    student.update!(course_locales: [ "de" ])
+    sign_in student
+
+    get courses_path
+
+    assert_response :success
+    assert_no_match(/Algebra/, response.body)
+    assert_match(/Physics 101/, response.body)
+  end
+
   test "show published course anonymously" do
     get course_path(courses(:algebra))
     assert_response :success
@@ -37,10 +50,11 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
   test "instructor can create their own course" do
     sign_in users(:instructor)
     assert_difference -> { Course.count }, 1 do
-      post courses_path, params: { course: { title: "Brand New", subject_id: subjects(:math).id, description: "x" } }
+      post courses_path, params: { course: { title: "Brand New", subject_id: subjects(:math).id, description: "x", locale: "de" } }
     end
     assert_redirected_to Course.last
     assert_equal users(:instructor), Course.last.owner
+    assert_equal "de", Course.last.locale
   end
 
   test "student cannot create a course" do

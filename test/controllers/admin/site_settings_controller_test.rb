@@ -50,22 +50,30 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_admin_site_setting_path(anchor: "integration")
   end
 
-  test "terminology section updates nested terminology keys" do
+  test "terminology section updates locale-specific terminology keys" do
     sign_in users(:admin)
 
     patch admin_site_setting_path, params: {
       section: "terminology",
       site_setting: {
         terminology: {
-          lesson_one: "Module",
-          lesson_other: "Modules"
+          en: {
+            lesson_one: "Module",
+            lesson_other: "Modules"
+          },
+          de: {
+            lesson_one: "Modul",
+            lesson_other: "Module"
+          }
         }
       }
     }
 
     setting = SiteSetting.current
-    assert_equal "Module", setting.terminology["lesson_one"]
-    assert_equal "Modules", setting.terminology["lesson_other"]
+    assert_equal "Module", setting.terminology["en"]["lesson_one"]
+    assert_equal "Modules", setting.terminology["en"]["lesson_other"]
+    assert_equal "Modul", setting.terminology["de"]["lesson_one"]
+    assert_equal "Module", setting.terminology["de"]["lesson_other"]
     assert_redirected_to edit_admin_site_setting_path(anchor: "terminology")
   end
 

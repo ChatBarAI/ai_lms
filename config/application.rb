@@ -45,7 +45,7 @@ module AiLms
     # Internationalisation. Default locale is English; other locale files
     # under config/locales/*.yml are auto-loaded. Missing keys fall back to :en.
     config.i18n.default_locale = :en
-    config.i18n.available_locales = [ :en ]
+    config.i18n.available_locales = [ :en, :de ]
     config.i18n.fallbacks = [ :en ]
   end
 end

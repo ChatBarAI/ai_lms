@@ -108,7 +108,7 @@ class Admin::SiteSettingsController < Admin::BaseController
 
   def site_setting_params(section)
     if section == "terminology"
-      params.require(:site_setting).permit(terminology: SiteSetting::TERMINOLOGY_KEYS)
+      params.require(:site_setting).permit(terminology: I18n.available_locales.index_with { SiteSetting::TERMINOLOGY_KEYS })
     else
       params.require(:site_setting).permit(*SECTION_ATTRIBUTES.fetch(section))
     end

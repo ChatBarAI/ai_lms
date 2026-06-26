@@ -38,6 +38,8 @@ en:
       course:
         title: "Title"
         description: "Description"
+      user:
+        locale: "Language"
 
   common:
     draft: "draft"
@@ -46,6 +48,71 @@ en:
     delete: "Delete"
     unpublish: "Unpublish"
     publish_now: "Publish now"
+    cancel: "Cancel"
+
+  layouts:
+    application:
+      subjects: "Subjects"
+      courses: "Courses"
+      my_learning: "My learning"
+      my_profile: "My profile"
+      my_courses: "My courses"
+      sign_in: "Sign in"
+      sign_up: "Sign up"
+      sign_out: "Sign out"
+      pwa_title: "Install this app for faster access"
+      pwa_safari: "Use Safari to install: open this site in Safari, tap Share (square with up arrow), then tap Add to Home Screen."
+      install: "Install"
+      not_now: "Not now"
+
+  home:
+    index:
+      title: "Home"
+      hero_heading: "Learn with an AI tutor"
+      browse_subjects: "Browse subjects"
+      all_courses: "All courses"
+      sign_in_to_access: "Sign in to access courses"
+      recently_published: "Recently published"
+      empty: "No published courses yet."
+    me:
+      title: "My learning"
+      heading: "My learning"
+      not_enrolled: "You're not enrolled in any courses yet."
+      browse_courses: "Browse courses"
+      progress: "Progress"
+      lessons_completed: "%{lessons} completed"
+      avg_score: "Avg score"
+      quiz_trend: "%{quiz} trend (course-wide)"
+      quiz_trend_title: "%{quiz} Mark Trend - %{course} (All %{lessons})"
+      view_course: "View %{course_l}"
+      course_completion: "%{course} completion"
+      course_completion_hint: "% of %{lessons_l} completed in each enrolled %{course_l}"
+      lessons_per_week: "%{lessons} completed per week"
+      last_12_weeks: "Last 12 weeks"
+
+  profiles:
+    show:
+      title: "My profile"
+      heading: "My profile"
+      language: "Language: %{language}"
+      course_languages: "Course languages: %{languages}"
+      edit: "Edit profile"
+    edit:
+      title: "Edit profile"
+      heading: "Edit profile"
+      display_name: "Display name"
+      name_placeholder: "Your name"
+      name_hint: "Leave blank to display your email address instead."
+      language: "Language"
+      language_hint: "Choose the language used for navigation, buttons, notices, and system text."
+      course_languages: "Course languages"
+      course_languages_hint: "Choose which %{courses} appear in catalogue and recent lists."
+      avatar: "Avatar"
+      avatar_upload: "Upload avatar (PNG, JPG, GIF or WebP, max 5 MB)"
+      save: "Save changes"
+    flash:
+      updated: "Profile updated."
+      update_failed: "Could not save profile."
 
   lessons:
     index:
@@ -70,8 +137,32 @@ en:
       completed: "✓ completed"
       enrol_prompt: "Enrol in this course to track progress and rate %{lessons_l}."
       enrol_now: "Enrol now"
+    flash:
+      ai_marking_timeout: "AI marking timed out after 5 minutes. Free-text answers have been scored as 0 — you can retake the %{quiz_l}."
+      complete_required_materials: "Complete the required materials first."
+      enrol_to_submit: "Enrol to submit answers."
+      no_questions_to_grade: "No questions to grade."
+      answers_submitted_title: "Answers submitted"
+      answers_queued: "Your written responses are queued for marking by ChatBar AI. You can track progress in the Status section."
+      answers_scored: "You scored %{score}%. %{message}"
+      lesson_marked_complete: "Lesson marked complete."
+      keep_practising: "Keep practising - pass mark is %{pass_mark}%."
+      created: "Lesson created."
+      updated: "Lesson updated."
+      deleted: "Lesson deleted."
+      published: "Lesson published."
+      unpublished: "Lesson unpublished."
+      video_url_saved: "Video URL saved."
+      video_uploaded: "Video uploaded."
+      video_removed: "Intro video removed."
+      poster_saved: "Poster image saved."
+      poster_removed: "Poster image removed."
 
   courses:
+    index:
+      title: "%{courses}"
+      new: "New %{course_l}"
+      empty: "No %{courses_l} found."
     show:
       back: "← %{courses}"
       unpublish_confirm: "Unpublish this %{course_l}?"
@@ -90,3 +181,40 @@ en:
       lessons_count:
         one: "%{count} %{lesson_l}"
         other: "%{count} %{lessons_l}"
+    flash:
+      created: "Course created."
+      updated: "Course updated."
+      deleted: "Course deleted."
+      published: "Course published."
+      unpublished: "Course unpublished."
+      layout_reset: "Layout reset to defaults."
+      layout_saved: "Certificate layout saved."
+
+  subjects:
+    index:
+      title: "%{subjects}"
+      courses_count:
+        one: "%{count} %{course_l}"
+        other: "%{count} %{courses_l}"
+    show:
+      back: "← %{subjects}"
+      empty: "No published %{courses_l} in this %{subject_l} yet."
+
+  enrollments:
+    flash:
+      enrolled: "Enrolled."
+      unenrolled: "Unenrolled."
+
+  ratings:
+    flash:
+      created: "Thanks for rating."
+      updated: "Rating updated."
+      removed: "Rating removed."
+      disabled: "Ratings are disabled for this lesson."
+
+  progresses:
+    flash:
+      saved: "Progress saved."
+
+  validation_messages:
+    required: "is required"

@@ -6,7 +6,7 @@ class ProgressesController < ApplicationController
     authorize! :update, @progress
     @progress.assign_attributes(progress_params)
     if @progress.save
-      redirect_back fallback_location: root_path, notice: "Progress saved."
+      redirect_back fallback_location: root_path, notice: t("progresses.flash.saved")
     else
       redirect_back fallback_location: root_path, alert: @progress.errors.full_messages.to_sentence
     end

@@ -1,0 +1,221 @@
+de:
+  date:
+    formats:
+      long: "%-d. %B %Y"
+    month_names:
+      -
+      - Januar
+      - Februar
+      - März
+      - April
+      - Mai
+      - Juni
+      - Juli
+      - August
+      - September
+      - Oktober
+      - November
+      - Dezember
+
+  activerecord:
+    models:
+      lesson:
+        one: "Lektion"
+        other: "Lektionen"
+      course:
+        one: "Kurs"
+        other: "Kurse"
+      subject:
+        one: "Fach"
+        other: "Fächer"
+      quiz:
+        one: "Quiz"
+        other: "Quizze"
+    attributes:
+      lesson:
+        title: "Titel"
+        body: "Inhalt"
+        duration_minutes: "Dauer (Minuten)"
+      course:
+        title: "Titel"
+        description: "Beschreibung"
+      user:
+        locale: "Sprache"
+
+  common:
+    draft: "Entwurf"
+    published: "veröffentlicht"
+    edit: "Bearbeiten"
+    delete: "Löschen"
+    unpublish: "Veröffentlichung aufheben"
+    publish_now: "Jetzt veröffentlichen"
+    cancel: "Abbrechen"
+
+  layouts:
+    application:
+      subjects: "Fächer"
+      courses: "Kurse"
+      my_learning: "Mein Lernen"
+      my_profile: "Mein Profil"
+      my_courses: "Meine Kurse"
+      sign_in: "Anmelden"
+      sign_up: "Registrieren"
+      sign_out: "Abmelden"
+      pwa_title: "Diese App für schnelleren Zugriff installieren"
+      pwa_safari: "Installation mit Safari: Öffne diese Seite in Safari, tippe auf Teilen und dann auf Zum Home-Bildschirm."
+      install: "Installieren"
+      not_now: "Nicht jetzt"
+
+  home:
+    index:
+      title: "Start"
+      hero_heading: "Lerne mit einem KI-Tutor"
+      browse_subjects: "Fächer durchsuchen"
+      all_courses: "Alle Kurse"
+      sign_in_to_access: "Anmelden, um Kurse zu öffnen"
+      recently_published: "Zuletzt veröffentlicht"
+      empty: "Noch keine veröffentlichten Kurse."
+    me:
+      title: "Mein Lernen"
+      heading: "Mein Lernen"
+      not_enrolled: "Du bist noch in keinen Kurs eingeschrieben."
+      browse_courses: "Kurse durchsuchen"
+      progress: "Fortschritt"
+      lessons_completed: "%{lessons} abgeschlossen"
+      avg_score: "Durchschnitt"
+      quiz_trend: "%{quiz}-Trend (kursweit)"
+      quiz_trend_title: "%{quiz}-Bewertungstrend - %{course} (alle %{lessons})"
+      view_course: "%{course} ansehen"
+      course_completion: "%{course}-Fortschritt"
+      course_completion_hint: "% abgeschlossene %{lessons_l} je eingeschriebenem %{course_l}"
+      lessons_per_week: "%{lessons} pro Woche abgeschlossen"
+      last_12_weeks: "Letzte 12 Wochen"
+
+  profiles:
+    show:
+      title: "Mein Profil"
+      heading: "Mein Profil"
+      language: "Sprache: %{language}"
+      course_languages: "Kurssprachen: %{languages}"
+      edit: "Profil bearbeiten"
+    edit:
+      title: "Profil bearbeiten"
+      heading: "Profil bearbeiten"
+      display_name: "Anzeigename"
+      name_placeholder: "Dein Name"
+      name_hint: "Leer lassen, um stattdessen deine E-Mail-Adresse anzuzeigen."
+      language: "Sprache"
+      language_hint: "Wähle die Sprache für Navigation, Buttons, Hinweise und Systemtexte."
+      course_languages: "Kurssprachen"
+      course_languages_hint: "Wähle aus, welche %{courses} in Katalog- und Neuheitenlisten erscheinen."
+      avatar: "Avatar"
+      avatar_upload: "Avatar hochladen (PNG, JPG, GIF oder WebP, max. 5 MB)"
+      save: "Änderungen speichern"
+    flash:
+      updated: "Profil aktualisiert."
+      update_failed: "Profil konnte nicht gespeichert werden."
+
+  lessons:
+    index:
+      heading: "%{lessons}"
+      add: "%{lesson_l} hinzufügen"
+      empty: "Noch keine %{lessons_l}."
+    card:
+      duration: "%{count} Min."
+      done: "✓ abgeschlossen"
+      in_progress: "in Bearbeitung"
+      queued_for_marking: "wartet auf Bewertung"
+    show:
+      edit: "%{lesson_l} bearbeiten"
+      questions: "Fragen bearbeiten"
+      unpublish_confirm: "Diese %{lesson_l} nicht mehr veröffentlichen?"
+      no_content: "Noch kein Inhalt."
+      progress: "Fortschritt"
+      status: "Status: %{status}"
+      score: "Punktzahl: %{score}%%"
+      mark_complete: "Als abgeschlossen markieren"
+      confirm_mark_complete: "Diese Lektion als abgeschlossen markieren?"
+      completed: "✓ abgeschlossen"
+      enrol_prompt: "Schreibe dich in diesen Kurs ein, um deinen Fortschritt zu verfolgen und %{lessons_l} zu bewerten."
+      enrol_now: "Jetzt einschreiben"
+    flash:
+      ai_marking_timeout: "Die KI-Bewertung hat nach 5 Minuten eine Zeitüberschreitung erreicht. Freitextantworten wurden mit 0 bewertet. Du kannst das %{quiz_l} erneut versuchen."
+      complete_required_materials: "Schließe zuerst die erforderlichen Materialien ab."
+      enrol_to_submit: "Schreibe dich ein, um Antworten abzugeben."
+      no_questions_to_grade: "Keine Fragen zum Bewerten vorhanden."
+      answers_submitted_title: "Antworten übermittelt"
+      answers_queued: "Deine schriftlichen Antworten warten auf die Bewertung durch ChatBar AI. Du kannst den Fortschritt im Statusbereich verfolgen."
+      answers_scored: "Du hast %{score}% erreicht. %{message}"
+      lesson_marked_complete: "Lektion als abgeschlossen markiert."
+      keep_practising: "Übe weiter - die Bestehensgrenze liegt bei %{pass_mark}%."
+      created: "Lektion erstellt."
+      updated: "Lektion aktualisiert."
+      deleted: "Lektion gelöscht."
+      published: "Lektion veröffentlicht."
+      unpublished: "Veröffentlichung der Lektion aufgehoben."
+      video_url_saved: "Video-URL gespeichert."
+      video_uploaded: "Video hochgeladen."
+      video_removed: "Intro-Video entfernt."
+      poster_saved: "Vorschaubild gespeichert."
+      poster_removed: "Vorschaubild entfernt."
+
+  courses:
+    index:
+      title: "%{courses}"
+      new: "Neuen %{course_l} erstellen"
+      empty: "Keine %{courses_l} gefunden."
+    show:
+      back: "← %{courses}"
+      unpublish_confirm: "Diesen %{course_l} nicht mehr veröffentlichen?"
+      delete_confirm: "Diesen %{course_l} löschen?"
+      published_on: "veröffentlicht am %{date}"
+      enrolled: "Eingeschrieben · %{percent}%% abgeschlossen"
+      unenrol: "Ausschreiben"
+      unenrol_confirm: "Aus diesem %{course_l} ausschreiben?"
+      enrol_prompt: "Schreibe dich in diesen %{course_l} ein, um Fortschritt und Bewertungen zu verfolgen."
+      enrol_now: "Jetzt einschreiben"
+      signin_prompt: "Melde dich an, um dich in diesen %{course_l} einzuschreiben und deinen Fortschritt zu verfolgen."
+      signin_cta: "Zum Einschreiben anmelden"
+      lessons_heading: "%{lessons}"
+      no_lessons: "Noch keine veröffentlichten %{lessons_l}."
+    card:
+      lessons_count:
+        one: "%{count} %{lesson_l}"
+        other: "%{count} %{lessons_l}"
+    flash:
+      created: "Kurs erstellt."
+      updated: "Kurs aktualisiert."
+      deleted: "Kurs gelöscht."
+      published: "Kurs veröffentlicht."
+      unpublished: "Veröffentlichung des Kurses aufgehoben."
+      layout_reset: "Layout auf Standardwerte zurückgesetzt."
+      layout_saved: "Zertifikatslayout gespeichert."
+
+  subjects:
+    index:
+      title: "%{subjects}"
+      courses_count:
+        one: "%{count} %{course_l}"
+        other: "%{count} %{courses_l}"
+    show:
+      back: "← %{subjects}"
+      empty: "Noch keine veröffentlichten %{courses_l} in diesem %{subject_l}."
+
+  enrollments:
+    flash:
+      enrolled: "Eingeschrieben."
+      unenrolled: "Ausgeschrieben."
+
+  ratings:
+    flash:
+      created: "Danke für deine Bewertung."
+      updated: "Bewertung aktualisiert."
+      removed: "Bewertung entfernt."
+      disabled: "Bewertungen sind für diese Lektion deaktiviert."
+
+  progresses:
+    flash:
+      saved: "Fortschritt gespeichert."
+
+  validation_messages:
+    required: "ist erforderlich"

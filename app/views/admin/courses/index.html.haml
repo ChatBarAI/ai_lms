@@ -15,6 +15,7 @@
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Title
       - if subjects_enabled?
         %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Subject
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Language
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Owner
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Status
       %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2 Lessons
@@ -25,6 +26,7 @@
         %td.px-3.py-2.font-medium= c.title
         - if subjects_enabled?
           %td.px-3.py-2.text-sm.text-gray-600= c.subject&.name
+        %td.px-3.py-2.text-sm.text-gray-600= User::SUPPORTED_LOCALES.fetch(c.locale, c.locale)
         %td.px-3.py-2.text-sm.text-gray-600= c.owner&.email
         %td.px-3.py-2.text-sm
           %span{ class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{c.published? ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}" }= c.published? ? "published" : "draft"

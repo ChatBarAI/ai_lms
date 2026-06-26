@@ -5,42 +5,7 @@
         - course.errors.full_messages.each do |msg|
           %li= msg
 
-  %div
-    = f.label :title, class: "block text-sm font-medium mb-1"
-    = f.text_field :title, class: "w-full border border-gray-300 rounded px-3 py-2"
-  %div
-    = f.label :description, class: "block text-sm font-medium mb-1"
-    = f.text_area :description, rows: 4, class: "w-full border border-gray-300 rounded px-3 py-2"
-
-  .flex.flex-col.gap-4.sm:flex-row.sm:items-start
-    .flex-1
-      .flex.flex-col.gap-4
-      - if subjects_enabled?
-        %div
-          = f.label :subject_id, "Subject", class: "block text-sm font-medium mb-1"
-          = f.collection_select :subject_id, Subject.order(:name), :id, :name, { include_blank: "—" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
-
-      %div
-        = f.label :owner_id, "Owner", class: "block text-sm font-medium mb-1"
-        = f.collection_select :owner_id, User.order(:email), :id, :email, { include_blank: "—" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
-
-      %div
-        = f.label :published_at, "Publish at", class: "block text-sm font-medium mb-1"
-        = f.datetime_local_field :published_at, title: "Leave blank to keep this course as a draft.", class: "w-full border border-gray-300 rounded px-3 py-2"
-
-
-      .mt-2
-        = render "shared/tag_picker", f: f, record: course
-
-    .flex-1
-      = upload_field f, :cover_image,
-          label: "Upload cover image (PNG, JPG or WebP, max 5 MB)",
-          accept: "image/png,image/jpeg,image/webp",
-          current_attachment: course.cover_image,
-          remove_name: "course[remove_cover_image]",
-          remove_label: "Remove current cover image",
-          hint: "Cover image (optional)"
-
+  = render "courses/fields", f: f, course: course, admin: true
 
   .flex.w-full.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"

@@ -2,6 +2,28 @@
 
 en:
   devise:
+    views:
+      sessions:
+        new:
+          heading: "Log in"
+          remember_me: "Remember me"
+          submit: "Log in"
+          sso_redirecting: "Your organisation uses single sign-on. Redirecting..."
+      registrations:
+        new:
+          heading: "Sign up"
+          minimum_password_length: "(%{count} characters minimum)"
+          submit: "Sign up"
+      links:
+        log_in: "Log in"
+        sign_up: "Sign up"
+        forgot_password: "Forgot your password?"
+        confirmation_instructions: "Didn't receive confirmation instructions?"
+        unlock_instructions: "Didn't receive unlock instructions?"
+        sign_in_with: "Sign in with %{provider}"
+        continue_with_google: "Continue with Google"
+        continue_with_microsoft: "Continue with Microsoft"
+        other_sso: "Other SSO"
     confirmations:
       confirmed: "Your email address has been successfully confirmed."
       send_instructions: "You will receive an email with instructions for how to confirm your email address in a few minutes."

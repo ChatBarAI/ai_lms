@@ -28,10 +28,11 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
   test "admin update does not change slug even if slug param sent" do
     sign_in users(:admin)
     original = courses(:algebra).slug
-    patch admin_course_path(courses(:algebra)), params: { course: { title: "Renamed", slug: "hacked-slug" } }
+    patch admin_course_path(courses(:algebra)), params: { course: { title: "Renamed", slug: "hacked-slug", locale: "de" } }
     courses(:algebra).reload
     assert_equal original, courses(:algebra).slug
     assert_equal "Renamed", courses(:algebra).title
+    assert_equal "de", courses(:algebra).locale
   end
 
   test "admin can export courses as CSV" do
@@ -71,6 +72,7 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
     headers = csv.headers
 
     assert_includes headers, "total_lessons"
+    assert_includes headers, "locale"
     assert_includes headers, "published_lessons"
     assert_includes headers, "active_learners"
     assert_includes headers, "completed_progresses"
@@ -83,6 +85,7 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
     row = csv.find { |r| r["slug"] == "algebra" }
     assert_not_nil row
     assert_equal "Algebra", row["title"]
+    assert_equal "en", row["locale"]
     assert_equal "Mathematics", row["subject"]
     assert_equal "instructor@example.com", row["owner_email"]
     assert_equal "published", row["status"]

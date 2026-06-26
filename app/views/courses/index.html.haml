@@ -1,13 +1,13 @@
-- content_for :title, "Courses"
+- content_for :title, t(".title", **terms)
 
 .flex.items-center.justify-between.mb-4
-  %h1.text-2xl.font-bold Courses
+  %h1.text-2xl.font-bold= terms[:courses]
   - if user_signed_in? && (current_user.instructor? || current_user.admin?)
-    = link_to "New course", new_course_path, class: "px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm"
+    = link_to t(".new", **terms), new_course_path, class: "px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm"
 
 - if @courses.any?
   .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
     - @courses.each do |course|
       = render "courses/card", course: course
 - else
-  %p.text-gray-500 No courses found.
+  %p.text-gray-500= t(".empty", **terms)

@@ -1,23 +1,23 @@
-- content_for :title, "My learning"
+- content_for :title, t(".title")
 
-%h1.text-2xl.font-bold.mb-6 My learning
+%h1.text-2xl.font-bold.mb-6= t(".heading")
 
 - if @enrollments.empty?
   .bg-white.border.border-gray-200.rounded-lg.p-6
     %p.text-gray-600
-      You're not enrolled in any courses yet.
-      = link_to "Browse courses", courses_path, class: "text-indigo-600 hover:underline"
+      = t(".not_enrolled")
+      = link_to t(".browse_courses"), courses_path, class: "text-indigo-600 hover:underline"
 
 - else
   .bg-white.border.border-gray-200.rounded-lg.overflow-hidden.mb-8
     %table.min-w-full.text-sm
       %thead.bg-gray-50.text-gray-600
         %tr
-          %th.text-left.px-4.py-2 Course
-          %th.text-left.px-4.py-2 Progress
-          %th.text-left.px-4.py-2 Lessons completed
-          %th.text-left.px-4.py-2 Avg score
-          %th.text-left.px-4.py-2= "#{terms[:quiz]} trend (course-wide)"
+          %th.text-left.px-4.py-2= terms[:course]
+          %th.text-left.px-4.py-2= t(".progress")
+          %th.text-left.px-4.py-2= t(".lessons_completed", **terms)
+          %th.text-left.px-4.py-2= t(".avg_score")
+          %th.text-left.px-4.py-2= t(".quiz_trend", **terms)
           %th.text-left.px-4.py-2
       %tbody.divide-y
         - @enrollments.each do |enrollment|
@@ -36,18 +36,18 @@
                            attempts: attempts,
                            pass_mark: @default_pass_mark,
                            dialog_id: trend_dialog_id,
-                           title: "#{terms[:quiz]} Mark Trend - #{course.title} (All #{terms[:lessons]})"
+                           title: t(".quiz_trend_title", quiz: terms[:quiz], course: course.title, lessons: terms[:lessons])
               - else
                 %span.text-gray-400 —
-            %td.px-4.py-2= link_to "View course", course_path(course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
+            %td.px-4.py-2= link_to t(".view_course", **terms), course_path(course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
 
   .grid.grid-cols-1.lg:grid-cols-2.gap-6.mb-8
     .bg-white.border.border-gray-200.rounded-lg.p-4
-      %h2.font-semibold.mb-2 Course completion
-      %p.text-xs.text-gray-500.mb-2 % of lessons completed in each enrolled course
+      %h2.font-semibold.mb-2= t(".course_completion", **terms)
+      %p.text-xs.text-gray-500.mb-2= t(".course_completion_hint", **terms)
       = svg_chart @course_completion, type: :bar, color: "#4f46e5", max: 100, suffix: "%", height: 260
 
     .bg-white.border.border-gray-200.rounded-lg.p-4
-      %h2.font-semibold.mb-2 Lessons completed per week
-      %p.text-xs.text-gray-500.mb-2 Last 12 weeks
+      %h2.font-semibold.mb-2= t(".lessons_per_week", **terms)
+      %p.text-xs.text-gray-500.mb-2= t(".last_12_weeks")
       = svg_chart @completed_per_week, type: :line, color: "#10b981", height: 260

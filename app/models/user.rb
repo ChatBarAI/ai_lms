@@ -1,4 +1,9 @@
 class User < ApplicationRecord
+  SUPPORTED_LOCALES = {
+    "en" => "English",
+    "de" => "Deutsch"
+  }.freeze
+
   google_oauth_enabled = Rails.application.credentials.dig(:google_oauth, :client_id).present? &&
                          Rails.application.credentials.dig(:google_oauth, :client_secret).present?
 
@@ -21,6 +26,11 @@ class User < ApplicationRecord
   has_one_attached :avatar
 
   validates :email, presence: true
+  validates :locale, presence: true, inclusion: { in: SUPPORTED_LOCALES.keys }
+  validates :course_locales, presence: true
+  validate :course_locales_are_supported
+
+  before_validation :normalise_course_locales
 
   scope :with_role, ->(role) { role.present? ? where(role: roles[role.to_s]) : all }
   scope :in_organization, ->(org_id) { org_id.present? ? where(organization_id: org_id) : all }
@@ -56,6 +66,14 @@ class User < ApplicationRecord
 
   def display_name
     name.presence || email
+  end
+
+  def locale_name
+    SUPPORTED_LOCALES.fetch(locale, SUPPORTED_LOCALES.fetch(I18n.default_locale.to_s))
+  end
+
+  def course_locale_names
+    course_locales.filter_map { |locale| SUPPORTED_LOCALES[locale] }
   end
 
   def self.from_omniauth(auth)
@@ -94,5 +112,16 @@ class User < ApplicationRecord
 
     user.save
     user
+  end
+
+  private
+
+  def normalise_course_locales
+    self.course_locales = Array(course_locales).reject(&:blank?).uniq
+  end
+
+  def course_locales_are_supported
+    unsupported = Array(course_locales).reject { |locale| SUPPORTED_LOCALES.key?(locale) }
+    errors.add(:course_locales, "contains unsupported locales") if unsupported.any?
   end
 end

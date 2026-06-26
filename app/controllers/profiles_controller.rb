@@ -9,9 +9,9 @@ class ProfilesController < ApplicationController
 
   def update
     if current_user.update(profile_params)
-      redirect_to profile_path, notice: "Profile updated."
+      redirect_to profile_path, notice: t("profiles.flash.updated")
     else
-      flash.now[:alert] = "Could not save profile."
+      flash.now[:alert] = t("profiles.flash.update_failed")
       render :edit, status: :unprocessable_entity
     end
   end
@@ -19,6 +19,6 @@ class ProfilesController < ApplicationController
   private
 
   def profile_params
-    params.require(:user).permit(:name, :avatar)
+    params.require(:user).permit(:name, :avatar, :locale, course_locales: [])
   end
 end

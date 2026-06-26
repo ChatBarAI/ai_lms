@@ -7,7 +7,7 @@ class EnrollmentsController < ApplicationController
     enrollment.role ||= :student
     authorize! :create, enrollment
     if enrollment.save
-      redirect_to course_path(course), notice: "Enrolled."
+      redirect_to course_path(course), notice: t("enrollments.flash.enrolled")
     else
       redirect_to course_path(course), alert: enrollment.errors.full_messages.to_sentence
     end
@@ -17,6 +17,6 @@ class EnrollmentsController < ApplicationController
     course = Course.find_by(slug: params[:course_id]) || Course.find(params[:course_id])
     enrollment = current_user.enrollments.find_by!(course_id: course.id)
     enrollment.destroy
-    redirect_to course_path(course), notice: "Unenrolled.", status: :see_other
+    redirect_to course_path(course), notice: t("enrollments.flash.unenrolled"), status: :see_other
   end
 end

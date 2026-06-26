@@ -3,23 +3,31 @@
     = hidden_field_tag :section, "terminology"
 
     %h2.text-lg.font-semibold.text-gray-900 Terminology
-    %p.text-sm.text-gray-500 Override labels used throughout the app.
+    %p.text-sm.text-gray-500 Override labels used throughout the app, separately for each supported language.
 
     = render "section_errors", section: "terminology"
 
-    - terminology = (@site_setting.terminology || {})
-    - terminology_groups = [["Lesson", "lesson_one", "lesson_other", "Lesson", "Lessons"], ["Course", "course_one", "course_other", "Course", "Courses"], ["Subject", "subject_one", "subject_other", "Subject", "Subjects"], ["Quiz", "quiz_one", "quiz_other", "Quiz", "Quizzes"]]
-    .mt-5.grid.grid-cols-1.sm:grid-cols-2.gap-x-10.gap-y-4
-      - terminology_groups.each do |group_label, sing_key, plur_key, sing_default, plur_default|
-        %div
-          %div.text-sm.font-medium.mb-1= group_label
-          .flex.items-center.gap-3
-            %label.flex.flex-1.flex-col.gap-1.text-xs.text-gray-600
-              %span Singular
-              = text_field_tag "site_setting[terminology][#{sing_key}]", terminology[sing_key], placeholder: sing_default, class: "border border-gray-300 rounded px-2 py-1 text-sm"
-            %label.flex.flex-1.flex-col.gap-1.text-xs.text-gray-600
-              %span Plural
-              = text_field_tag "site_setting[terminology][#{plur_key}]", terminology[plur_key], placeholder: plur_default, class: "border border-gray-300 rounded px-2 py-1 text-sm"
+    - terminology_groups = [["Lesson", "lesson_one", "lesson_other", Lesson], ["Course", "course_one", "course_other", Course], ["Subject", "subject_one", "subject_other", Subject], ["Quiz", "quiz_one", "quiz_other", nil]]
+    .mt-5.space-y-8
+      - I18n.available_locales.each do |locale|
+        - locale = locale.to_s
+        - terminology = @site_setting.terminology_for(locale)
+        %div.rounded-lg.border.border-gray-200.p-4
+          %h3.text-base.font-semibold.text-gray-900= User::SUPPORTED_LOCALES.fetch(locale, locale.upcase)
+          %p.text-xs.text-gray-500 Leave blank to use the #{locale.upcase} translation file defaults.
+          .mt-4.grid.grid-cols-1.sm:grid-cols-2.gap-x-10.gap-y-4
+            - terminology_groups.each do |group_label, sing_key, plur_key, model|
+              - sing_default = I18n.with_locale(locale) { model ? model.model_name.human(count: 1) : I18n.t("activerecord.models.quiz.one") }
+              - plur_default = I18n.with_locale(locale) { model ? model.model_name.human(count: 2) : I18n.t("activerecord.models.quiz.other") }
+              %div
+                %div.text-sm.font-medium.mb-1= group_label
+                .flex.items-center.gap-3
+                  %label.flex.flex-1.flex-col.gap-1.text-xs.text-gray-600
+                    %span Singular
+                    = text_field_tag "site_setting[terminology][#{locale}][#{sing_key}]", terminology[sing_key], placeholder: sing_default, class: "border border-gray-300 rounded px-2 py-1 text-sm"
+                  %label.flex.flex-1.flex-col.gap-1.text-xs.text-gray-600
+                    %span Plural
+                    = text_field_tag "site_setting[terminology][#{locale}][#{plur_key}]", terminology[plur_key], placeholder: plur_default, class: "border border-gray-300 rounded px-2 py-1 text-sm"
 
     .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
       = f.submit "Save terminology", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

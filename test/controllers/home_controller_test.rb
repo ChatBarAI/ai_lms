@@ -4,13 +4,42 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "renders root for anonymous user" do
     get root_path
     assert_response :success
+    assert_select "html[lang=?]", "en"
     assert_match(/Mathematics/, response.body)
+  end
+
+  test "signed in German user sees German locale chrome" do
+    student = users(:student)
+    student.update!(locale: "de")
+    sign_in student
+
+    get profile_path
+
+    assert_response :success
+    assert_select "html[lang=?]", "de"
+    assert_match(/Mein Profil/, response.body)
+    assert_match(/Sprache: Deutsch/, response.body)
   end
 
   test "lists published courses but not drafts" do
     get root_path
     assert_match(/Algebra/, response.body)
     assert_no_match(/Draft Course/, response.body)
+  end
+
+  test "signed in student sees only recent items matching course languages" do
+    courses(:algebra).update!(locale: "en")
+    courses(:other_owner_course).update!(locale: "de")
+    student = users(:student)
+    student.update!(course_locales: [ "de" ])
+    sign_in student
+
+    get root_path
+
+    assert_response :success
+    assert_no_match(/Algebra/, response.body)
+    assert_no_match(/Intro to Algebra/, response.body)
+    assert_match(/Physics 101/, response.body)
   end
 
   test "signed in student does not see future-scheduled items" do

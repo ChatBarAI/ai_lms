@@ -2,6 +2,7 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
+  around_action :switch_locale
   before_action :refresh_terminology
   before_action :configure_permitted_parameters, if: :devise_controller?
   before_action :enforce_sso_requirement
@@ -58,5 +59,16 @@ class ApplicationController < ActionController::Base
 
   def refresh_terminology
     TerminologyApplier.ensure_fresh!
+  end
+
+  def switch_locale(&action)
+    I18n.with_locale(current_locale, &action)
+  end
+
+  def current_locale
+    locale = current_user&.locale.presence
+    return locale.to_sym if I18n.available_locales.map(&:to_s).include?(locale)
+
+    I18n.default_locale
   end
 end

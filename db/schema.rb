@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_18_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_22_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -75,6 +75,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_18_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "certificate_layout", default: {}, null: false
+    t.string "locale", default: "en", null: false
     t.index ["owner_id"], name: "index_courses_on_owner_id"
     t.index ["slug"], name: "index_courses_on_slug", unique: true
     t.index ["subject_id"], name: "index_courses_on_subject_id"
@@ -358,6 +359,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_18_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "organization_id"
+    t.string "locale", default: "en", null: false
+    t.string "course_locales", default: ["en", "de"], null: false, array: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true

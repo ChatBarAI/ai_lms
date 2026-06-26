@@ -4,8 +4,8 @@ class HomeController < ApplicationController
   def index
     if SiteSetting.current.allow_guest_access? || user_signed_in?
       @subjects = Subject.includes(:courses).order(:name)
-      recent_courses = Course.published.includes(:tags).order(published_at: :desc).limit(6)
-      recent_lessons = Lesson.published.includes(:tags, course: :subject).order(published_at: :desc).limit(6)
+      recent_courses = Course.published.visible_to(current_user).includes(:tags).order(published_at: :desc).limit(6)
+      recent_lessons = Lesson.published.joins(:course).merge(Course.visible_to(current_user)).includes(:tags, course: :subject).order(published_at: :desc).limit(6)
       @recent_items = (recent_courses + recent_lessons).sort_by(&:published_at).reverse.first(6)
     end
   end

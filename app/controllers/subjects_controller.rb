@@ -5,6 +5,6 @@ class SubjectsController < ApplicationController
 
   def show
     @subject = Subject.find_by!(slug: params[:id]) rescue Subject.find(params[:id])
-    @courses = @subject.courses.published.includes(:tags).order(published_at: :desc)
+    @courses = @subject.courses.published.visible_to(current_user).includes(:tags).order(published_at: :desc)
   end
 end

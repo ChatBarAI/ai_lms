@@ -19,15 +19,20 @@ class Course < ApplicationRecord
                                    size: { less_than: 10.megabytes }
 
   validates :title, presence: true
+  validates :locale, presence: true, inclusion: { in: User::SUPPORTED_LOCALES.keys }
   validates :slug, presence: true, uniqueness: true,
                    format: { with: /\A[a-z0-9-]+\z/ }
 
   before_validation :assign_slug, on: :create
 
   scope :published, -> { where(published_at: ..Time.current) }
+  scope :visible_to, ->(user) {
+    locales = user&.course_locales.presence
+    locales.present? ? where(locale: locales) : all
+  }
 
   def self.ransackable_attributes(_auth = nil)
-    %w[title slug description owner_id subject_id published_at created_at updated_at id]
+    %w[title slug description locale owner_id subject_id published_at created_at updated_at id]
   end
 
   def self.ransackable_associations(_auth = nil)
@@ -40,6 +45,7 @@ class Course < ApplicationRecord
     id
     slug
     title
+    locale
     subject
     owner_email
     status
@@ -152,6 +158,7 @@ class Course < ApplicationRecord
       course.id,
       course.slug,
       course.title,
+      course.locale,
       course.subject_name,
       course.owner_email,
       course.published? ? "published" : "draft",
@@ -180,6 +187,7 @@ class Course < ApplicationRecord
       courses.id,
       courses.slug,
       courses.title,
+      courses.locale,
       courses.published_at,
       courses.created_at,
       courses.updated_at,

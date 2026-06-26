@@ -24,7 +24,7 @@ class LessonsController < ApplicationController
         fail_scoring!(@progress, @enrollment, @lesson)
         @quiz_attempts = @progress.quiz_attempts.ordered.to_a
         @ai_scoring_pending = false
-        flash.now[:alert] = "AI marking timed out after 5 minutes. Free-text answers have been scored as 0 — you can retake the #{helpers.terms[:quiz_l]}."
+        flash.now[:alert] = t("lessons.flash.ai_marking_timeout", quiz_l: helpers.terms[:quiz_l])
       end
     end
     if @lesson.retry_incorrect_only? && @enrollment && @progress&.persisted?
@@ -43,7 +43,7 @@ class LessonsController < ApplicationController
   def start
     enrollment = current_user.enrollments.find_by(course_id: @course.id)
     if enrollment && !@lesson.lesson_materials_complete_for?(enrollment)
-      redirect_to course_lesson_path(@course, @lesson), alert: "Complete the required materials first." and return
+      redirect_to course_lesson_path(@course, @lesson), alert: t("lessons.flash.complete_required_materials") and return
     end
     if enrollment
       progress = enrollment.progresses.find_or_create_by(lesson_id: @lesson.id)
@@ -56,23 +56,25 @@ class LessonsController < ApplicationController
     authorize! :read, @lesson
 
     enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
-    return redirect_to(course_lesson_path(@course, @lesson), alert: "Enrol to submit answers.") unless enrollment
-    return redirect_to(course_lesson_path(@course, @lesson), alert: "Complete the required materials first.") unless @lesson.lesson_materials_complete_for?(enrollment)
+    return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.enrol_to_submit")) unless enrollment
+    return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.complete_required_materials")) unless @lesson.lesson_materials_complete_for?(enrollment)
 
     answers = submission_answers
-    return redirect_to(course_lesson_path(@course, @lesson), alert: "No questions to grade.") if @lesson.questions.empty?
+    return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.no_questions_to_grade")) if @lesson.questions.empty?
 
     result = LessonQuizSubmissionService.new(lesson: @lesson, enrollment: enrollment, answers: answers).call
     progress = result[:progress]
 
     if result[:queued_ai_scoring]
-      flash[:popup_title] = "Answers submitted"
-      flash[:popup] = "Your written responses are queued for marking by ChatBar AI. You can track progress in the Status section."
+      flash[:popup_title] = t("lessons.flash.answers_submitted_title")
+      flash[:popup] = t("lessons.flash.answers_queued")
       redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
     else
       score = result[:score]
-      flash[:popup_title] = "Answers submitted"
-      flash[:popup] = "You scored #{score}%. #{progress.completed? ? 'Lesson marked complete.' : "Keep practising - pass mark is #{@lesson.effective_pass_mark}%."}"
+      flash[:popup_title] = t("lessons.flash.answers_submitted_title")
+      flash[:popup] = t("lessons.flash.answers_scored",
+                         score: score,
+                         message: progress.completed? ? t("lessons.flash.lesson_marked_complete") : t("lessons.flash.keep_practising", pass_mark: @lesson.effective_pass_mark))
       redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
     end
   end
@@ -84,7 +86,7 @@ class LessonsController < ApplicationController
     @lesson.course = @course
     @lesson.position ||= @course.lessons.maximum(:position).to_i + 1
     if assign_lesson_form_attributes && @lesson.save
-      redirect_to course_lesson_path(@course, @lesson), notice: "Lesson created."
+      redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.created")
     else
       render :new, status: :unprocessable_entity
     end
@@ -96,7 +98,7 @@ class LessonsController < ApplicationController
   def update
     @lesson.cover_image.purge if ActiveModel::Type::Boolean.new.cast(params.dig(:lesson, :remove_cover_image))
     if assign_lesson_form_attributes && @lesson.save
-      redirect_to course_lesson_path(@course, @lesson), notice: "Lesson updated."
+      redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.updated")
     else
       render :edit, status: :unprocessable_entity
     end
@@ -104,17 +106,17 @@ class LessonsController < ApplicationController
 
   def destroy
     @lesson.destroy
-    redirect_to course_path(@course), notice: "Lesson deleted.", status: :see_other
+    redirect_to course_path(@course), notice: t("lessons.flash.deleted"), status: :see_other
   end
 
   def publish
     @lesson.update(published_at: Time.current)
-    redirect_to course_lesson_path(@course, @lesson), notice: "Lesson published."
+    redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.published")
   end
 
   def unpublish
     @lesson.update(published_at: nil)
-    redirect_to course_lesson_path(@course, @lesson), notice: "Lesson unpublished."
+    redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.unpublished")
   end
 
   def video_youtube_edit
@@ -123,7 +125,7 @@ class LessonsController < ApplicationController
   def video_youtube_update
     @lesson.intro_video.purge if @lesson.intro_video.attached?
     if @lesson.update(params.require(:lesson).permit(:video_url))
-      redirect_to edit_course_lesson_path(@course, @lesson), notice: "Video URL saved."
+      redirect_to edit_course_lesson_path(@course, @lesson), notice: t("lessons.flash.video_url_saved")
     else
       render :video_youtube_edit, status: :unprocessable_entity
     end
@@ -135,11 +137,11 @@ class LessonsController < ApplicationController
   def video_upload_update
     attrs = params.require(:lesson).permit(:intro_video)
     if attrs[:intro_video].blank?
-      @lesson.errors.add(:intro_video, "is required")
+      @lesson.errors.add(:intro_video, t("validation_messages.required"))
       return render :video_upload_edit, status: :unprocessable_entity
     end
     if @lesson.update(attrs.merge(video_url: nil))
-      redirect_to edit_course_lesson_path(@course, @lesson), notice: "Video uploaded."
+      redirect_to edit_course_lesson_path(@course, @lesson), notice: t("lessons.flash.video_uploaded")
     else
       render :video_upload_edit, status: :unprocessable_entity
     end
@@ -227,7 +229,7 @@ class LessonsController < ApplicationController
   def destroy_video
     @lesson.intro_video.purge if @lesson.intro_video.attached?
     @lesson.update(video_url: nil)
-    redirect_to edit_course_lesson_path(@course, @lesson), notice: "Intro video removed."
+    redirect_to edit_course_lesson_path(@course, @lesson), notice: t("lessons.flash.video_removed")
   end
 
   def poster_edit
@@ -236,11 +238,11 @@ class LessonsController < ApplicationController
   def poster_update
     attrs = params.require(:lesson).permit(:poster_image)
     if attrs[:poster_image].blank?
-      @lesson.errors.add(:poster_image, "is required")
+      @lesson.errors.add(:poster_image, t("validation_messages.required"))
       return render :poster_edit, status: :unprocessable_entity
     end
     if @lesson.update(attrs)
-      redirect_to edit_course_lesson_path(@course, @lesson), notice: "Poster image saved."
+      redirect_to edit_course_lesson_path(@course, @lesson), notice: t("lessons.flash.poster_saved")
     else
       render :poster_edit, status: :unprocessable_entity
     end
@@ -248,7 +250,7 @@ class LessonsController < ApplicationController
 
   def destroy_poster
     @lesson.poster_image.purge if @lesson.poster_image.attached?
-    redirect_to edit_course_lesson_path(@course, @lesson), notice: "Poster image removed."
+    redirect_to edit_course_lesson_path(@course, @lesson), notice: t("lessons.flash.poster_removed")
   end
 
   private

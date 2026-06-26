@@ -31,8 +31,8 @@
             - if show_site_brand_name?
               %span.font-semibold.text-lg= site_brand_name
           - if subjects_enabled?
-            = link_to "Subjects", subjects_path, class: "text-sm hover:opacity-80"
-          = link_to "Courses", courses_path, class: "text-sm hover:opacity-80"
+            = link_to t("layouts.application.subjects"), subjects_path, class: "text-sm hover:opacity-80"
+          = link_to t("layouts.application.courses"), courses_path, class: "text-sm hover:opacity-80"
         .flex.items-center.gap-3
           - if user_signed_in?
             .relative{ data: { controller: "dropdown" } }
@@ -48,18 +48,18 @@
                 %svg.w-4.h-4.opacity-50{ xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 20 20", fill: "currentColor" }
                   %path{ "fill-rule": "evenodd", d: "M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z", "clip-rule": "evenodd" }
               .absolute.right-0.top-full.z-50.mt-1.w-52.rounded-lg.border.border-gray-200.bg-white.py-1.shadow-lg.hidden{ id: "user-menu", role: "menu", data: { dropdown_target: "menu" } }
-                = link_to "My learning", me_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
-                = link_to "My profile", profile_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
+                = link_to t("layouts.application.my_learning"), me_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
+                = link_to t("layouts.application.my_profile"), profile_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.instructor? || current_user.admin?
-                  = link_to "My courses", courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
+                  = link_to t("layouts.application.my_courses"), courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.admin?
                   = link_to "Admin", admin_root_path, class: "block px-4 py-2 text-sm text-indigo-600 hover:bg-gray-50"
                 .border-t.border-gray-100.mt-1.pt-1
-                  = button_to "Sign out", destroy_user_session_path, method: :delete, class: "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 bg-transparent border-0 cursor-pointer"
+                  = button_to t("layouts.application.sign_out"), destroy_user_session_path, method: :delete, class: "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 bg-transparent border-0 cursor-pointer"
           - else
-            = link_to "Sign in", new_user_session_path, class: "text-sm hover:opacity-80"
+            = link_to t("layouts.application.sign_in"), new_user_session_path, class: "text-sm hover:opacity-80"
             - if SiteSetting.current.self_service_sign_up_enabled?
-              = link_to "Sign up", new_user_registration_path, class: "text-sm font-medium px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+              = link_to t("layouts.application.sign_up"), new_user_registration_path, class: "text-sm font-medium px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700"
     %main.max-w-6xl.mx-auto.px-4.py-8
       - flash.reject { |type, _| %w[popup popup_alert popup_title].include?(type) }.each do |type, msg|
         - level = (type.to_s == "notice" ? "bg-green-50 text-green-800 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200")
@@ -74,11 +74,11 @@
     .fixed.inset-x-0.bottom-0.z-40.hidden{ data: { controller: "pwa-install", pwa_install_target: "container" } }
       %div{ class: "border-t backdrop-blur shadow-2xl", style: "border-color: color-mix(in srgb, var(--page-fg) 18%, transparent); background-color: color-mix(in srgb, var(--card-bg) 94%, transparent);" }
         .max-w-6xl.mx-auto.w-full.px-4.py-4.flex.flex-col.gap-3
-          %p.text-base.font-medium{ data: { pwa_install_target: "title" } } Install this app for faster access
+          %p.text-base.font-medium{ data: { pwa_install_target: "title" } }= t("layouts.application.pwa_title")
           %p.text-sm.hidden{ data: { pwa_install_target: "details" } }
-            Use Safari to install: open this site in Safari, tap Share (square with up arrow), then tap Add to Home Screen.
+            = t("layouts.application.pwa_safari")
           .flex.items-center.gap-2.w-full.sm:w-auto
             %button.text-sm.px-4.py-2.rounded.bg-indigo-600.text-white.hover:bg-indigo-700.cursor-pointer.border-0.w-full.sm:w-auto{ type: "button", data: { action: "pwa-install#install", pwa_install_target: "primaryButton" } }
-              Install
+              = t("layouts.application.install")
             %button.text-sm.px-4.py-2.rounded.border.bg-transparent.cursor-pointer.w-full.sm:w-auto{ type: "button", data: { action: "pwa-install#dismiss" }, style: "border-color: color-mix(in srgb, var(--page-fg) 28%, transparent); color: var(--page-fg);" }
-              Not now
+              = t("layouts.application.not_now")

@@ -1,6 +1,6 @@
-# Pushes per-deployment terminology overrides from SiteSetting#terminology
-# into the I18n backend so admin-editable strings (e.g. renaming "Lesson"
-# to "Module") take effect without a restart.
+# Pushes per-deployment, per-locale terminology overrides from
+# SiteSetting#terminology into the I18n backend so admin-editable strings
+# (e.g. renaming "Lesson" to "Module") take effect without a restart.
 #
 # Multi-worker safety: each Puma worker has its own I18n backend. Workers
 # call `ensure_fresh!` on each request and re-apply when SiteSetting has
@@ -50,15 +50,26 @@ class TerminologyApplier
     end
 
     def apply_overrides(overrides)
-      tree = {}
-      OVERRIDABLE.each do |key, path|
-        value = overrides[key].presence
-        next unless value
-        deep_set(tree, path, value.to_s)
+      normalise_by_locale(overrides).each do |locale, locale_overrides|
+        next unless I18n.available_locales.map(&:to_s).include?(locale)
+
+        tree = {}
+        OVERRIDABLE.each do |key, path|
+          value = locale_overrides[key].presence
+          next unless value
+
+          deep_set(tree, path, value.to_s)
+        end
+        I18n.backend.store_translations(locale.to_sym, tree) if tree.any?
       end
-      return if tree.empty?
-      I18n.available_locales.each do |locale|
-        I18n.backend.store_translations(locale, tree)
+    end
+
+    def normalise_by_locale(overrides)
+      hash = (overrides || {}).to_h.deep_stringify_keys
+      if (hash.keys & OVERRIDABLE.keys).any?
+        { I18n.default_locale.to_s => hash.slice(*OVERRIDABLE.keys) }
+      else
+        hash.transform_values { |locale_overrides| (locale_overrides || {}).to_h.deep_stringify_keys.slice(*OVERRIDABLE.keys) }
       end
     end
 

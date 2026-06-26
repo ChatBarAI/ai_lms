@@ -8,7 +8,7 @@ class RatingsController < ApplicationController
     @rating.assign_attributes(rating_params)
     authorize! :create, @rating
     if @rating.save
-      redirect_to course_lesson_path(@lesson.course, @lesson), notice: "Thanks for rating."
+      redirect_to course_lesson_path(@lesson.course, @lesson), notice: t("ratings.flash.created")
     else
       redirect_to course_lesson_path(@lesson.course, @lesson), alert: @rating.errors.full_messages.to_sentence
     end
@@ -18,7 +18,7 @@ class RatingsController < ApplicationController
     @rating = Rating.find(params[:id])
     authorize! :update, @rating
     if @rating.update(rating_params)
-      redirect_to course_lesson_path(@lesson.course, @lesson), notice: "Rating updated."
+      redirect_to course_lesson_path(@lesson.course, @lesson), notice: t("ratings.flash.updated")
     else
       redirect_to course_lesson_path(@lesson.course, @lesson), alert: @rating.errors.full_messages.to_sentence
     end
@@ -28,7 +28,7 @@ class RatingsController < ApplicationController
     rating = Rating.find(params[:id])
     authorize! :destroy, rating
     rating.destroy
-    redirect_to course_lesson_path(@lesson.course, @lesson), notice: "Rating removed.", status: :see_other
+    redirect_to course_lesson_path(@lesson.course, @lesson), notice: t("ratings.flash.removed"), status: :see_other
   end
 
   private
@@ -44,6 +44,6 @@ class RatingsController < ApplicationController
   def ensure_ratings_enabled!
     return if @lesson.ratings_enabled?
 
-    redirect_to course_lesson_path(@lesson.course, @lesson), alert: "Ratings are disabled for this lesson."
+    redirect_to course_lesson_path(@lesson.course, @lesson), alert: t("ratings.flash.disabled")
   end
 end

@@ -1,4 +1,4 @@
-- content_for :title, "Home"
+- content_for :title, t(".title")
 
 .bg-white.border.border-gray-200.rounded-lg.p-8.mb-8
   .flex.flex-col.items-start.gap-4.sm:flex-row.sm:items-center.sm:justify-between
@@ -6,19 +6,19 @@
     - if hero
       .flex-1.hero-prose= hero
     - else
-      %h1.text-xl.font-bold Learn with an AI tutor
+      %h1.text-xl.font-bold= t(".hero_heading")
     - if site_setting.allow_guest_access? || user_signed_in?
       .flex.w-full.flex-col.gap-3.sm:w-auto.sm:flex-row.sm:items-center
         - if subjects_enabled?
-          = link_to "Browse subjects", subjects_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
-        = link_to "All courses", courses_path, class: "w-full text-center px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 sm:w-auto"
+          = link_to t(".browse_subjects"), subjects_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
+        = link_to t(".all_courses"), courses_path, class: "w-full text-center px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 sm:w-auto"
     - else
       .flex.w-full.sm:w-auto
-        = link_to "Sign in to access courses", new_user_session_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
+        = link_to t(".sign_in_to_access"), new_user_session_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
 
 - if site_setting.allow_guest_access? || user_signed_in?
   %section
-    %h2.text-xl.font-semibold.mb-3 Recently published
+    %h2.text-xl.font-semibold.mb-3= t(".recently_published")
     - if @recent_items&.any?
       .flex.flex-wrap.justify-center.gap-4
         - @recent_items.each do |item|
@@ -28,5 +28,5 @@
             - else
               = render "lessons/card", lesson: item
     - else
-      %p.text-gray-500 No published courses yet.
+      %p.text-gray-500= t(".empty")
 - else

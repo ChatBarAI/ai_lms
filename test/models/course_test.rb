@@ -18,6 +18,22 @@ class CourseTest < ActiveSupport::TestCase
     assert_equal "hello-world", c.slug
   end
 
+  test "locale defaults to English" do
+    c = Course.new(title: "Locale Course", owner: users(:instructor))
+    assert_equal "en", c.locale
+  end
+
+  test "allows supported locales" do
+    c = Course.new(title: "German Course", owner: users(:instructor), locale: "de")
+    assert c.valid?
+  end
+
+  test "rejects unsupported locales" do
+    c = Course.new(title: "Invalid Locale Course", owner: users(:instructor), locale: "fr")
+    assert_not c.valid?
+    assert_includes c.errors[:locale], "is not included in the list"
+  end
+
   test "to_param uses slug" do
     assert_equal "algebra", courses(:algebra).to_param
   end

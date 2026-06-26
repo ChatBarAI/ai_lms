@@ -1,0 +1,85 @@
+de:
+  devise:
+    views:
+      sessions:
+        new:
+          heading: "Anmelden"
+          remember_me: "Angemeldet bleiben"
+          submit: "Anmelden"
+          sso_redirecting: "Deine Organisation verwendet Single Sign-on. Weiterleitung..."
+      registrations:
+        new:
+          heading: "Registrieren"
+          minimum_password_length: "(mindestens %{count} Zeichen)"
+          submit: "Registrieren"
+      links:
+        log_in: "Anmelden"
+        sign_up: "Registrieren"
+        forgot_password: "Passwort vergessen?"
+        confirmation_instructions: "Keine Bestätigungsanweisungen erhalten?"
+        unlock_instructions: "Keine Entsperranweisungen erhalten?"
+        sign_in_with: "Mit %{provider} anmelden"
+        continue_with_google: "Weiter mit Google"
+        continue_with_microsoft: "Weiter mit Microsoft"
+        other_sso: "Anderes SSO"
+    confirmations:
+      confirmed: "Deine E-Mail-Adresse wurde erfolgreich bestätigt."
+      send_instructions: "Du erhältst in wenigen Minuten eine E-Mail mit Anweisungen zur Bestätigung deiner E-Mail-Adresse."
+      send_paranoid_instructions: "Falls deine E-Mail-Adresse in unserer Datenbank existiert, erhältst du in wenigen Minuten eine E-Mail mit Bestätigungsanweisungen."
+    failure:
+      already_authenticated: "Du bist bereits angemeldet."
+      inactive: "Dein Konto ist noch nicht aktiviert."
+      invalid: "Ungültige %{authentication_keys} oder ungültiges Passwort."
+      locked: "Dein Konto ist gesperrt."
+      last_attempt: "Du hast noch einen Versuch, bevor dein Konto gesperrt wird."
+      not_found_in_database: "Ungültige %{authentication_keys} oder ungültiges Passwort."
+      timeout: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
+      unauthenticated: "Du musst dich anmelden oder registrieren, bevor du fortfahren kannst."
+      unconfirmed: "Du musst deine E-Mail-Adresse bestätigen, bevor du fortfahren kannst."
+    mailer:
+      confirmation_instructions:
+        subject: "Bestätigungsanweisungen"
+      reset_password_instructions:
+        subject: "Anweisungen zum Zurücksetzen des Passworts"
+      unlock_instructions:
+        subject: "Anweisungen zum Entsperren"
+      email_changed:
+        subject: "E-Mail geändert"
+      password_change:
+        subject: "Passwort geändert"
+    omniauth_callbacks:
+      failure: "Authentifizierung über %{kind} fehlgeschlagen: \"%{reason}\"."
+      success: "Erfolgreich über %{kind} authentifiziert."
+    passwords:
+      no_token: "Du kannst diese Seite nur über einen Link aus einer Passwort-Zurücksetzen-E-Mail öffnen. Falls du aus einer solchen E-Mail kommst, prüfe bitte, ob du die vollständige URL verwendet hast."
+      send_instructions: "Du erhältst in wenigen Minuten eine E-Mail mit Anweisungen zum Zurücksetzen deines Passworts."
+      send_paranoid_instructions: "Falls deine E-Mail-Adresse in unserer Datenbank existiert, erhältst du in wenigen Minuten einen Link zur Passwort-Wiederherstellung."
+      updated: "Dein Passwort wurde erfolgreich geändert. Du bist jetzt angemeldet."
+      updated_not_active: "Dein Passwort wurde erfolgreich geändert."
+    registrations:
+      destroyed: "Tschüss! Dein Konto wurde erfolgreich gelöscht."
+      signed_up: "Willkommen! Du hast dich erfolgreich registriert."
+      signed_up_but_inactive: "Du hast dich erfolgreich registriert. Dein Konto ist jedoch noch nicht aktiviert."
+      signed_up_but_locked: "Du hast dich erfolgreich registriert. Dein Konto ist jedoch gesperrt."
+      signed_up_but_unconfirmed: "Eine Nachricht mit einem Bestätigungslink wurde an deine E-Mail-Adresse gesendet."
+      update_needs_confirmation: "Du hast dein Konto erfolgreich aktualisiert, aber wir müssen deine neue E-Mail-Adresse bestätigen."
+      updated: "Dein Konto wurde erfolgreich aktualisiert."
+      updated_but_not_signed_in: "Dein Konto wurde erfolgreich aktualisiert. Da dein Passwort geändert wurde, musst du dich erneut anmelden."
+    sessions:
+      signed_in: "Erfolgreich angemeldet."
+      signed_out: "Erfolgreich abgemeldet."
+      already_signed_out: "Erfolgreich abgemeldet."
+    unlocks:
+      send_instructions: "Du erhältst in wenigen Minuten eine E-Mail mit Anweisungen zum Entsperren deines Kontos."
+      send_paranoid_instructions: "Falls dein Konto existiert, erhältst du in wenigen Minuten eine E-Mail mit Entsperranweisungen."
+      unlocked: "Dein Konto wurde erfolgreich entsperrt. Bitte melde dich an."
+  errors:
+    messages:
+      already_confirmed: "wurde bereits bestätigt, bitte melde dich an"
+      confirmation_period_expired: "muss innerhalb von %{period} bestätigt werden, bitte fordere eine neue Bestätigung an"
+      expired: "ist abgelaufen, bitte fordere eine neue an"
+      not_found: "nicht gefunden"
+      not_locked: "war nicht gesperrt"
+      not_saved:
+        one: "1 Fehler verhinderte das Speichern von %{resource}:"
+        other: "%{count} Fehler verhinderten das Speichern von %{resource}:"

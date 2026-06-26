@@ -3,7 +3,7 @@ class CoursesController < ApplicationController
   load_and_authorize_resource find_by: :slug
 
   def index
-    @courses = (params[:mine] && current_user ? current_user.owned_courses : Course.published).includes(:tags).order(published_at: :desc)
+    @courses = (params[:mine] && current_user ? current_user.owned_courses : Course.published.visible_to(current_user)).includes(:tags).order(published_at: :desc)
   end
 
   def show
@@ -29,7 +29,7 @@ class CoursesController < ApplicationController
   def create
     @course.owner = current_user
     if @course.save
-      redirect_to @course, notice: "Course created."
+      redirect_to @course, notice: t("courses.flash.created")
     else
       render :new, status: :unprocessable_entity
     end
@@ -44,7 +44,7 @@ class CoursesController < ApplicationController
     @course.cover_image.purge if bool.cast(params.dig(:course, :remove_cover_image))
     @course.certificate_template.purge if bool.cast(params.dig(:course, :remove_certificate_template))
     if @course.update(course_params)
-      redirect_to @course, notice: "Course updated."
+      redirect_to @course, notice: t("courses.flash.updated")
     else
       render :edit, status: :unprocessable_entity
     end
@@ -57,7 +57,7 @@ class CoursesController < ApplicationController
   def update_certificate_layout
     if params[:reset].present?
       @course.update!(certificate_layout: {})
-      redirect_to certificate_layout_course_path(@course), notice: "Layout reset to defaults." and return
+      redirect_to certificate_layout_course_path(@course), notice: t("courses.flash.layout_reset") and return
     end
 
     layout = (params[:layout] || {}).to_unsafe_h.slice(*Course::CERTIFICATE_FIELDS)
@@ -72,7 +72,7 @@ class CoursesController < ApplicationController
     end
 
     if @course.update(certificate_layout: cleaned)
-      redirect_to certificate_layout_course_path(@course), notice: "Certificate layout saved."
+      redirect_to certificate_layout_course_path(@course), notice: t("courses.flash.layout_saved")
     else
       @layout = @course.certificate_layout_with_defaults
       render :certificate_layout, status: :unprocessable_entity
@@ -81,22 +81,22 @@ class CoursesController < ApplicationController
 
   def destroy
     @course.destroy
-    redirect_to courses_path, notice: "Course deleted.", status: :see_other
+    redirect_to courses_path, notice: t("courses.flash.deleted"), status: :see_other
   end
 
   def publish
     @course.update(published_at: Time.current)
-    redirect_to @course, notice: "Course published."
+    redirect_to @course, notice: t("courses.flash.published")
   end
 
   def unpublish
     @course.update(published_at: nil)
-    redirect_to @course, notice: "Course unpublished."
+    redirect_to @course, notice: t("courses.flash.unpublished")
   end
 
   private
 
   def course_params
-    params.require(:course).permit(:title, :description, :subject_id, :published_at, :cover_image, :certificate_template, tag_ids: [])
+    params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :cover_image, :certificate_template, tag_ids: [])
   end
 end

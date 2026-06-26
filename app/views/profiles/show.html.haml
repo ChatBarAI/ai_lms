@@ -1,6 +1,6 @@
-- content_for :title, "My profile"
+- content_for :title, t(".title")
 
-%h1.text-2xl.font-bold.mb-6 My profile
+%h1.text-2xl.font-bold.mb-6= t(".heading")
 
 .max-w-lg.bg-white.border.border-gray-200.rounded-lg.p-6
   .flex.items-center.gap-5.mb-6
@@ -14,6 +14,8 @@
     .space-y-0.5
       %p.font-semibold.text-lg= current_user.display_name
       %p.text-sm.text-gray-500= current_user.email
+      %p.text-sm.text-gray-500= t(".language", language: current_user.locale_name)
+      %p.text-sm.text-gray-500= t(".course_languages", languages: current_user.course_locale_names.join(", "))
       %span.inline-block.rounded.bg-gray-100.px-2.py-0.5.text-xs.capitalize.text-gray-600= current_user.role
 
-  = link_to "Edit profile", edit_profile_path, class: "inline-block px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+  = link_to t(".edit"), edit_profile_path, class: "inline-block px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700"

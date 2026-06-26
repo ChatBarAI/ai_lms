@@ -42,6 +42,7 @@ class SiteSetting < ApplicationRecord
             if: -> { has_attribute?(:brand_primary_color) }
 
   TERMINOLOGY_KEYS = TerminologyApplier::OVERRIDABLE.keys.freeze
+  TERMINOLOGY_LOCALES = -> { I18n.available_locales.map(&:to_s) }
 
   validate :terminology_keys_whitelisted
   before_validation :normalise_terminology
@@ -74,22 +75,55 @@ class SiteSetting < ApplicationRecord
     end
   end
 
+  def terminology_for(locale)
+    normalised_terminology.fetch(locale.to_s, {})
+  end
+
   private
 
   def normalise_terminology
-    self.terminology = (terminology || {}).to_h.transform_keys(&:to_s)
-      .slice(*TERMINOLOGY_KEYS)
-      .transform_values { |v| v.to_s.strip }
-      .reject { |_, v| v.blank? }
+    self.terminology = normalised_terminology
   end
 
   def terminology_keys_whitelisted
     return if terminology.blank?
-    unknown = terminology.keys.map(&:to_s) - TERMINOLOGY_KEYS
-    errors.add(:terminology, "contains unknown keys: #{unknown.join(', ')}") if unknown.any?
+
+    raw = (terminology || {}).to_h.deep_stringify_keys
+    if flat_terminology?(raw)
+      unknown = raw.keys - TERMINOLOGY_KEYS
+      errors.add(:terminology, "contains unknown keys: #{unknown.join(', ')}") if unknown.any?
+      return
+    end
+
+    unknown_locales = raw.keys - TERMINOLOGY_LOCALES.call
+    errors.add(:terminology, "contains unknown locales: #{unknown_locales.join(', ')}") if unknown_locales.any?
+
+    raw.each do |locale, locale_terms|
+      next unless TERMINOLOGY_LOCALES.call.include?(locale)
+
+      unknown = (locale_terms || {}).to_h.keys.map(&:to_s) - TERMINOLOGY_KEYS
+      errors.add(:terminology, "contains unknown keys for #{locale}: #{unknown.join(', ')}") if unknown.any?
+    end
   end
 
   def reapply_terminology
     TerminologyApplier.call
+  end
+
+  def normalised_terminology
+    raw = (terminology || {}).to_h.deep_stringify_keys
+    raw = { I18n.default_locale.to_s => raw } if flat_terminology?(raw)
+
+    raw.slice(*TERMINOLOGY_LOCALES.call).each_with_object({}) do |(locale, locale_terms), result|
+      cleaned = (locale_terms || {}).to_h.deep_stringify_keys
+        .slice(*TERMINOLOGY_KEYS)
+        .transform_values { |v| v.to_s.strip }
+        .reject { |_, v| v.blank? }
+      result[locale] = cleaned if cleaned.any?
+    end
+  end
+
+  def flat_terminology?(hash)
+    (hash.keys & TERMINOLOGY_KEYS).any?
   end
 end
