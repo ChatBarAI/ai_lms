@@ -1,4 +1,19 @@
 module LessonsHelper
+  def lesson_progress_ring(progress, classes: nil)
+    pct = progress.completed? ? 100 : 50
+    circ = (2 * Math::PI * 20).round(2)
+    offset = (circ * (1 - pct / 100.0)).round(2)
+    ring_color = progress.completed? ? "#16a34a" : "#6366f1"
+
+    tag.svg(class: classes, width: "52", height: "52", viewBox: "0 0 48 48", fill: "none") do
+      safe_join([
+        tag.circle(cx: "24", cy: "24", r: "20", stroke: "#e5e7eb", "stroke-width": "4", fill: "none"),
+        tag.circle(cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "4", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)"),
+        tag.text("#{pct}%", x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600")
+      ])
+    end
+  end
+
   # Returns a hash describing the lesson's current intro video, or nil if none.
   def lesson_current_video_summary(lesson)
     if lesson.intro_video.attached?
@@ -166,7 +181,39 @@ module LessonsHelper
     question_generation_prompt(lesson)
   end
 
+  def quiz_answer_result(answer, lesson)
+    question = answer.question
+
+    if question.free_text?
+      return result_descriptor("Pending", "bg-amber-50 text-amber-700 border-amber-200") if answer.ai_score.blank?
+
+      if answer.ai_score >= lesson.free_text_pass_level
+        result_descriptor("Marked #{answer.ai_score}/10", "bg-green-50 text-green-700 border-green-200")
+      else
+        result_descriptor("Marked #{answer.ai_score}/10", "bg-amber-50 text-amber-700 border-amber-200")
+      end
+    elsif answer.answer_text.to_s.strip.casecmp?(question.correct_answer.to_s.strip)
+      result_descriptor("Correct", "bg-green-50 text-green-700 border-green-200")
+    else
+      result_descriptor("Incorrect", "bg-red-50 text-red-700 border-red-200")
+    end
+  end
+
+  def quiz_answer_correct?(answer, lesson)
+    question = answer.question
+
+    if question.free_text?
+      answer.ai_score.present? && answer.ai_score >= lesson.free_text_pass_level
+    else
+      answer.answer_text.to_s.strip.casecmp?(question.correct_answer.to_s.strip)
+    end
+  end
+
   private
+
+  def result_descriptor(label, classes)
+    { label: label, classes: classes }
+  end
 
   def render_click_to_play_iframe(iframe_src, poster_url)
     content_tag(:div,

@@ -61,4 +61,32 @@ class LessonsHelperTest < ActionView::TestCase
   test "current video summary nil when no video" do
     assert_nil lesson_current_video_summary(lessons(:intro))
   end
+
+  test "quiz answer result labels auto marked answers" do
+    answer = QuestionAnswer.new(question: questions(:intro_q1), answer_text: "2")
+    result = quiz_answer_result(answer, lessons(:intro))
+
+    assert_equal "Correct", result[:label]
+    assert_includes result[:classes], "green"
+  end
+
+  test "quiz answer result labels ai marked answers" do
+    question = questions(:intro_q_free)
+    question.kind = :free_text
+    answer = QuestionAnswer.new(question: question, answer_text: "Order does not matter.", ai_score: 9)
+    result = quiz_answer_result(answer, lessons(:advanced))
+
+    assert_equal "Marked 9/10", result[:label]
+    assert_includes result[:classes], "green"
+  end
+
+  test "quiz answer correct helper follows question type" do
+    assert quiz_answer_correct?(QuestionAnswer.new(question: questions(:intro_q1), answer_text: "2"), lessons(:intro))
+    assert_not quiz_answer_correct?(QuestionAnswer.new(question: questions(:intro_q1), answer_text: "wrong"), lessons(:intro))
+
+    question = questions(:intro_q_free)
+    question.kind = :free_text
+    assert quiz_answer_correct?(QuestionAnswer.new(question: question, answer_text: "ok", ai_score: 9), lessons(:advanced))
+    assert_not quiz_answer_correct?(QuestionAnswer.new(question: question, answer_text: "weak", ai_score: 1), lessons(:advanced))
+  end
 end

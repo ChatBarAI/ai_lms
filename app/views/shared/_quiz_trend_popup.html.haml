@@ -4,10 +4,19 @@
 -# - dialog_id: unique DOM id for modal
 -# - title: popup title
 -# - mini_width / mini_height (optional)
+-# - wrapper_class / button_class / mini_svg_class / mini_svg_width (optional)
+-# - show_attempt_numbers: labels points by attempt number instead of sequence
+-# - axis_label: large chart x-axis label
 - attempts ||= []
 - return if attempts.size < 2
 - pass_mark = pass_mark.to_f.clamp(0.0, 100.0)
 - title ||= "#{terms[:quiz]} Mark Trend"
+- wrapper_class ||= "relative overflow-visible"
+- button_class ||= "w-full text-left cursor-zoom-in"
+- mini_svg_class ||= "h-10 w-full"
+- mini_svg_width ||= nil
+- show_attempt_numbers = local_assigns.fetch(:show_attempt_numbers, false)
+- axis_label ||= "Attempt Sequence (All Lessons)"
 - pass_marks = attempts.map { |attempt| attempt.lesson&.effective_pass_mark }.compact.map(&:to_f).uniq.sort
 - resolved_pass_mark = pass_marks.size == 1 ? pass_marks.first : pass_mark
 - show_shared_pass_line = pass_marks.size <= 1
@@ -27,11 +36,13 @@
 -   "#{x},#{y}"
 - end.join(" ")
 - mini_area_points = "#{mini_left},#{mini_bottom} #{mini_points} #{mini_right},#{mini_bottom}"
+- mini_svg_attrs = { class: mini_svg_class, viewBox: "0 0 #{mini_width.to_i} #{mini_height.to_i}", fill: "none", role: "img", "aria-label": "#{terms[:quiz]} attempt score trend", preserveAspectRatio: "none" }
+- mini_svg_attrs[:width] = mini_svg_width if mini_svg_width.present?
 
-.relative.overflow-visible{ data: { controller: "chart-tooltip status-modal", status_modal_dialog_id_value: dialog_id } }
+%div{ class: wrapper_class, data: { controller: "chart-tooltip status-modal", status_modal_dialog_id_value: dialog_id } }
   .pointer-events-none.fixed.hidden.z-50.max-w-xs.rounded.bg-slate-900.px-3.py-2.text-xs.leading-5.font-medium.text-white.shadow-lg.whitespace-pre-line{ data: { chart_tooltip_target: "tooltip" } }
-  %button.w-full.text-left.cursor-zoom-in{ type: "button", data: { action: "click->status-modal#open" }, "aria-label": "Open larger #{terms[:quiz_l]} marks chart" }
-    %svg.h-10.w-full{ viewBox: "0 0 #{mini_width.to_i} #{mini_height.to_i}", fill: "none", role: "img", "aria-label": "#{terms[:quiz]} attempt score trend", preserveAspectRatio: "none" }
+  %button{ class: button_class, type: "button", data: { action: "click->status-modal#open" }, "aria-label": "Open larger #{terms[:quiz_l]} marks chart" }
+    %svg{ mini_svg_attrs }
       %line{ x1: mini_left.to_s, y1: mini_bottom.to_s, x2: mini_right.to_s, y2: mini_bottom.to_s, stroke: "#e5e7eb", "stroke-width": "1" }
       - if show_shared_pass_line
         %line{ x1: mini_left.to_s, y1: mini_pass_y.to_s, x2: mini_right.to_s, y2: mini_pass_y.to_s, stroke: "#16a34a", "stroke-width": "1", "stroke-dasharray": "3 2", "stroke-opacity": "0.9" }
@@ -42,13 +53,16 @@
         - x = (mini_padding + (idx * mini_x_step)).round(1)
         - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
         - y = (mini_height - mini_padding - (y_val / 100.0 * mini_plot_height)).round(1)
-        - lesson_name = attempt.lesson&.title.presence || "#{terms[:lesson]} ##{attempt.lesson_id}"
-        - lesson_pass_mark = attempt.lesson&.effective_pass_mark
-        - lesson_pass_text = lesson_pass_mark.present? ? "Pass #{lesson_pass_mark.to_f.round}%" : nil
         - attempt_time = (attempt.completed_at || attempt.submitted_at)
         - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
         - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
-        - tooltip_text = "#{lesson_name} - #{attempt_score}#{lesson_pass_text.present? ? " (#{lesson_pass_text})" : ""}\n#{attempt_date}"
+        - if show_attempt_numbers
+          - tooltip_text = "Attempt ##{attempt.attempt_number} - #{attempt_score}\n#{attempt_date}"
+        - else
+          - lesson_name = attempt.lesson&.title.presence || "#{terms[:lesson]} ##{attempt.lesson_id}"
+          - lesson_pass_mark = attempt.lesson&.effective_pass_mark
+          - lesson_pass_text = lesson_pass_mark.present? ? "Pass #{lesson_pass_mark.to_f.round}%" : nil
+          - tooltip_text = "#{lesson_name} - #{attempt_score}#{lesson_pass_text.present? ? " (#{lesson_pass_text})" : ""}\n#{attempt_date}"
         %circle{ cx: x.to_s, cy: y.to_s, r: "2.5", fill: "#4f46e5", "pointer-events": "none" }
         %circle{ cx: x.to_s, cy: y.to_s, r: "8", fill: "transparent", stroke: "transparent", "pointer-events": "all", tabindex: "0", role: "button", "aria-label": tooltip_text, data: { tooltip: tooltip_text, action: "mouseenter->chart-tooltip#show mousemove->chart-tooltip#move mouseleave->chart-tooltip#hide focus->chart-tooltip#show blur->chart-tooltip#hide" } }
 
@@ -97,16 +111,21 @@
           - x = (graph_padding + (idx * x_step)).round(1)
           - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
           - y = (graph_height - graph_padding - (y_val / 100.0 * graph_plot_height)).round(1)
-          - lesson_name = attempt.lesson&.title.presence || "#{terms[:lesson]} ##{attempt.lesson_id}"
-          - lesson_pass_mark = attempt.lesson&.effective_pass_mark
-          - lesson_pass_text = lesson_pass_mark.present? ? "Pass #{lesson_pass_mark.to_f.round}%" : nil
           - attempt_time = (attempt.completed_at || attempt.submitted_at)
           - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
           - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
-          - tooltip_text = "#{lesson_name} - #{attempt_score}#{lesson_pass_text.present? ? " (#{lesson_pass_text})" : ""}\n#{attempt_date}"
+          - if show_attempt_numbers
+            - tooltip_text = "Attempt ##{attempt.attempt_number} - #{attempt_score}\n#{attempt_date}"
+            - attempt_label = attempt.attempt_number
+          - else
+            - lesson_name = attempt.lesson&.title.presence || "#{terms[:lesson]} ##{attempt.lesson_id}"
+            - lesson_pass_mark = attempt.lesson&.effective_pass_mark
+            - lesson_pass_text = lesson_pass_mark.present? ? "Pass #{lesson_pass_mark.to_f.round}%" : nil
+            - tooltip_text = "#{lesson_name} - #{attempt_score}#{lesson_pass_text.present? ? " (#{lesson_pass_text})" : ""}\n#{attempt_date}"
+            - attempt_label = idx + 1
           %circle{ cx: x.to_s, cy: y.to_s, r: "4", fill: "#4338ca", "pointer-events": "none" }
           %circle{ cx: x.to_s, cy: y.to_s, r: "12", fill: "transparent", stroke: "transparent", "pointer-events": "all", tabindex: "0", role: "button", "aria-label": tooltip_text, data: { tooltip: tooltip_text, action: "mouseenter->chart-tooltip#show mousemove->chart-tooltip#move mouseleave->chart-tooltip#hide focus->chart-tooltip#show blur->chart-tooltip#hide" } }
           - if idx % attempt_label_step == 0 || idx == attempts.size - 1
             %line{ x1: x.to_s, y1: graph_bottom.to_s, x2: x.to_s, y2: (graph_bottom + 4).to_s, stroke: "#9ca3af", "stroke-width": "1" }
-            %text{ x: x.to_s, y: (graph_bottom + 16).to_s, "text-anchor": "middle", fill: "#6b7280", "font-size": "10" }= "##{idx + 1}"
-        %text{ x: ((graph_left + graph_right) / 2.0).round(1).to_s, y: (graph_bottom + 28).to_s, "text-anchor": "middle", fill: "#374151", "font-size": "11", "font-weight": "600" } Attempt Sequence (All Lessons)
+            %text{ x: x.to_s, y: (graph_bottom + 16).to_s, "text-anchor": "middle", fill: "#6b7280", "font-size": "10" }= "##{attempt_label}"
+        %text{ x: ((graph_left + graph_right) / 2.0).round(1).to_s, y: (graph_bottom + 28).to_s, "text-anchor": "middle", fill: "#374151", "font-size": "11", "font-weight": "600" }= axis_label

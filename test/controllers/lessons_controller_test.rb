@@ -294,6 +294,33 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 50.0, progress.quiz_attempts.ordered.last.score.to_f
   end
 
+  test "show displays latest marked quiz results for enrolled student" do
+    sign_in users(:student)
+    questions(:intro_q2).update!(correct_answer: "matrix-only-answer")
+
+    post submit_quiz_course_lesson_path(courses(:algebra), lessons(:intro)),
+         params: { answers: { questions(:intro_q1).id.to_s => "2", questions(:intro_q2).id.to_s => "wrong" } }
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_match "Latest Quiz results", response.body
+    assert_match 'id="quiz-results"', response.body
+    assert_match 'data-controller="collapsible"', response.body
+    assert_match 'data-expanded="false"', response.body
+    assert_match 'data-collapsible-target="content"', response.body
+    assert_match 'class="space-y-3 mt-4 hidden"', response.body
+    assert_no_match "Question 1", response.body
+    assert_no_match "Question 2", response.body
+    assert_match "What is 1 + 1?", response.body
+    assert_match "Correct", response.body
+    assert_match "What is 2 + 2?", response.body
+    assert_match "Incorrect", response.body
+    assert_match "wrong", response.body
+    assert_match "Correct answer", response.body
+    assert_no_match "matrix-only-answer", response.body
+  end
+
   test "submit_quiz stores score for each attempt" do
     sign_in users(:student)
 

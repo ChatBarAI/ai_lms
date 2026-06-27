@@ -345,6 +345,35 @@ RAILS_ENV=production bin/rails assets:precompile
 sudo systemctl restart puma-ai_lms
 ```
 
+### Background jobs
+
+Production uses ActiveJob with Sidekiq and Redis for background work such as
+AI quiz marking and ActiveStorage analysis. The Rails web process does not run
+these jobs by itself, so run a separate Sidekiq worker process on the server.
+
+A basic manual way to start the worker is:
+
+```bash
+nohup env RAILS_ENV=production bundle exec sidekiq >> log/sidekiq.log 2>&1 &
+```
+
+Then confirm it stayed up and is processing the default queue:
+
+```bash
+ps aux | grep sidekiq
+tail -n 100 log/sidekiq.log
+RAILS_ENV=production bin/rails runner 'puts "default queue: #{Sidekiq::Queue.new("default").size}"; puts "retries: #{Sidekiq::RetrySet.new.size}"; puts "dead: #{Sidekiq::DeadSet.new.size}"'
+```
+
+Sidekiq and the Rails web process must use the same Redis URL. The app resolves
+Redis from `SiteSetting#redis_url`, then `REDIS_URL`, then falls back to
+`redis://localhost:6379/0`. After changing the Redis URL, restart both Puma and
+Sidekiq.
+
+For a durable deployment, run Sidekiq under systemd or the same process manager
+used for Puma. The `nohup` command is useful for a quick manual start, but it
+will not reliably survive deploys or server restarts.
+
 ### First-time server setup
 
 Before the first deploy the target host needs:

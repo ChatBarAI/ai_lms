@@ -22,10 +22,13 @@ class LessonsController < ApplicationController
       if @ai_scoring_pending && @progress.scoring_submitted_at.present? &&
           @progress.scoring_submitted_at < 5.minutes.ago
         fail_scoring!(@progress, @enrollment, @lesson)
+        @progress.reload
         @quiz_attempts = @progress.quiz_attempts.ordered.to_a
         @ai_scoring_pending = false
         flash.now[:alert] = t("lessons.flash.ai_marking_timeout", quiz_l: helpers.terms[:quiz_l])
       end
+
+      @latest_quiz_answers = latest_quiz_answers_for(@enrollment, @lesson) if @progress.score.present? && !@ai_scoring_pending
     end
     if @lesson.retry_incorrect_only? && @enrollment && @progress&.persisted?
       @questions = @lesson.incorrect_questions_for(@enrollment)
@@ -148,82 +151,40 @@ class LessonsController < ApplicationController
   end
 
   def video_chatbar
-    if params[:lesson].present?
-      @lesson.update(params.require(:lesson).permit(:cbai_token, :cbai_api_key))
-    end
-    return unless params[:fetch].present?
-
-    result = video_fetch_service.chatbar_recordings
-    if result[:ok]
-      @recordings = result[:data]
-    else
-      flash.now[:alert] = result[:error]
-      @recordings = nil
-    end
+    persist_lesson_video_attributes(:cbai_token, :cbai_api_key)
+    fetch_video_data(:chatbar_recordings, :@recordings) if params[:fetch].present?
   end
 
   def video_synthesia
-    if params[:lesson].present?
-      @lesson.update(params.require(:lesson).permit(:synthesia_api_key))
-    end
-    return unless params[:fetch].present?
-
-    result = video_fetch_service.synthesia_videos
-    if result[:ok]
-      @synthesia_videos = result[:data]
-    else
-      flash.now[:alert] = result[:error]
-      @synthesia_videos = nil
-    end
+    persist_lesson_video_attributes(:synthesia_api_key)
+    fetch_video_data(:synthesia_videos, :@synthesia_videos) if params[:fetch].present?
   end
 
   def video_heygen
-    if params[:lesson].present?
-      @lesson.update(params.require(:lesson).permit(:heygen_api_key))
-    end
+    persist_lesson_video_attributes(:heygen_api_key)
 
     @heygen_video_id = params[:video_id].to_s.strip
     return unless params[:fetch].present?
 
-    result = video_fetch_service.heygen_video(video_id: params[:video_id])
-    @heygen_video_id = result[:video_id].to_s if result[:video_id].present?
-
-    if result[:ok]
-      @heygen_video = result[:data]
-    else
-      flash.now[:alert] = result[:error]
-      @heygen_video = nil
+    fetch_video_data(:heygen_video, :@heygen_video, video_id: params[:video_id]) do |result|
+      @heygen_video_id = result[:video_id].to_s if result[:video_id].present?
     end
   end
 
   def import_recording
     result = video_import_service.import_chatbar_recording(recording_id: params[:recording_id])
-    return redirect_to(edit_course_lesson_path(@course, @lesson), notice: result[:notice]) if result[:ok]
-
-    path_args = {}
-    path_args[:fetch] = 1 if result[:type] == :import_failed
-    redirect_to video_chatbar_course_lesson_path(@course, @lesson, **path_args), alert: result[:error]
+    redirect_after_video_import(result, :video_chatbar_course_lesson_path)
   end
 
   def import_synthesia_video
     result = video_import_service.import_synthesia_video(video_id: params[:video_id])
-    return redirect_to(edit_course_lesson_path(@course, @lesson), notice: result[:notice]) if result[:ok]
-
-    path_args = {}
-    path_args[:fetch] = 1 if result[:type] == :import_failed
-    redirect_to video_synthesia_course_lesson_path(@course, @lesson, **path_args), alert: result[:error]
+    redirect_after_video_import(result, :video_synthesia_course_lesson_path)
   end
 
   def import_heygen_video
     result = video_import_service.import_heygen_video(video_id: params[:video_id])
-    return redirect_to(edit_course_lesson_path(@course, @lesson), notice: result[:notice]) if result[:ok]
-
-    path_args = {}
-    if result[:type] == :import_failed
-      path_args[:fetch] = 1
-      path_args[:video_id] = result[:video_id]
-    end
-    redirect_to video_heygen_course_lesson_path(@course, @lesson, **path_args), alert: result[:error]
+    path_args = result[:type] == :import_failed ? { video_id: result[:video_id] } : {}
+    redirect_after_video_import(result, :video_heygen_course_lesson_path, **path_args)
   end
 
   def destroy_video
@@ -272,6 +233,15 @@ class LessonsController < ApplicationController
     LessonScoringJob.perform_now(progress.id)
   end
 
+  def latest_quiz_answers_for(enrollment, lesson)
+    QuestionAnswer
+      .includes(:question)
+      .joins(:question)
+      .where(enrollment_id: enrollment.id, questions: { lesson_id: lesson.id })
+      .order("questions.position")
+      .to_a
+  end
+
   def video_fetch_service
     @video_fetch_service ||= LessonVideoFetchService.new(lesson: @lesson)
   end
@@ -280,71 +250,42 @@ class LessonsController < ApplicationController
     @video_import_service ||= LessonVideoImportService.new(lesson: @lesson)
   end
 
+  def persist_lesson_video_attributes(*attributes)
+    return unless params[:lesson].present?
+
+    @lesson.update(params.require(:lesson).permit(*attributes))
+  end
+
+  def fetch_video_data(fetch_method, instance_variable_name, **kwargs)
+    result = video_fetch_service.public_send(fetch_method, **kwargs)
+    yield result if block_given?
+
+    if result[:ok]
+      instance_variable_set(instance_variable_name, result[:data])
+    else
+      flash.now[:alert] = result[:error]
+      instance_variable_set(instance_variable_name, nil)
+    end
+  end
+
+  def redirect_after_video_import(result, fallback_path_helper, **path_args)
+    return redirect_to(edit_course_lesson_path(@course, @lesson), notice: result[:notice]) if result[:ok]
+
+    path_args[:fetch] = 1 if result[:type] == :import_failed
+    path_args.compact!
+    redirect_to public_send(fallback_path_helper, @course, @lesson, **path_args), alert: result[:error]
+  end
+
   def set_course
     @course = Course.find_by(slug: params[:course_id]) || Course.find(params[:course_id])
   end
 
   def lesson_params
-    params.require(:lesson).permit(:title, :position, :body, :ai_tutor_provider, :cbai_display_mode, :custom_tutor_embed_url, :custom_tutor_embed_type, :custom_tutor_embed_script, :quiz_layout, :published_at, :pass_mark, :duration_minutes, :cover_image, :retry_incorrect_only, :ratings_enabled, :free_text_pass_level, tag_ids: [])
+    params.require(:lesson).permit(*LessonFormAssignmentService::PERMITTED_ATTRIBUTES)
   end
 
   def assign_lesson_form_attributes
-    attrs = lesson_params.to_h
-    lesson_input = params.require(:lesson)
-
-    if lesson_input.key?(:cbai_api_key)
-      attrs["cbai_api_key"] = lesson_input[:cbai_api_key].to_s.strip.presence
-    end
-
-    if lesson_input.key?(:anam_api_key)
-      attrs["anam_api_key"] = lesson_input[:anam_api_key].to_s.strip.presence
-    end
-
-    if lesson_input.key?(:anam_persona_id)
-      attrs["anam_persona_id"] = lesson_input[:anam_persona_id].to_s.strip.presence
-    end
-
-    if lesson_input.key?(:custom_tutor_embed_url)
-      attrs["custom_tutor_embed_url"] = lesson_input[:custom_tutor_embed_url].to_s.strip.presence
-    end
-
-    if lesson_input.key?(:custom_tutor_embed_script)
-      attrs["custom_tutor_embed_script"] = lesson_input[:custom_tutor_embed_script].to_s.strip.presence
-    end
-
-    if attrs["ai_tutor_provider"] == "custom"
-      if attrs["custom_tutor_embed_type"] == "script"
-        attrs["custom_tutor_embed_url"] = nil
-      else
-        attrs["custom_tutor_embed_script"] = nil
-      end
-    end
-
-    @lesson.assign_attributes(attrs)
-
-    return true unless attrs.key?("cbai_api_key") && attrs["cbai_api_key"].present?
-
-    details = CbaiClient.new(api_key: attrs["cbai_api_key"]).details
-    @lesson.cbai_token = extract_cbai_token(details)
-    @lesson.cbai_id = extract_cbai_id(details)
-    true
-  rescue CbaiClient::Error => e
-    @lesson.errors.add(:cbai_api_key, "could not load ChatBar AI details: #{e.message}")
-    false
-  end
-
-  def extract_cbai_token(details)
-    token = details["token"].presence || details["cbai_token"].presence || details.dig("cbai", "token").presence
-    raise CbaiClient::Error, "CBAI details did not include a token" if token.blank?
-
-    token
-  end
-
-  def extract_cbai_id(details)
-    raw = details["id"] || details["cbai_id"] || details.dig("cbai", "id")
-    Integer(raw) if raw.present?
-  rescue ArgumentError, TypeError
-    nil
+    LessonFormAssignmentService.new(lesson: @lesson, params: params).call
   end
 
   def fetch_anam_session_token

@@ -12,5 +12,5 @@
           = button_to "Remove rating", course_lesson_rating_path(lesson.course, lesson, rating), method: :delete, data: { turbo_confirm: "Remove your rating?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer transition-colors border-0 mt-1"
       .flex-1
         %label.block.text-sm.font-medium.mb-1 Comment (optional)
-        = f.text_area :comment, rows: 2, class: "w-full border border-gray-300 rounded px-3 py-2"
+        = f.text_area :comment, rows: 1, class: "w-full border border-gray-300 rounded px-3 py-2"
     = f.submit (rating.persisted? ? "Update rating" : "Submit rating"), class: "w-full px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-sm mt-3"

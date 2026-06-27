@@ -1,15 +1,8 @@
 -# Locals: progress, lesson, course, enrollment, ai_scoring_pending, user_rating
 %div{ id: dom_id(progress, :status) }
   .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6
-    - pct = progress.completed? ? 100 : 50
-    - circ = (2 * Math::PI * 20).round(2)
-    - offset = (circ * (1 - pct / 100.0)).round(2)
-    - ring_color = progress.completed? ? "#16a34a" : "#6366f1"
     .flex.items-center.gap-4
-      %svg{ width: "52", height: "52", viewBox: "0 0 48 48", fill: "none" }
-        %circle{ cx: "24", cy: "24", r: "20", stroke: "#e5e7eb", "stroke-width": "4", fill: "none" }
-        %circle{ cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "4", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)" }
-        %text{ x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600" }= "#{pct}%"
+      = lesson_progress_ring(progress)
       .flex-1
         %p.font-semibold.text-sm= t("lessons.show.status", status: progress.status.to_s.humanize)
         - if ai_scoring_pending
