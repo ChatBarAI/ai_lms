@@ -10,11 +10,17 @@
       = f.label :title, class: "block text-sm font-medium mb-1"
       = f.text_field :title, class: "w-full border border-gray-300 rounded px-3 h-10"
 
-    %div
+    %div{ data: { controller: "trix-insert-html" } }
       = f.label :body, "Lesson description", class: "block text-sm font-medium mb-1"
-      = f.text_area :body, rows: 10, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
-    
-    
+      = f.rich_text_area :body, class: "block w-full border border-gray-300 rounded"
+      .flex.justify-end.mt-2
+        %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800.hover:bg-gray-200.border.border-gray-200{ type: "button", data: { action: "trix-insert-html#toggle" } } &lt;&gt; Insert HTML
+      .hidden.mt-2.p-3.bg-gray-50.border.border-gray-200.rounded{ data: { trix_insert_html_target: "panel" } }
+        %p.text-xs.text-gray-500.mb-2 HTML will be converted to Trix's document model. Some formatting may be lost.
+        %textarea.w-full.font-mono.text-sm.border.border-gray-300.rounded.px-2.py-1{ rows: 6, placeholder: "<p>Your HTML here…</p>", data: { trix_insert_html_target: "input" } }
+        .flex.gap-2.mt-2
+          %button.px-3.py-1.text-sm.rounded.bg-indigo-600.text-white.hover:bg-indigo-700{ type: "button", data: { action: "trix-insert-html#insert" } } Insert
+          %button.px-3.py-1.text-sm.rounded.border.border-gray-300.hover:bg-gray-50{ type: "button", data: { action: "trix-insert-html#cancel" } } Cancel
     .grid.grid-cols-1.gap-4.xl:grid-cols-4
       %div
         = f.label :ai_tutor_provider, "AI tutor provider", class: "block text-sm font-medium mb-1"

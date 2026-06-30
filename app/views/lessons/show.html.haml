@@ -27,7 +27,7 @@
     = render "shared/tags", record: @lesson
 
   - if @lesson.body.present?
-    .prose.max-w-none= simple_format(@lesson.body)
+    .prose.max-w-none= @lesson.body
   - else
     %p.text-gray-400.italic= t(".no_content")
 

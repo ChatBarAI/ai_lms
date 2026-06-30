@@ -2,7 +2,6 @@ intro:
   course: algebra
   title: Intro to Algebra
   position: 1
-  body: Welcome
   published_at: <%= 1.month.ago.to_fs(:db) %>
   cbai_token: tok_intro
 
@@ -10,18 +9,15 @@ advanced:
   course: algebra
   title: Quadratic equations
   position: 2
-  body: Harder stuff
   published_at: <%= 1.month.ago.to_fs(:db) %>
 
 draft_lesson:
   course: algebra
   title: Draft Lesson
   position: 3
-  body: Work in progress
 
 physics_lesson:
   course: other_owner_course
   title: Newton's laws
   position: 1
-  body: F = ma
   published_at: <%= 1.month.ago.to_fs(:db) %>

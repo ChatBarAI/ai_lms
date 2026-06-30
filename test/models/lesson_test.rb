@@ -35,12 +35,19 @@ class LessonTest < ActiveSupport::TestCase
       course: courses(:algebra),
       title: "Scheduled Lesson",
       position: 99,
-      body: "Coming soon",
       published_at: 1.day.from_now
     )
+    scheduled.body = "<p>Coming soon</p>"
+    scheduled.save!
 
     assert_not scheduled.published?
     assert_not_includes Lesson.published, scheduled
+  end
+
+  test "body is ActionText rich text" do
+    lesson = lessons(:intro)
+    assert lesson.body.present?
+    assert_includes lesson.body.to_s, "Welcome"
   end
 
   test "cbai_display_mode validates against allowed values" do

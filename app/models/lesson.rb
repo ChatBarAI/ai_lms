@@ -1,6 +1,8 @@
 class Lesson < ApplicationRecord
   belongs_to :course
 
+  has_rich_text :body
+
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 

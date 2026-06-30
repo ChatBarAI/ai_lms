@@ -133,6 +133,22 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_nil lessons(:intro).reload.video_url
   end
 
+  test "update saves rich text body with links" do
+    sign_in users(:instructor)
+    html_body = '<p>Read the <a href="https://ruby-lang.org">Ruby docs</a>.</p>'
+
+    patch course_lesson_path(courses(:algebra), lessons(:intro)),
+          params: { lesson: { body: html_body } }
+
+    assert_redirected_to course_lesson_path(courses(:algebra), lessons(:intro))
+    assert_includes lessons(:intro).reload.body.to_s, 'href="https://ruby-lang.org"'
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+    assert_response :success
+    assert_match 'href="https://ruby-lang.org"', response.body
+    assert_match "Ruby docs", response.body
+  end
+
   test "video_youtube_update saves URL and purges any uploaded video" do
     sign_in users(:instructor)
     lessons(:intro).intro_video.attach(io: StringIO.new("x"), filename: "x.mp4", content_type: "video/mp4")
