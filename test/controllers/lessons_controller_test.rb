@@ -6,6 +6,11 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show private course lesson redirects anonymous user" do
+    get course_lesson_path(courses(:other_owner_course), lessons(:physics_lesson))
+    assert_redirected_to root_path
+  end
+
   test "show draft lesson denied for anonymous" do
     get course_lesson_path(courses(:algebra), lessons(:draft_lesson))
     assert_redirected_to root_path

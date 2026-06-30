@@ -38,6 +38,10 @@ class Lesson < ApplicationRecord
     pass_mark.presence || SiteSetting.current.pass_mark
   end
 
+  def public_to_guests?
+    published? && course&.public_to_guests?
+  end
+
   def required_lesson_materials
     lesson_materials.required_only
   end

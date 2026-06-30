@@ -124,6 +124,6 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def course_params
-    params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :cover_image, :certificate_template, tag_ids: [])
+    params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [])
   end
 end

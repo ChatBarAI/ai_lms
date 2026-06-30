@@ -5,12 +5,14 @@ class AbilityTest < ActiveSupport::TestCase
     Ability.new(user)
   end
 
-  test "anonymous can read published catalogue" do
+  test "anonymous can read public published catalogue" do
     a = ability_for(nil)
     assert a.can?(:read, subjects(:math))
     assert a.can?(:read, courses(:algebra))
+    assert_not a.can?(:read, courses(:other_owner_course))
     assert_not a.can?(:read, courses(:draft_course))
     assert a.can?(:read, lessons(:intro))
+    assert_not a.can?(:read, lessons(:physics_lesson))
     assert_not a.can?(:read, lessons(:draft_lesson))
   end
 
@@ -28,6 +30,7 @@ class AbilityTest < ActiveSupport::TestCase
     SiteSetting.current.update!(allow_guest_access: false)
     a = ability_for(users(:student))
     assert a.can?(:read, courses(:algebra))
+    assert a.can?(:read, courses(:other_owner_course))
   ensure
     SiteSetting.current.update!(allow_guest_access: true)
   end

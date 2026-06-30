@@ -1,10 +1,11 @@
 require "test_helper"
 
 class CoursesControllerTest < ActionDispatch::IntegrationTest
-  test "index lists published courses anonymously" do
+  test "index lists only public published courses anonymously" do
     get courses_path
     assert_response :success
     assert_match(/Algebra/, response.body)
+    assert_no_match(/Physics 101/, response.body)
   end
 
   test "index filters published courses by signed in user's course languages" do
@@ -23,6 +24,11 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
   test "show published course anonymously" do
     get course_path(courses(:algebra))
     assert_response :success
+  end
+
+  test "show private published course redirects anonymous user" do
+    get course_path(courses(:other_owner_course))
+    assert_redirected_to root_path
   end
 
   test "show draft course redirects anonymous user" do
@@ -50,11 +56,12 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
   test "instructor can create their own course" do
     sign_in users(:instructor)
     assert_difference -> { Course.count }, 1 do
-      post courses_path, params: { course: { title: "Brand New", subject_id: subjects(:math).id, description: "x", locale: "de" } }
+      post courses_path, params: { course: { title: "Brand New", subject_id: subjects(:math).id, description: "x", locale: "de", public_access_enabled: "1" } }
     end
     assert_redirected_to Course.last
     assert_equal users(:instructor), Course.last.owner
     assert_equal "de", Course.last.locale
+    assert Course.last.public_access_enabled?
   end
 
   test "student cannot create a course" do
