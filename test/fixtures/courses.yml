@@ -5,6 +5,7 @@ algebra:
   owner: instructor
   description: Variables and equations
   published_at: <%= 1.month.ago.to_fs(:db) %>
+  public_access_enabled: true
 
 draft_course:
   title: Draft Course
@@ -20,3 +21,4 @@ other_owner_course:
   owner: other_instructor
   description: Mechanics basics
   published_at: <%= 1.month.ago.to_fs(:db) %>
+  public_access_enabled: false

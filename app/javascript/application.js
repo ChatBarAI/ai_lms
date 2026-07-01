@@ -4,6 +4,7 @@ import "controllers"
 
 import "trix"
 import "@rails/actiontext"
+import "trix_config"
 
 const isSecureContextHost =
 	window.location.protocol === "https:" ||

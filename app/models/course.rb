@@ -26,13 +26,24 @@ class Course < ApplicationRecord
   before_validation :assign_slug, on: :create
 
   scope :published, -> { where(published_at: ..Time.current) }
+  scope :publicly_accessible, -> { published.where(public_access_enabled: true) }
   scope :visible_to, ->(user) {
     locales = user&.course_locales.presence
     locales.present? ? where(locale: locales) : all
   }
+  scope :catalog_visible_to, ->(user) {
+    scope = published.visible_to(user)
+    if user.present?
+      scope
+    elsif SiteSetting.current.allow_guest_access?
+      scope.where(public_access_enabled: true)
+    else
+      none
+    end
+  }
 
   def self.ransackable_attributes(_auth = nil)
-    %w[title slug description locale owner_id subject_id published_at created_at updated_at id]
+    %w[title slug description locale owner_id subject_id published_at public_access_enabled created_at updated_at id]
   end
 
   def self.ransackable_associations(_auth = nil)
@@ -87,6 +98,10 @@ class Course < ApplicationRecord
 
   def published?
     published_at.present? && published_at <= Time.current
+  end
+
+  def public_to_guests?
+    SiteSetting.current.allow_guest_access? && published? && public_access_enabled?
   end
 
   def to_param

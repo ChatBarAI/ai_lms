@@ -6,6 +6,11 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show private course lesson redirects anonymous user" do
+    get course_lesson_path(courses(:other_owner_course), lessons(:physics_lesson))
+    assert_redirected_to root_path
+  end
+
   test "show draft lesson denied for anonymous" do
     get course_lesson_path(courses(:algebra), lessons(:draft_lesson))
     assert_redirected_to root_path
@@ -131,6 +136,22 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     patch course_lesson_path(courses(:algebra), lessons(:intro)),
           params: { lesson: { title: "T", video_url: "https://example.com/x.mp4" } }
     assert_nil lessons(:intro).reload.video_url
+  end
+
+  test "update saves rich text body with links" do
+    sign_in users(:instructor)
+    html_body = '<p>Read the <a href="https://ruby-lang.org">Ruby docs</a>.</p>'
+
+    patch course_lesson_path(courses(:algebra), lessons(:intro)),
+          params: { lesson: { body: html_body } }
+
+    assert_redirected_to course_lesson_path(courses(:algebra), lessons(:intro))
+    assert_includes lessons(:intro).reload.body.to_s, 'href="https://ruby-lang.org"'
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+    assert_response :success
+    assert_match 'href="https://ruby-lang.org"', response.body
+    assert_match "Ruby docs", response.body
   end
 
   test "video_youtube_update saves URL and purges any uploaded video" do

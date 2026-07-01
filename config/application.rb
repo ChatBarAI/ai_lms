@@ -42,6 +42,10 @@ module AiLms
     # Background job processing via Sidekiq + Redis.
     config.active_job.queue_adapter = :sidekiq
 
+    # Serve generated Active Storage URLs through Rails so access control can
+    # run before protected course and lesson assets are streamed.
+    config.active_storage.resolve_model_to_route = :rails_storage_proxy
+
     # Internationalisation. Default locale is English; other locale files
     # under config/locales/*.yml are auto-loaded. Missing keys fall back to :en.
     config.i18n.default_locale = :en

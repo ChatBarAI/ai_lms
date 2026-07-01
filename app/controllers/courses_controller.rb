@@ -3,7 +3,7 @@ class CoursesController < ApplicationController
   load_and_authorize_resource find_by: :slug
 
   def index
-    @courses = (params[:mine] && current_user ? current_user.owned_courses : Course.published.visible_to(current_user)).includes(:tags).order(published_at: :desc)
+    @courses = (params[:mine] && current_user ? current_user.owned_courses : Course.catalog_visible_to(current_user)).includes(:tags).order(published_at: :desc)
   end
 
   def show
@@ -97,6 +97,6 @@ class CoursesController < ApplicationController
   private
 
   def course_params
-    params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :cover_image, :certificate_template, tag_ids: [])
+    params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [])
   end
 end

@@ -35,4 +35,4 @@
     - if show_course_info
       %p.text-sm.text-gray-500.mt-1= subjects_enabled? && lesson.course.subject ? "#{lesson.course.title} · #{lesson.course.subject.name}" : lesson.course.title
     - if lesson.body.present?
-      %p.text-sm.text-gray-600.mt-2.line-clamp-2.dark:text-gray-400= lesson.body
+      %p.text-sm.text-gray-600.mt-2.line-clamp-2.dark:text-gray-400= lesson.body.to_plain_text

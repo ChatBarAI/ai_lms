@@ -95,6 +95,10 @@ class LessonMaterial < ApplicationRecord
     audio_upload? || audio_url?
   end
 
+  def public_to_guests?
+    lesson&.public_to_guests?
+  end
+
   def kind_label
     KIND_LABELS[kind]
   end

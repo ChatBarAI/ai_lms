@@ -12,7 +12,7 @@ Use Chatbar AI or provide your own endpoint to create lesson questions. Free-for
 
 | Role           | Description                                                                                                                                                                                                                      |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Guest**      | Unauthenticated visitor. Can browse and read published subjects, courses, and lessons. Cannot enrol, rate, submit quizzes, or access lesson materials.                                                                           |
+| **Guest**      | Unauthenticated visitor. Can browse subjects and read only published courses that have **Allow public access** enabled. Cannot enrol, rate, submit quizzes, or access private course assets. |
 | **Student**    | Default role assigned on self-service registration (when enabled) or first SSO JIT sign-in. Can enrol in published courses, track lesson progress, submit quiz answers, rate lessons, view and acknowledge lesson materials, and download their own completion certificates. |
 | **Instructor** | Can create and own courses. Manages the full lifecycle of their courses: CRUD for lessons, questions (including AI-generated), lesson materials, video sources, and certificate layout. Cannot manage other instructors' content. |
 | **Admin**      | Full access to everything via the `/admin` namespace: catalogue CRUD, user management, site settings (branding, theme, terminology, auth policy), organization SSO setup, and certificate administration. |
@@ -46,7 +46,7 @@ Use Chatbar AI or provide your own endpoint to create lesson questions. Free-for
 **Platform**
 - Fully themeable: colours, brand name, logo, and per-term terminology overrides.
 - PWA support: installable, offline fallback, configurable icons and manifest.
-- Guest access toggle — public catalogue browsing without an account.
+- Guest access toggle plus per-course **Allow public access** — courses are private to signed-in users by default, with explicit public opt-in.
 - Admin panel for full catalogue, user, and site management.
 
 ## Stack
@@ -61,7 +61,7 @@ Use Chatbar AI or provide your own endpoint to create lesson questions. Free-for
 - Tailwind CSS via `tailwindcss-rails`
 - Haml for views (no ERB)
 - Importmap, Turbo, Stimulus
-- ActiveStorage (lesson intro videos, lesson poster images, site logo)
+- ActiveStorage (course/lesson assets, lesson materials, ActionText/Trix embeds, site branding)
 - `active_storage_validations` for content-type and size limits
 - Ransack, Pagy, Rack::Attack, HTTParty (utility gems)
 
@@ -84,6 +84,11 @@ Course / Lesson ─< Tagging >─ Tag
 - **Subject** and **Course** are routed publicly by `slug`. Both define
   `to_param` returning the slug and controllers fall back to id:
   `find_by(slug: params[:id]) || find(params[:id])`.
+- **Course** public access is explicit. Published courses are visible to signed-in
+  users by default, but anonymous users can read only courses where
+  `public_access_enabled` is true and `SiteSetting#allow_guest_access` is enabled.
+  Private course, lesson, lesson-material, and Trix/ActionText assets require a
+  signed-in user even when someone has a signed ActiveStorage URL.
 - **Lesson** key columns:
   `title, position, body, cbai_token, cbai_api_key, cbai_display_mode,
    video_url, published_at`.
@@ -116,7 +121,7 @@ Course / Lesson ─< Tagging >─ Tag
 
 | Surface       | Mounting                                                        | Notes                                                                                      |
 | ------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Public        | `/courses/:slug`, `/courses/:slug/lessons/:id`                  | Anonymous reads of the published catalogue allowed.                                        |
+| Public        | `/courses/:slug`, `/courses/:slug/lessons/:id`                  | Anonymous reads are allowed only for published courses with **Allow public access** enabled, and only when site-wide guest access is enabled. |
 | Authenticated | Enrolments, ratings, quiz submissions, lesson materials, certs  | Students manage their own enrolments, ratings, progress, acknowledgements, and certificates. |
 | Instructor    | Same paths, gated via CanCanCan                                 | `can :manage, Course, owner_id: user.id` and equivalents for lessons, materials, questions. |
 | Admin         | `/admin/...`                                                    | Full catalogue CRUD, user management, site settings, certificate administration.           |

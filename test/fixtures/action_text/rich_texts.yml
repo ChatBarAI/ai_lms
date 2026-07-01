@@ -1,0 +1,19 @@
+intro_body:
+  name: body
+  body: <p>Welcome</p>
+  record: intro (Lesson)
+
+advanced_body:
+  name: body
+  body: <p>Harder stuff</p>
+  record: advanced (Lesson)
+
+draft_lesson_body:
+  name: body
+  body: <p>Work in progress</p>
+  record: draft_lesson (Lesson)
+
+physics_lesson_body:
+  name: body
+  body: <p>F = ma</p>
+  record: physics_lesson (Lesson)

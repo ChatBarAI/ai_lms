@@ -23,9 +23,9 @@ class Ability
 
   def allow_guest_catalog_access
     can :read, Subject
-    can :read, Course, published_at: ..Time.current
-    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current }
-    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current } }
+    can :read, Course, published_at: ..Time.current, public_access_enabled: true
+    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current, public_access_enabled: true }
+    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current, public_access_enabled: true } }
   end
 
   def allow_authenticated_catalog_access(user)

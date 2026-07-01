@@ -112,3 +112,80 @@ html.theme-dark trix-toolbar .trix-dialog input.trix-input {
   border-color: rgb(75 85 99);
   color: rgb(243 244 246);
 }
+
+/* Link dialog must sit above surrounding form UI */
+trix-toolbar .trix-dialogs {
+  z-index: 50;
+}
+
+trix-toolbar .trix-dialog {
+  z-index: 50;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+/* Rich text display — views use .prose but @tailwindcss/typography is not installed */
+.prose.max-w-none,
+.trix-content {
+  line-height: 1.625;
+  max-width: none;
+}
+
+.prose.max-w-none p,
+.trix-content p {
+  margin-bottom: 0.75rem;
+}
+
+.prose.max-w-none p:last-child,
+.trix-content p:last-child {
+  margin-bottom: 0;
+}
+
+.prose.max-w-none a,
+.trix-content a,
+trix-editor a {
+  color: #4f46e5;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.prose.max-w-none a:hover,
+.trix-content a:hover,
+trix-editor a:hover {
+  color: #4338ca;
+}
+
+.prose.max-w-none ul,
+.trix-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose.max-w-none ol,
+.trix-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose.max-w-none strong,
+.trix-content strong {
+  font-weight: 700;
+}
+
+.prose.max-w-none em,
+.trix-content em {
+  font-style: italic;
+}
+
+html.theme-dark .prose.max-w-none a,
+html.theme-dark .trix-content a,
+html.theme-dark trix-editor a {
+  color: #818cf8;
+}
+
+html.theme-dark .prose.max-w-none a:hover,
+html.theme-dark .trix-content a:hover,
+html.theme-dark trix-editor a:hover {
+  color: #a5b4fc;
+}

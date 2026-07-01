@@ -1,6 +1,8 @@
 class Lesson < ApplicationRecord
   belongs_to :course
 
+  has_rich_text :body
+
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
@@ -34,6 +36,10 @@ class Lesson < ApplicationRecord
 
   def effective_pass_mark
     pass_mark.presence || SiteSetting.current.pass_mark
+  end
+
+  def public_to_guests?
+    published? && course&.public_to_guests?
   end
 
   def required_lesson_materials

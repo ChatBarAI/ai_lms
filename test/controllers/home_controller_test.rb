@@ -5,7 +5,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
     assert_select "html[lang=?]", "en"
-    assert_match(/Mathematics/, response.body)
+    assert_match(/Browse subjects/, response.body)
+    assert_match(/All courses/, response.body)
   end
 
   test "signed in German user sees German locale chrome" do
@@ -21,8 +22,21 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sprache: Deutsch/, response.body)
   end
 
-  test "lists published courses but not drafts" do
+  test "anonymous home page lists public recent courses only" do
     get root_path
+
+    assert_response :success
+    assert_match(/Algebra/, response.body)
+    assert_no_match(/Physics 101/, response.body)
+    assert_no_match(/Draft Course/, response.body)
+  end
+
+  test "signed in user sees published recent courses but not drafts" do
+    sign_in users(:student)
+
+    get root_path
+
+    assert_response :success
     assert_match(/Algebra/, response.body)
     assert_no_match(/Draft Course/, response.body)
   end

@@ -27,6 +27,11 @@
       = f.label :published_at, "Publish at", class: "block text-sm font-medium mb-1"
       = f.datetime_local_field :published_at, title: "Leave blank to keep this course as a draft.", class: "w-full border border-gray-300 rounded px-3 py-2"
 
+    %div.flex-1.pb-2
+      = toggle_switch_field f, :public_access_enabled,
+          label: "Allow public access",
+          title: "Published courses with public access can be viewed by people who are not signed in, including their lessons and uploaded content."
+
   %div
     = upload_field f, :cover_image,
         label: "Upload cover image (PNG, JPG or WebP, max 5 MB)",

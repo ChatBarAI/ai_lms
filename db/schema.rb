@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_22_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_30_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -76,6 +76,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_22_000000) do
     t.datetime "updated_at", null: false
     t.jsonb "certificate_layout", default: {}, null: false
     t.string "locale", default: "en", null: false
+    t.boolean "public_access_enabled", default: false, null: false
     t.index ["owner_id"], name: "index_courses_on_owner_id"
     t.index ["slug"], name: "index_courses_on_slug", unique: true
     t.index ["subject_id"], name: "index_courses_on_subject_id"
@@ -122,7 +123,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_22_000000) do
     t.bigint "course_id", null: false
     t.string "title"
     t.integer "position"
-    t.text "body"
     t.string "cbai_token"
     t.datetime "published_at"
     t.datetime "created_at", null: false

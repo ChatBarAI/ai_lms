@@ -23,6 +23,12 @@ class CourseTest < ActiveSupport::TestCase
     assert_equal "en", c.locale
   end
 
+  test "public access is off by default" do
+    c = Course.new(title: "Private Course", owner: users(:instructor))
+    assert_not c.public_access_enabled?
+    assert_not c.public_to_guests?
+  end
+
   test "allows supported locales" do
     c = Course.new(title: "German Course", owner: users(:instructor), locale: "de")
     assert c.valid?
