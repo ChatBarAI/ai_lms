@@ -35,7 +35,7 @@ module ActiveStorageAccessControl
     return if public_active_storage_blob?(blob)
 
     @protected_active_storage_request = true
-    require_active_storage_user!
+    require_active_storage_user_for_blob!(blob)
   end
 
   def mark_protected_active_storage_response_private!
@@ -65,6 +65,13 @@ module ActiveStorageAccessControl
     head :unauthorized
   end
 
+  def require_active_storage_user_for_blob!(blob)
+    return require_active_storage_user! unless user_signed_in?
+    return if active_storage_blob_readable_by_current_user?(blob)
+
+    head :forbidden
+  end
+
   def public_active_storage_blob?(blob)
     attachments = blob.attachments.includes(:record).to_a
     return false if attachments.empty?
@@ -87,6 +94,38 @@ module ActiveStorageAccessControl
     else
       true
     end
+  end
+
+  def active_storage_blob_readable_by_current_user?(blob)
+    attachments = blob.attachments.includes(:record).to_a
+    return false if attachments.empty?
+
+    attachments.all? { |attachment| active_storage_record_readable_by_current_user?(attachment.record) }
+  end
+
+  def active_storage_record_readable_by_current_user?(record)
+    case record
+    when SiteSetting
+      true
+    when User
+      record == current_user || active_storage_current_ability.can?(:read, record)
+    when Course, Lesson, LessonMaterial
+      active_storage_current_ability.can?(:read, record)
+    when ActionText::RichText
+      active_storage_rich_text_record_readable_by_current_user?(record)
+    else
+      false
+    end
+  end
+
+  def active_storage_rich_text_record_readable_by_current_user?(rich_text)
+    return false unless %w[Lesson LessonMaterial].include?(rich_text.record_type)
+
+    rich_text.record.present? && active_storage_record_readable_by_current_user?(rich_text.record)
+  end
+
+  def active_storage_current_ability
+    @active_storage_current_ability ||= Ability.new(current_user)
   end
 
   def rich_text_record_public_to_guests?(rich_text)

@@ -12,6 +12,8 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:admin)
     get admin_courses_path
     assert_response :success
+    assert_select "th", text: "Access"
+    assert_select "span", text: "Public"
   end
 
   test "admin can filter courses by subject" do

@@ -91,6 +91,9 @@ gem "active_storage_validations"
 
 # Stdlib gems being removed from default Ruby
 gem "ostruct"
+# Keep psych on Ruby 3.4.2's bundled default version; newer releases can be
+# reinstalled by Bundler and trigger ambiguous-spec warnings alongside default gems.
+gem "psych", "5.2.2"
 
 # PDF certificate generation
 gem "prawn", "~> 2.5"

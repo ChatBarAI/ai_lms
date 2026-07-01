@@ -12,14 +12,15 @@
 %table.w-full.bg-white.border.border-gray-200.rounded
   %thead.bg-gray-50
     %tr
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Title
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The course title shown to learners and administrators." } Title
       - if subjects_enabled?
-        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Subject
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Language
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Owner
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Status
-      %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2 Lessons
-      %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The subject this course is grouped under." } Subject
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The language used for this course." } Language
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The instructor or administrator who owns this course." } Owner
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Shows whether this course is published or still a draft." } Status
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Displays when a Course and Lessons are publicly viewable without sign in." } Access
+      %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The number of lessons in this course." } Lessons
+      %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Available actions for this course." }
   %tbody
     - @courses.each do |c|
       %tr.border-t.border-gray-100
@@ -30,6 +31,11 @@
         %td.px-3.py-2.text-sm.text-gray-600= c.owner&.email
         %td.px-3.py-2.text-sm
           %span{ class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{c.published? ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}" }= c.published? ? "published" : "draft"
+        %td.px-3.py-2.text-sm
+          - if c.public_access_enabled?
+            %span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-sky-100.text-sky-800 Public
+          - else
+            %span.text-xs.text-gray-400 —
         %td.px-3.py-2.text-center.text-sm
           = link_to c.lessons.size, admin_course_lessons_path(c), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors"
         %td.px-3.py-2.text-right

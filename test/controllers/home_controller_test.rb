@@ -31,6 +31,16 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/Draft Course/, response.body)
   end
 
+  test "anonymous home page hides recent section when no public courses are available" do
+    Course.update_all(public_access_enabled: false)
+
+    get root_path
+
+    assert_response :success
+    assert_no_match(/Recently published/, response.body)
+    assert_no_match(/No published courses yet/, response.body)
+  end
+
   test "signed in user sees published recent courses but not drafts" do
     sign_in users(:student)
 

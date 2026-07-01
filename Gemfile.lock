@@ -292,7 +292,7 @@ GEM
       ttfunk (~> 1.8)
     prettyprint (0.2.0)
     prism (1.9.0)
-    psych (5.4.0)
+    psych (5.2.2)
       date
       stringio
     public_suffix (7.0.5)
@@ -511,6 +511,7 @@ DEPENDENCIES
   pagy (~> 43.5)
   pg (~> 1.1)
   prawn (~> 2.5)
+  psych (= 5.2.2)
   puma (>= 5.0)
   rack-attack
   rails (~> 7.2.3)

@@ -16,7 +16,7 @@
       .flex.w-full.sm:w-auto
         = link_to t(".sign_in_to_access"), new_user_session_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
 
-- if site_setting.allow_guest_access? || user_signed_in?
+- if (site_setting.allow_guest_access? || user_signed_in?) && (user_signed_in? || @recent_items&.any?)
   %section
     %h2.text-xl.font-semibold.mb-3= t(".recently_published")
     - if @recent_items&.any?

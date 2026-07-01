@@ -26,12 +26,30 @@ class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "signed in user cannot access a draft course asset they cannot read" do
+    courses(:draft_course).cover_image.attach(image_upload("course-cover.png"))
+    sign_in users(:student)
+
+    get rails_blob_path(courses(:draft_course).cover_image)
+
+    assert_response :forbidden
+  end
+
   test "anonymous user cannot access a lesson asset" do
     lessons(:physics_lesson).poster_image.attach(image_upload("poster.png"))
 
     get rails_blob_path(lessons(:physics_lesson).poster_image)
 
     assert_response :unauthorized
+  end
+
+  test "signed in user cannot access a draft lesson asset they cannot read" do
+    lessons(:draft_lesson).poster_image.attach(image_upload("poster.png"))
+    sign_in users(:student)
+
+    get rails_blob_path(lessons(:draft_lesson).poster_image)
+
+    assert_response :forbidden
   end
 
   test "anonymous user cannot access a lesson material document" do
@@ -46,6 +64,21 @@ class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
     get rails_blob_path(material.document)
 
     assert_response :unauthorized
+  end
+
+  test "signed in user cannot access a draft lesson material document they cannot read" do
+    material = LessonMaterial.new(lesson: lessons(:draft_lesson), title: "Draft notes", kind: :pdf)
+    material.document.attach(
+      io: StringIO.new("%PDF-1.4\n"),
+      filename: "draft-notes.pdf",
+      content_type: "application/pdf"
+    )
+    material.save!
+    sign_in users(:student)
+
+    get rails_blob_path(material.document)
+
+    assert_response :forbidden
   end
 
   test "anonymous user cannot access a trix image attached to a lesson body" do
@@ -88,6 +121,15 @@ class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
     SiteSetting.current.logo.attach(image_upload("logo.png"))
 
     get rails_blob_path(SiteSetting.current.logo)
+
+    assert_response :success
+  end
+
+  test "signed in user can access their own avatar" do
+    users(:student).avatar.attach(image_upload("avatar.png"))
+    sign_in users(:student)
+
+    get rails_blob_path(users(:student).avatar)
 
     assert_response :success
   end
