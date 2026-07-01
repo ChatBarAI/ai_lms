@@ -1,9 +1,11 @@
-class MigrateLessonBodyToActionText < ActiveRecord::Migration[7.2]
+class ActionTextTrixAndCoursePublicAccess < ActiveRecord::Migration[7.2]
   class MigrationLesson < ApplicationRecord
     self.table_name = "lessons"
   end
 
   def up
+    add_column :courses, :public_access_enabled, :boolean, null: false, default: false
+
     MigrationLesson.where.not(body: [ nil, "" ]).find_each do |lesson|
       next if ActionText::RichText.exists?(record_type: "Lesson", record_id: lesson.id, name: "body")
 
@@ -25,6 +27,8 @@ class MigrateLessonBodyToActionText < ActiveRecord::Migration[7.2]
       MigrationLesson.where(id: rich_text.record_id).update_all(body: rich_text.body.to_plain_text)
       rich_text.destroy!
     end
+
+    remove_column :courses, :public_access_enabled
   end
 
   private
