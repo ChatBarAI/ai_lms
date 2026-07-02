@@ -7,10 +7,11 @@
 - if @subject.description.present?
   %p.text-gray-600.mb-6= @subject.description
 
-%h2.text-lg.font-semibold.mb-3= terms[:courses]
-- if @courses.any?
-  .grid.grid-cols-1.sm:grid-cols-2.gap-4
-    - @courses.each do |course|
-      = render "courses/card", course: course, hide_subject: true
-- else
-  %p.text-gray-500= t(".empty", **terms)
+- if @courses.any? || user_signed_in?
+  %h2.text-lg.font-semibold.mb-3= terms[:courses]
+  - if @courses.any?
+    .grid.grid-cols-1.sm:grid-cols-2.gap-4
+      - @courses.each do |course|
+        = render "courses/card", course: course, hide_subject: true
+  - else
+    %p.text-gray-500= t(".empty", **terms)

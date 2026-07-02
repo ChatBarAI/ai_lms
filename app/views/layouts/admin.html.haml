@@ -12,6 +12,7 @@
     %noscript
       = stylesheet_link_tag "application", "data-turbo-track": "reload"
     = javascript_importmap_tags
+    = yield :javascript
     = theme_style_tag
     = theme_mode_script
   %body{ class: "bg-[var(--page-bg)] text-[var(--page-fg)]" }

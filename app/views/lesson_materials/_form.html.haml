@@ -1,3 +1,6 @@
+- content_for :javascript do
+  = javascript_import_module_tag "actiontext_editor"
+
 - url = material.persisted? ? course_lesson_lesson_material_path(course, lesson, material) : course_lesson_lesson_materials_path(course, lesson)
 
 = form_with model: material, url: url, multipart: true, class: "space-y-4 bg-white mt-3" do |f|

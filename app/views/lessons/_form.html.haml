@@ -1,3 +1,6 @@
+- content_for :javascript do
+  = javascript_import_module_tag "actiontext_editor"
+
 = form_with model: lesson, url: (lesson.persisted? ? course_lesson_path(course, lesson) : course_lessons_path(course)), class: "space-y-4 bg-white mt-3" do |f|
   - if lesson.errors.any?
     .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
