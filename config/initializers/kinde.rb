@@ -17,14 +17,17 @@
 kinde_domain        = Rails.application.credentials.dig(:kinde, :domain)
 kinde_client_id     = Rails.application.credentials.dig(:kinde, :client_id)
 kinde_client_secret = Rails.application.credentials.dig(:kinde, :client_secret)
+kinde_host          = ENV["APP_HOST"].presence ||
+                      Rails.application.credentials.dig(:kinde, :host).presence ||
+                      "http://localhost:3000"
 
 if kinde_domain.present? && kinde_client_id.present? && kinde_client_secret.present?
   KindeSdk.configure do |c|
     c.domain        = kinde_domain
     c.client_id     = kinde_client_id
     c.client_secret = kinde_client_secret
-    c.callback_url  = "#{Rails.application.credentials.dig(:kinde, :host) || ENV.fetch("APP_HOST", "http://localhost:3000")}/kinde/callback"
-    c.logout_url    = "#{Rails.application.credentials.dig(:kinde, :host) || ENV.fetch("APP_HOST", "http://localhost:3000")}/kinde/logout_callback"
+    c.callback_url  = "#{kinde_host}/kinde/callback"
+    c.logout_url    = "#{kinde_host}/kinde/logout_callback"
     c.logger        = Rails.logger
   end
 end

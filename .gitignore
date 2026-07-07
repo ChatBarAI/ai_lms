@@ -33,11 +33,13 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+/config/database_password
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
 
 /config/credentials/production.key
+/config/deploy/generated/
 
 # Local deploy script (keep outside the repo)
 /bin/deploy
