@@ -18,6 +18,7 @@ class Admin::DashboardController < Admin::BaseController
     @completions_this_month = progresses_scope.completed.where(completed_at: Time.current.beginning_of_month..).count
     @total_courses = Course.count
     @total_lessons = Lesson.count
+    @pending_marking_lessons_count = Lesson.pending_marking_count
 
     avg = enrollments_scope.includes(:course).map(&:completion_percentage)
     @avg_completion = avg.any? ? (avg.sum / avg.size).round(1) : 0

@@ -144,6 +144,7 @@ en:
       no_questions_to_grade: "No questions to grade."
       answers_submitted_title: "Answers submitted"
       answers_queued: "Your written responses are queued for marking by ChatBar AI. You can track progress in the Status section."
+      answers_pending_manual_marking: "Your written responses were saved. The instructor will be notified to mark your answers."
       answers_scored: "You scored %{score}%. %{message}"
       lesson_marked_complete: "Lesson marked complete."
       keep_practising: "Keep practising - pass mark is %{pass_mark}%."

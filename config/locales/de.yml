@@ -145,6 +145,7 @@ de:
       no_questions_to_grade: "Keine Fragen zum Bewerten vorhanden."
       answers_submitted_title: "Antworten übermittelt"
       answers_queued: "Deine schriftlichen Antworten warten auf die Bewertung durch ChatBar AI. Du kannst den Fortschritt im Statusbereich verfolgen."
+      answers_pending_manual_marking: "Deine schriftlichen Antworten wurden gespeichert. Der Kursleiter wird benachrichtigt, deine Antworten zu bewerten."
       answers_scored: "Du hast %{score}% erreicht. %{message}"
       lesson_marked_complete: "Lektion als abgeschlossen markiert."
       keep_practising: "Übe weiter - die Bestehensgrenze liegt bei %{pass_mark}%."

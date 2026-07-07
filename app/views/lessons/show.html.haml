@@ -58,6 +58,10 @@
               .flex.items-center.gap-1.5.mt-0.5{ data: { controller: "scoring-channel", "scoring-channel-progress-id-value": @progress.id } }
                 .w-2.h-2.rounded-full.bg-indigo-500.animate-pulse
                 %p.text-xs.text-indigo-600.font-medium Queued for marking…
+            - elsif @manual_marking_pending
+              .flex.items-center.gap-1.5.mt-0.5
+                .w-2.h-2.rounded-full.bg-amber-500
+                %p.text-xs.text-amber-700.font-medium Awaiting manual marking…
             - elsif @progress.score.present?
               %p.text-xs.text-gray-500= t(".score", score: @progress.score)
             - if @quiz_attempts.present?
@@ -76,7 +80,7 @@
                      show_attempt_numbers: true,
                      axis_label: "Attempt Number"
       - if !@progress.completed?
-        - unless @ai_scoring_pending
+        - unless @marking_pending
           .self-center.ml-auto
             = form_with model: @progress, url: progress_path(@progress.id), method: :patch, local: true do |f|
               = f.hidden_field :status, value: "completed"
@@ -97,7 +101,7 @@
       - if @retry_mode && @questions.empty?
         .bg-green-50.border.border-green-200.text-green-800.rounded.p-4.text-sm.mb-6
           %p.font-semibold ✓ All questions answered correctly — nothing left to retry!
-      - elsif !@ai_scoring_pending
+      - elsif !@marking_pending
         = render "quiz", lesson: @lesson, questions: @questions, progress: @progress, retry_mode: @retry_mode, collapsed: (@enrollment && @progress&.completed?)
     - else
       .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.mb-6

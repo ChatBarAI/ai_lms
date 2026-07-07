@@ -1,0 +1,41 @@
+- content_for :title, "Lessons needing marking"
+
+.flex.items-center.justify-between.mb-6
+  %div
+    %h1.text-2xl.font-bold Lessons needing marking
+    %p.text-sm.text-gray-500.mt-1 Free-text answers waiting for AI or manual marking.
+  = link_to "Back to dashboard", admin_root_path, class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
+
+- if @lessons.empty?
+  .bg-white.border.border-gray-200.rounded.p-4.text-sm.text-gray-500
+    No lessons need marking right now.
+- else
+  .bg-white.border.border-gray-200.rounded.overflow-hidden
+    %table.w-full.text-sm
+      %thead.bg-gray-50
+        %tr
+          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Course
+          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Lesson
+          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Marking status
+          %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Learners
+          %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Answers
+          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Latest submission
+          %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2
+      %tbody
+        - @lessons.each do |lesson|
+          - mode = lesson.pending_marking_mode
+          %tr.border-t.border-gray-100
+            %td.px-3.py-2.text-gray-700= link_to lesson.course.title, admin_course_path(lesson.course), class: "text-indigo-600 hover:underline"
+            %td.px-3.py-2.font-medium.text-gray-900= lesson.title
+            %td.px-3.py-2
+              - if mode == :ai
+                %span.inline-flex.items-center.gap-1.5.rounded-full.border.border-indigo-200.bg-indigo-50.px-2.5.py-1.text-xs.font-medium.text-indigo-700
+                  .h-2.w-2.rounded-full.bg-indigo-500.animate-pulse
+                  Queued for AI marking
+              - else
+                %span.inline-flex.items-center.rounded-full.border.border-amber-200.bg-amber-50.px-2.5.py-1.text-xs.font-medium.text-amber-700 Manual marking
+            %td.px-3.py-2.text-right.text-gray-700= lesson.pending_learners_count
+            %td.px-3.py-2.text-right.text-gray-700= lesson.pending_free_text_answers_count
+            %td.px-3.py-2.text-gray-500= lesson.latest_pending_answer_at&.strftime("%Y-%m-%d %H:%M") || "—"
+            %td.px-3.py-2.text-right
+              = link_to "Open report", report_admin_course_lesson_path(lesson.course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors"

@@ -33,7 +33,7 @@
         = f.select :cbai_display_mode, [["Pop up", "popup"], ["Slide-in", "drawer"], ["None", "none"]], {}, title: "Choose how the tutor opens, or disable it for this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
       %div{ data: { "ai-tutor-provider-target": "chatbarFields" } }
         = f.label :cbai_api_key, "ChatBar AI API key", class: "block text-sm font-medium mb-1"
-        = f.text_field :cbai_api_key, value: lesson.cbai_api_key, autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", inputmode: "text", title: "Provide the ChatBar AI API key to fetch the instance details automatically and save its token on this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10"
+        = f.password_field :cbai_api_key, value: lesson.cbai_api_key, autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", inputmode: "text", title: "Provide the ChatBar AI API key to fetch the instance details automatically and save its token on this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10"
       %div{ data: { "ai-tutor-provider-target": "anamFields" } }
         = f.label :anam_api_key, "Anam API key", class: "block text-sm font-medium mb-1"
         = f.text_field :anam_api_key, value: lesson.anam_api_key, autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", inputmode: "text", title: "Stored server-side only and used to mint short-lived Anam session tokens.", class: "w-full border border-gray-300 rounded px-3 h-10"

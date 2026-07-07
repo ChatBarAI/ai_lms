@@ -120,9 +120,34 @@ class Lesson < ApplicationRecord
   end
 
   scope :published, -> { where(published_at: ..Time.current) }
+  scope :pending_marking, -> {
+    joins(questions: :question_answers)
+      .where(questions: { kind: Question.kinds[:free_text] })
+      .where(question_answers: { ai_score: nil })
+  }
+
+  def self.pending_marking_count
+    pending_marking.distinct.count(:id)
+  end
+
+  def self.marking_queue
+    pending_marking
+      .select(
+        "lessons.*",
+        "COUNT(question_answers.id) AS pending_free_text_answers_count",
+        "COUNT(DISTINCT question_answers.enrollment_id) AS pending_learners_count",
+        "MAX(question_answers.updated_at) AS latest_pending_answer_at"
+      )
+      .group("lessons.id")
+      .order(Arel.sql("MAX(question_answers.updated_at) DESC"))
+  end
 
   def published?
     published_at.present? && published_at <= Time.current
+  end
+
+  def pending_marking_mode
+    cbai_api_key.present? ? :ai : :manual
   end
 
   def average_rating

@@ -87,6 +87,8 @@ Rails.application.routes.draw do
   resources :tags, only: [ :show ]
   namespace :admin do
     root "dashboard#index"
+    get "marking_queue", to: "marking_queue#index"
+    patch "question_answers/:id/score", to: "question_answers#score", as: :question_answer_score
     resources :users do
       member do
         post :enroll

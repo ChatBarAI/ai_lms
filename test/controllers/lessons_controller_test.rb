@@ -395,13 +395,14 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_match "AI", flash[:popup]
 
     progress = Progress.find_by!(enrollment: enrollments(:student_in_algebra), lesson: lessons(:intro))
+    assert_nil progress.score
     attempt = progress.quiz_attempts.ordered.last
     assert_not_nil attempt
     assert attempt.pending?
     assert_nil attempt.score
   end
 
-  test "submit_quiz does not enqueue job when lesson has no CBAI key" do
+  test "submit_quiz with free-text and no CBAI key saves pending answers without scoring" do
     sign_in users(:student)
     lessons(:intro).update!(cbai_api_key: nil)
     questions(:intro_q1).update!(kind: :free_text)
@@ -412,5 +413,16 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to course_lesson_path(courses(:algebra), lessons(:intro), anchor: "lesson-status")
+    assert_match "instructor will be notified", flash[:popup_alert]
+    assert_nil flash[:popup]
+
+    progress = Progress.find_by!(enrollment: enrollments(:student_in_algebra), lesson: lessons(:intro))
+    assert_nil progress.score
+    assert progress.in_progress?
+
+    attempt = progress.quiz_attempts.ordered.last
+    assert_not_nil attempt
+    assert attempt.pending?
+    assert_nil attempt.score
   end
 end

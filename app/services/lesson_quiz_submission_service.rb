@@ -6,42 +6,58 @@ class LessonQuizSubmissionService
   end
 
   def call
-    questions_to_save = @lesson.persist_submission_answers!(enrollment: @enrollment, answers: @answers)
+    @lesson.persist_submission_answers!(enrollment: @enrollment, answers: @answers)
     progress = @enrollment.progresses.find_or_initialize_by(lesson_id: @lesson.id)
 
-    if queue_ai_scoring?(questions_to_save)
-      enqueue_ai_scoring!(progress)
-      { progress: progress, queued_ai_scoring: true, score: nil }
+    if pending_free_text_answers?
+      return enqueue_ai_scoring!(progress) if @lesson.cbai_api_key.present?
+
+      mark_manual_marking_pending!(progress)
     else
       score = save_immediate_score!(progress)
-      { progress: progress, queued_ai_scoring: false, score: score }
+      { progress: progress, queued_ai_scoring: false, manual_marking_pending: false, score: score }
     end
   end
 
   private
 
-  def queue_ai_scoring?(questions_to_save)
-    questions_to_save.any?(&:free_text?) && @lesson.cbai_api_key.present?
+  def pending_free_text_answers?
+    QuestionAnswer
+      .joins(:question)
+      .where(enrollment_id: @enrollment.id, questions: { lesson_id: @lesson.id, kind: Question.kinds[:free_text] })
+      .where(ai_score: nil)
+      .exists?
   end
 
   def enqueue_ai_scoring!(progress)
+    attempt = create_pending_attempt!(progress)
+    LessonScoringJob.perform_later(progress.id, attempt.id)
+    ScoringCleanupJob.set(wait: 10.minutes).perform_later(progress.id, attempt.id)
+
+    { progress: progress, queued_ai_scoring: true, manual_marking_pending: false, score: nil }
+  end
+
+  def mark_manual_marking_pending!(progress)
+    create_pending_attempt!(progress)
+    { progress: progress, queued_ai_scoring: false, manual_marking_pending: true, score: nil }
+  end
+
+  def create_pending_attempt!(progress)
     submitted_at = Time.current
 
     progress.status = :in_progress
     progress.scoring_submitted_at = submitted_at
     progress.scoring_retry_count = 0
+    progress.score = nil
     progress.save!
 
-    attempt = progress.quiz_attempts.create!(
+    progress.quiz_attempts.create!(
       enrollment: @enrollment,
       lesson: @lesson,
       attempt_number: progress.next_attempt_number,
       status: :pending,
       submitted_at: submitted_at
     )
-
-    LessonScoringJob.perform_later(progress.id, attempt.id)
-    ScoringCleanupJob.set(wait: 10.minutes).perform_later(progress.id, attempt.id)
   end
 
   def save_immediate_score!(progress)

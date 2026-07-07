@@ -27,7 +27,7 @@ class Admin::LessonsController < Admin::BaseController
 
     @ai_answers = QuestionAnswer
       .joins(:question, enrollment: :user)
-      .where(questions: { lesson_id: @lesson.id })
+      .where(questions: { lesson_id: @lesson.id, kind: Question.kinds[:free_text] })
       .order("questions.position, users.email")
       .select("question_answers.*, questions.prompt AS question_body, questions.correct_answer AS expected_answer, users.email AS user_email")
   end

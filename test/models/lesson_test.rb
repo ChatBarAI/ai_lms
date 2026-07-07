@@ -195,4 +195,20 @@ class LessonTest < ActiveSupport::TestCase
 
     assert_equal 100.0, score
   end
+
+  test "marking_queue lists lessons with pending free-text answers" do
+    question = questions(:intro_q1)
+    question.update!(kind: :free_text)
+    QuestionAnswer.create!(
+      enrollment: enrollments(:student_in_algebra),
+      question: question,
+      answer_text: "Needs review"
+    )
+
+    queued = Lesson.marking_queue.to_a
+
+    assert_includes queued, lessons(:intro)
+    assert_equal 1, Lesson.pending_marking_count
+    assert_equal :manual, queued.find { |lesson| lesson.id == lessons(:intro).id }.pending_marking_mode
+  end
 end

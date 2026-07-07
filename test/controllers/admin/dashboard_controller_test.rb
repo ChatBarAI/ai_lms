@@ -20,6 +20,22 @@ class Admin::DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Enrolments/, response.body)
   end
 
+  test "admin dashboard links to marking queue when lessons need marking" do
+    questions(:intro_q1).update!(kind: :free_text)
+    QuestionAnswer.create!(
+      enrollment: enrollments(:student_in_algebra),
+      question: questions(:intro_q1),
+      answer_text: "Needs review"
+    )
+
+    sign_in users(:admin)
+    get admin_root_path
+
+    assert_response :success
+    assert_match "Lessons needing marking", response.body
+    assert_match admin_marking_queue_path, response.body
+  end
+
   test "admin can filter dashboard by organization" do
     sign_in users(:admin)
     users(:student).update!(organization: organizations(:acme))

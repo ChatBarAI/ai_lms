@@ -63,7 +63,7 @@
 - if @ai_answers.any?
   .mt-4.bg-white.border.border-gray-200.rounded
     .px-4.py-2.border-b.border-gray-100.flex.items-center.justify-between
-      %span.font-semibold ChatBar AI lesson marking
+      %span.font-semibold Free-text lesson marking
       - pending = @ai_answers.count { |a| a.ai_score.nil? }
       - if pending > 0
         .flex.items-center.gap-1.5
@@ -76,7 +76,7 @@
           %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:24%" } Question
           %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:22%" } Their answer
           %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:22%" } Expected
-          %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:8%" } Score
+          %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:12%" } Score
           %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:8%" } Scored at
       %tbody
         - @ai_answers.each do |qa|
@@ -89,6 +89,10 @@
               - if qa.ai_score
                 %span.inline-flex.items-center.rounded-full.px-2.py-0.5.text-xs.font-semibold{ class: qa.ai_score >= 7 ? "bg-green-100 text-green-800" : qa.ai_score >= 4 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800" }
                   = "#{qa.ai_score}/10"
+              - elsif @lesson.cbai_api_key.present?
+                %span.text-xs.text-indigo-500 queued for AI
               - else
-                %span.text-xs.text-indigo-500 pending
+                = form_with url: admin_question_answer_score_path(qa), method: :patch, local: true, class: "flex justify-center gap-1" do
+                  = select_tag "question_answer[ai_score]", options_for_select((1..10).map { |score| [ score, score ] }), include_blank: "—", class: "w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-xs"
+                  = submit_tag "Save", class: "rounded bg-amber-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-amber-700 cursor-pointer"
             %td.px-3.py-2.text-gray-400.text-xs.truncate{ title: qa.scored_at&.strftime("%Y-%m-%d %H:%M") }= qa.scored_at&.strftime("%Y-%m-%d %H:%M") || "—"

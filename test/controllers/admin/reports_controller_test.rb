@@ -25,9 +25,31 @@ class Admin::ReportsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:admin)
     get report_admin_course_lesson_path(courses(:algebra), lessons(:advanced))
     assert_response :success
-    assert_match "ChatBar AI lesson marking", response.body
+    assert_match "Free-text lesson marking", response.body
     assert_match "9/10", response.body
     assert_match "Explain the commutative property", response.body
+  end
+
+  test "lesson report marking table only shows free-text answers" do
+    QuestionAnswer.create!(
+      enrollment: enrollments(:student_in_algebra),
+      question: questions(:intro_q1),
+      answer_text: "2"
+    )
+    questions(:intro_q2).update!(kind: :free_text)
+    QuestionAnswer.create!(
+      enrollment: enrollments(:student_in_algebra),
+      question: questions(:intro_q2),
+      answer_text: "Four-ish"
+    )
+
+    sign_in users(:admin)
+    get report_admin_course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_match "Free-text lesson marking", response.body
+    assert_match "What is 2 + 2?", response.body
+    assert_no_match "What is 1 + 1?", response.body
   end
 
   test "lesson report shows pending indicator when answer has no score" do

@@ -13,11 +13,17 @@ class LessonsController < ApplicationController
     if @enrollment
       @progress = @enrollment.progresses.find_or_create_by!(lesson_id: @lesson.id)
       @quiz_attempts = @progress.quiz_attempts.ordered.to_a
-      @ai_scoring_pending = @progress.persisted? && !@progress.completed? && QuestionAnswer
-        .joins(:question)
-        .where(enrollment_id: @enrollment.id, questions: { lesson_id: @lesson.id, kind: Question.kinds[:free_text] })
-        .where(ai_score: nil)
-        .exists?
+      pending_free_text_answers =
+        @progress.persisted? &&
+        !@progress.completed? &&
+        QuestionAnswer
+          .joins(:question)
+          .where(enrollment_id: @enrollment.id, questions: { lesson_id: @lesson.id, kind: Question.kinds[:free_text] })
+          .where(ai_score: nil)
+          .exists?
+      @ai_scoring_pending = @lesson.cbai_api_key.present? && pending_free_text_answers
+      @manual_marking_pending = @lesson.cbai_api_key.blank? && pending_free_text_answers
+      @marking_pending = @ai_scoring_pending || @manual_marking_pending
 
       if @ai_scoring_pending && @progress.scoring_submitted_at.present? &&
           @progress.scoring_submitted_at < 5.minutes.ago
@@ -25,10 +31,11 @@ class LessonsController < ApplicationController
         @progress.reload
         @quiz_attempts = @progress.quiz_attempts.ordered.to_a
         @ai_scoring_pending = false
+        @marking_pending = @manual_marking_pending
         flash.now[:alert] = t("lessons.flash.ai_marking_timeout", quiz_l: helpers.terms[:quiz_l])
       end
 
-      @latest_quiz_answers = latest_quiz_answers_for(@enrollment, @lesson) if @progress.score.present? && !@ai_scoring_pending
+      @latest_quiz_answers = latest_quiz_answers_for(@enrollment, @lesson) if @progress.score.present? && !@marking_pending
     end
     if @lesson.retry_incorrect_only? && @enrollment && @progress&.persisted?
       @questions = @lesson.incorrect_questions_for(@enrollment)
@@ -71,6 +78,10 @@ class LessonsController < ApplicationController
     if result[:queued_ai_scoring]
       flash[:popup_title] = t("lessons.flash.answers_submitted_title")
       flash[:popup] = t("lessons.flash.answers_queued")
+      redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
+    elsif result[:manual_marking_pending]
+      flash[:popup_title] = t("lessons.flash.answers_submitted_title")
+      flash[:popup_alert] = t("lessons.flash.answers_pending_manual_marking")
       redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
     else
       score = result[:score]
