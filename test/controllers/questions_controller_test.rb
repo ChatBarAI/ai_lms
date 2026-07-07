@@ -32,4 +32,24 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_operator response.body.index(@question_two.prompt), :<, response.body.index(@question_one.prompt)
   end
+
+  test "invalid multiple choice create shows validation error and preserves choices" do
+    sign_in users(:instructor)
+
+    assert_no_difference("Question.count") do
+      post course_lesson_questions_path(@course, @lesson), params: {
+        question: {
+          prompt: "What is 2 + 2?",
+          kind: "multiple_choice",
+          choices_list: [ "2", "4" ],
+          correct_answer: "5",
+          points: "1"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "Correct answer must exactly match one of the choices", response.body
+    assert_match "2\n4", response.body
+  end
 end

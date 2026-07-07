@@ -317,7 +317,11 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
 
   test "show displays latest marked quiz results for enrolled student" do
     sign_in users(:student)
-    questions(:intro_q2).update!(correct_answer: "matrix-only-answer")
+    questions(:intro_q2).tap do |question|
+      question.correct_answer = "matrix-only-answer"
+      question.choices_list = [ "matrix-only-answer", "wrong" ]
+      question.save!
+    end
 
     post submit_quiz_course_lesson_path(courses(:algebra), lessons(:intro)),
          params: { answers: { questions(:intro_q1).id.to_s => "2", questions(:intro_q2).id.to_s => "wrong" } }
@@ -339,7 +343,9 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Incorrect", response.body
     assert_match "wrong", response.body
     assert_match "Correct answer", response.body
-    assert_no_match "matrix-only-answer", response.body
+    assert_select "#quiz-results" do |elements|
+      assert_no_match "matrix-only-answer", elements.first.to_html
+    end
   end
 
   test "submit_quiz stores score for each attempt" do

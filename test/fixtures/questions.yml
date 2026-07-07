@@ -2,6 +2,7 @@ intro_q1:
   lesson: intro
   prompt: What is 1 + 1?
   kind: 0
+  choices: '["1","2","3"]'
   correct_answer: "2"
   points: 1
   position: 1
@@ -10,6 +11,7 @@ intro_q2:
   lesson: intro
   prompt: What is 2 + 2?
   kind: 0
+  choices: '["3","4","5"]'
   correct_answer: "4"
   points: 1
   position: 2
