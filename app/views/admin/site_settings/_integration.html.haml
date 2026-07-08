@@ -62,5 +62,62 @@
                   - elsif in_use
                     %span.ml-1 (in use)
 
+    .mt-5.border-t.border-gray-200.pt-5
+      .flex.flex-col.gap-3.md:flex-row.md:items-start.md:justify-between
+        %div
+          %h3.font-semibold.text-gray-900 Sidekiq worker
+          %p.mt-1.text-xs.text-gray-500
+            Redis:
+            %span.font-mono= @sidekiq_status.redis_url
+        - if @sidekiq_status.available && @sidekiq_status.default_queue_running?
+          %span.inline-flex.w-fit.items-center.rounded-full.border.border-green-200.bg-green-50.px-2.5.py-1.text-xs.font-medium.text-green-700 Running
+        - elsif @sidekiq_status.available && @sidekiq_status.running?
+          %span.inline-flex.w-fit.items-center.rounded-full.border.border-amber-200.bg-amber-50.px-2.5.py-1.text-xs.font-medium.text-amber-700 Worker not on default queue
+        - elsif @sidekiq_status.available
+          %span.inline-flex.w-fit.items-center.rounded-full.border.border-red-200.bg-red-50.px-2.5.py-1.text-xs.font-medium.text-red-700 No worker heartbeat
+        - else
+          %span.inline-flex.w-fit.items-center.rounded-full.border.border-red-200.bg-red-50.px-2.5.py-1.text-xs.font-medium.text-red-700 Redis unavailable
+
+      - if @sidekiq_status.available
+        .mt-4.grid.grid-cols-2.gap-x-4.gap-y-3.border-y.border-gray-100.py-3.text-sm.md:grid-cols-5
+          %div
+            .text-xs.uppercase.tracking-wide.text-gray-500 Processes
+            .mt-1.text-xl.font-semibold= @sidekiq_status.processes.size
+          %div
+            .text-xs.uppercase.tracking-wide.text-gray-500 Default queue
+            .mt-1.text-xl.font-semibold= @sidekiq_status.default_queue_size
+          %div
+            .text-xs.uppercase.tracking-wide.text-gray-500 Scheduled
+            .mt-1.text-xl.font-semibold= @sidekiq_status.scheduled_size
+          %div
+            .text-xs.uppercase.tracking-wide.text-gray-500 Retries
+            .mt-1.text-xl.font-semibold= @sidekiq_status.retry_size
+          %div
+            .text-xs.uppercase.tracking-wide.text-gray-500 Dead
+            .mt-1.text-xl.font-semibold= @sidekiq_status.dead_size
+
+        - if @sidekiq_status.processes.any?
+          .mt-4.overflow-x-auto
+            %table.min-w-full.text-sm
+              %thead
+                %tr.border-b.border-gray-100.text-left.text-xs.uppercase.tracking-wide.text-gray-500
+                  %th.py-2.pr-3 Host
+                  %th.py-2.pr-3 Tag
+                  %th.py-2.pr-3 Queues
+                  %th.py-2.pr-3 Busy
+                  %th.py-2.pr-3 Started
+              %tbody.divide-y.divide-gray-100
+                - @sidekiq_status.processes.each do |process|
+                  %tr
+                    %td.py-2.pr-3.font-mono.text-xs= process[:hostname].presence || process[:identity]
+                    %td.py-2.pr-3= process[:tag].presence || "default"
+                    %td.py-2.pr-3= process[:queues].presence&.join(", ") || "?"
+                    %td.py-2.pr-3= "#{process[:busy]}/#{process[:concurrency]}"
+                    %td.py-2.pr-3= process[:started_at]&.strftime("%Y-%m-%d %H:%M") || "?"
+        - else
+          %p.mt-3.text-sm.text-gray-500 No Sidekiq process has heartbeated in this instance's configured Redis DB.
+      - else
+        %p.mt-3.text-sm.text-red-700= @sidekiq_status.error
+
     .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
       = f.submit "Save integration", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

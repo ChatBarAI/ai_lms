@@ -471,6 +471,9 @@ end
 # ─────────────────────────────────────────────────────────────────────────────
 
 FileUtils.chdir APP_ROOT do
+  puts "\n== Creating runtime directories =="
+  FileUtils.mkdir_p %w[log tmp/pids tmp/cache tmp/sockets]
+
   puts "\n== Installing dependencies =="
   system("bundle --version > /dev/null 2>&1") || system!("gem", "install", "bundler", "--conservative", "--user-install")
   system! "bundle", "config", "set", "--local", "path", bundle_path

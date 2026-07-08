@@ -379,6 +379,33 @@ For a durable deployment, run Sidekiq under systemd or the same process manager
 used for Puma. The `nohup` command is useful for a quick manual start, but it
 will not reliably survive deploys or server restarts.
 
+`bin/setup --generate-systemd` generates Puma and Sidekiq unit files under
+`config/deploy/generated/` and prints the commands to install and enable them.
+`bin/setup --generate-deploy-configs` does the same as part of the full deploy
+config generation. The generated Sidekiq service is named
+`sidekiq-ai_lms.service` by default, matching the database root.
+
+After a deploy or Redis/job configuration change, restart the worker with:
+
+```bash
+sudo systemctl restart sidekiq-ai_lms.service
+sudo systemctl status sidekiq-ai_lms.service --no-pager -l
+```
+
+To check the systemd-managed Sidekiq process later:
+
+```bash
+sudo systemctl is-active sidekiq-ai_lms.service
+sudo systemctl status sidekiq-ai_lms.service --no-pager -l
+sudo journalctl -u sidekiq-ai_lms.service -n 100 --no-pager
+```
+
+If Puma also needs to pick up the same change, restart both services:
+
+```bash
+sudo systemctl restart puma-ai_lms.service sidekiq-ai_lms.service
+```
+
 ### First-time server setup
 
 Before the first deploy the target host needs:

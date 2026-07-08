@@ -49,10 +49,13 @@ class Admin::SiteSettingsController < Admin::BaseController
     }
   }.freeze
 
+  PURGEABLE_ATTACHMENTS = SECTION_ATTACHMENT_PURGE_FLAGS.values.flat_map(&:keys).freeze
+
   def edit
     @active_section = current_section
     @current_base_url = request.base_url
     @redis_info = probe_redis
+    @sidekiq_status = SidekiqStatus.current
   end
 
   def probe_redis
@@ -91,6 +94,7 @@ class Admin::SiteSettingsController < Admin::BaseController
       @active_section = section
       @current_base_url = request.base_url
       @redis_info = probe_redis
+      @sidekiq_status = SidekiqStatus.current
       render :edit, status: :unprocessable_entity
     end
   end
@@ -124,20 +128,9 @@ class Admin::SiteSettingsController < Admin::BaseController
   end
 
   def purge_attachment(attachment_name)
-    case attachment_name
-    when :logo
-      @site_setting.logo.purge
-    when :favicon
-      @site_setting.favicon.purge
-    when :default_meta_card_image
-      @site_setting.default_meta_card_image.purge
-    when :pwa_screenshot_mobile
-      @site_setting.pwa_screenshot_mobile.purge
-    when :pwa_screenshot_desktop
-      @site_setting.pwa_screenshot_desktop.purge
-    when :certificate_template
-      @site_setting.certificate_template.purge
-    end
+    return unless PURGEABLE_ATTACHMENTS.include?(attachment_name)
+
+    @site_setting.public_send(attachment_name).purge
   end
   private :purge_attachment
 end
