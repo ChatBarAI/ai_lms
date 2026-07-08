@@ -72,6 +72,6 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    params.require(:lesson_material).permit(:title, :kind, :position, :required, :body, :document, :raw_html_content, :audio_file, :url, :image_file)
+    params.require(:lesson_material).permit(:title, :kind, :position, :required, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file)
   end
 end

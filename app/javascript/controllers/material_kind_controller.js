@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["pdf", "html", "rawhtml", "audioupload", "audiourl", "imageupload"]
+  static targets = ["pdf", "html", "rawhtml", "audioupload", "audiourl", "imageupload", "videoupload", "videourl"]
 
   connect() {
     const select = this.element.querySelector('select[name$="[kind]"]')
@@ -19,5 +19,7 @@ export default class extends Controller {
     if (this.hasAudiouploadTarget) this.audiouploadTarget.classList.toggle("hidden", value !== "audio_upload")
     if (this.hasAudiourlTarget)   this.audiourlTarget.classList.toggle("hidden", value !== "audio_url")
     if (this.hasImageuploadTarget) this.imageuploadTarget.classList.toggle("hidden", value !== "image_upload")
+    if (this.hasVideouploadTarget) this.videouploadTarget.classList.toggle("hidden", value !== "video_upload")
+    if (this.hasVideourlTarget)   this.videourlTarget.classList.toggle("hidden", value !== "video_url")
   }
 }

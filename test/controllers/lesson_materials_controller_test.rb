@@ -117,6 +117,14 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "material form submits without turbo so validation errors stay visible" do
+    sign_in users(:instructor)
+    get new_course_lesson_lesson_material_path(@course, @lesson)
+
+    assert_response :success
+    assert_select "form[data-turbo=?]", "false"
+  end
+
   test "instructor creates an html material" do
     sign_in users(:instructor)
     assert_difference("LessonMaterial.count", 1) do
@@ -138,6 +146,20 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to edit_course_lesson_path(@course, @lesson)
     assert LessonMaterial.order(:created_at).last.image_file.attached?
+  end
+
+  test "instructor creates a video url material" do
+    sign_in users(:instructor)
+
+    assert_difference("LessonMaterial.count", 1) do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Clip", kind: "video_url", url: "https://example.com/clip.mp4" } }
+    end
+
+    material = LessonMaterial.order(:created_at).last
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal "video_url", material.kind
+    assert_equal "https://example.com/clip.mp4", material.url
   end
 
   test "instructor can get edit form for own material" do

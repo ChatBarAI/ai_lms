@@ -6,8 +6,9 @@ class LessonMaterial < ApplicationRecord
   has_one_attached :document
   has_one_attached :audio_file
   has_one_attached :image_file
+  has_one_attached :video_file
 
-  enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5 }
+  enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5, video_upload: 6, video_url: 7 }
 
   SANITIZER     = Rails::HTML::SafeListSanitizer.new
   ALLOWED_TAGS  = %w[p br strong em u s h1 h2 h3 h4 h5 h6 ul ol li
@@ -22,6 +23,10 @@ class LessonMaterial < ApplicationRecord
 
   IMAGE_CONTENT_TYPES = %w[
     image/png image/jpeg image/webp image/gif
+  ].freeze
+
+  VIDEO_CONTENT_TYPES = %w[
+    video/mp4 video/webm video/ogg
   ].freeze
 
   KIND_CONTENT_REQUIREMENTS = {
@@ -54,6 +59,16 @@ class LessonMaterial < ApplicationRecord
       field: :image_file,
       message: "must be attached for an uploaded image material",
       valid: ->(material) { material.image_file.attached? }
+    },
+    "video_upload" => {
+      field: :video_file,
+      message: "must be attached for an uploaded video material",
+      valid: ->(material) { material.video_file.attached? }
+    },
+    "video_url" => {
+      field: :url,
+      message: "can't be blank",
+      valid: ->(material) { material.url.present? }
     }
   }.freeze
 
@@ -63,7 +78,9 @@ class LessonMaterial < ApplicationRecord
     "raw_html" => "Raw HTML",
     "audio_upload" => "Audio (upload)",
     "audio_url" => "Audio (URL)",
-    "image_upload" => "Image (upload)"
+    "image_upload" => "Image (upload)",
+    "video_upload" => "Video (upload)",
+    "video_url" => "Video (URL)"
   }.freeze
 
   validates :title, presence: true
@@ -80,6 +97,10 @@ class LessonMaterial < ApplicationRecord
             content_type: IMAGE_CONTENT_TYPES,
             size: { less_than: 10.megabytes },
             if: -> { image_file.attached? }
+  validates :video_file,
+            content_type: VIDEO_CONTENT_TYPES,
+            size: { less_than: 100.megabytes },
+            if: -> { video_file.attached? }
 
   before_validation :assign_position, on: :create
   before_validation :sanitize_raw_html
@@ -93,6 +114,10 @@ class LessonMaterial < ApplicationRecord
 
   def audio?
     audio_upload? || audio_url?
+  end
+
+  def video?
+    video_upload? || video_url?
   end
 
   def public_to_guests?

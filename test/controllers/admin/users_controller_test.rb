@@ -49,6 +49,22 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "admin sees errors when creating a user without a password" do
+    sign_in users(:admin)
+
+    assert_no_difference -> { User.count } do
+      post admin_users_path, params: {
+        user: { email: "no-password@example.com", name: "No Password", role: "student", password: "" }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    body = CGI.unescapeHTML(response.body)
+    assert_includes body, "Password can't be blank"
+    assert_includes body, "no-password@example.com"
+    assert_includes body, "No Password"
+  end
+
   test "admin can update a user without changing password when blank" do
     sign_in users(:admin)
     digest = users(:student).encrypted_password

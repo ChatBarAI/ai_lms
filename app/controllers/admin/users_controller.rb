@@ -31,6 +31,7 @@ class Admin::UsersController < Admin::BaseController
     if @user.save
       redirect_to admin_user_path(@user), notice: "User created."
     else
+      flash.now[:alert] = @user.errors.full_messages.to_sentence
       render :new, status: :unprocessable_entity
     end
   end

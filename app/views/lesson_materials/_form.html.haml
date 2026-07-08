@@ -3,7 +3,7 @@
 
 - url = material.persisted? ? course_lesson_lesson_material_path(course, lesson, material) : course_lesson_lesson_materials_path(course, lesson)
 
-= form_with model: material, url: url, multipart: true, class: "space-y-4 bg-white mt-3" do |f|
+= form_with model: material, url: url, multipart: true, local: true, data: { turbo: false }, class: "space-y-4 bg-white mt-3" do |f|
   - if material.errors.any?
     .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
       %ul.list-disc.pl-5
@@ -19,7 +19,7 @@
       %div
         = f.label :kind, class: "block text-sm font-medium mb-1"
         = f.select :kind,
-          [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML", "raw_html"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"]],
+          [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML", "raw_html"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"]],
             {},
             class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
             data: { action: "change->material-kind#toggle" }
@@ -72,6 +72,18 @@
           accept: "image/png,image/jpeg,image/webp,image/gif",
           preview_type: :image,
           current_attachment: material.image_file
+
+    %div{ data: { material_kind_target: "videoupload" }, class: ("hidden" if material.kind != "video_upload") }
+      = upload_field f, :video_file,
+          label: "Video file — mp4, webm, ogg — max 100 MB",
+          accept: "video/mp4,video/webm,video/ogg",
+          preview_type: :file,
+          current_attachment: material.video_file
+
+    %div{ data: { material_kind_target: "videourl" }, class: ("hidden" if material.kind != "video_url") }
+      = f.label :url, "Video URL", class: "block text-sm font-medium mb-1"
+      = f.url_field :url, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "https://example.com/video.mp4"
+      %p.text-xs.text-gray-500.mt-1 Direct link to an mp4, webm, or ogg video file.
 
   .flex.w-full.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"

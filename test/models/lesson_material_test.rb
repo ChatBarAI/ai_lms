@@ -40,6 +40,18 @@ class LessonMaterialTest < ActiveSupport::TestCase
     assert_not r.valid?
     assert_includes r.errors[:image_file], "must be attached for an uploaded image material"
   end
+
+  test "video_upload material requires video file" do
+    r = LessonMaterial.new(lesson: @lesson, title: "Video", kind: :video_upload)
+    assert_not r.valid?
+    assert_includes r.errors[:video_file], "must be attached for an uploaded video material"
+  end
+
+  test "video_url material requires url" do
+    r = LessonMaterial.new(lesson: @lesson, title: "Video", kind: :video_url)
+    assert_not r.valid?
+    assert_includes r.errors[:url], "can't be blank"
+  end
 end
 
 class LessonMaterialsGatingTest < ActiveSupport::TestCase
