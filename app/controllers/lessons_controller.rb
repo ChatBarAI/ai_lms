@@ -73,24 +73,7 @@ class LessonsController < ApplicationController
     return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.no_questions_to_grade")) if @lesson.questions.empty?
 
     result = LessonQuizSubmissionService.new(lesson: @lesson, enrollment: enrollment, answers: answers).call
-    progress = result[:progress]
-
-    if result[:queued_ai_scoring]
-      flash[:popup_title] = t("lessons.flash.answers_submitted_title")
-      flash[:popup] = t("lessons.flash.answers_queued")
-      redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
-    elsif result[:manual_marking_pending]
-      flash[:popup_title] = t("lessons.flash.answers_submitted_title")
-      flash[:popup_alert] = t("lessons.flash.answers_pending_manual_marking")
-      redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
-    else
-      score = result[:score]
-      flash[:popup_title] = t("lessons.flash.answers_submitted_title")
-      flash[:popup] = t("lessons.flash.answers_scored",
-                         score: score,
-                         message: progress.completed? ? t("lessons.flash.lesson_marked_complete") : t("lessons.flash.keep_practising", pass_mark: @lesson.effective_pass_mark))
-      redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
-    end
+    redirect_after_quiz_submission(result)
   end
 
   def new
@@ -232,6 +215,28 @@ class LessonsController < ApplicationController
     return answers_param.to_unsafe_h if answers_param.is_a?(ActionController::Parameters)
 
     answers_param || {}
+  end
+
+  def redirect_after_quiz_submission(result)
+    flash[:popup_title] = t("lessons.flash.answers_submitted_title")
+
+    if result[:queued_ai_scoring]
+      flash[:popup] = t("lessons.flash.answers_queued")
+    elsif result[:manual_marking_pending]
+      flash[:popup_alert] = t("lessons.flash.answers_pending_manual_marking")
+    else
+      flash[:popup] = scored_quiz_message(result)
+    end
+
+    redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")
+  end
+
+  def scored_quiz_message(result)
+    progress = result[:progress]
+
+    t("lessons.flash.answers_scored",
+      score: result[:score],
+      message: progress.completed? ? t("lessons.flash.lesson_marked_complete") : t("lessons.flash.keep_practising", pass_mark: @lesson.effective_pass_mark))
   end
 
   def fail_scoring!(progress, enrollment, lesson)

@@ -53,9 +53,34 @@ class Admin::ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "lesson report shows pending indicator when answer has no score" do
-    question_answers(:scored_answer).update!(ai_score: nil, scored_at: nil)
+    course = Course.create!(
+      title: "Pending Report Course",
+      slug: "pending-report-course",
+      subject: subjects(:math),
+      owner: users(:instructor)
+    )
+    lesson = Lesson.create!(
+      course: course,
+      title: "Pending Report Lesson",
+      position: 1
+    )
+    question = Question.create!(
+      lesson: lesson,
+      prompt: "Explain the pending state.",
+      kind: :free_text,
+      correct_answer: "A pending answer has no score.",
+      points: 1,
+      position: 1
+    )
+    enrollment = Enrollment.create!(user: users(:student), course: course)
+    QuestionAnswer.create!(
+      enrollment: enrollment,
+      question: question,
+      answer_text: "It has not been scored yet."
+    )
+
     sign_in users(:admin)
-    get report_admin_course_lesson_path(courses(:algebra), lessons(:advanced))
+    get report_admin_course_lesson_path(course, lesson)
     assert_response :success
     assert_match "1 pending", response.body
   end

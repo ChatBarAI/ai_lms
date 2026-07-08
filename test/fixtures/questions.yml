@@ -19,7 +19,7 @@ intro_q2:
 intro_q_free:
   lesson: advanced
   prompt: Explain the commutative property.
-  kind: 2
+  kind: 1
   correct_answer: Addition order does not change the sum.
   points: 2
   position: 1
