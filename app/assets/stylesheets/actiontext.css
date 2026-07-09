@@ -123,6 +123,48 @@ trix-toolbar .trix-dialog {
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
 }
 
+/* Uploaded attachments are linked for display; disable link clicks inside the editor. */
+trix-editor figure.attachment > a {
+  pointer-events: none;
+  cursor: default;
+}
+
+trix-editor figure.attachment .attachment__caption,
+trix-editor figure.attachment .attachment__caption--editing {
+  pointer-events: auto;
+  cursor: text;
+}
+
+trix-editor textarea.attachment__caption-editor {
+  display: block;
+  width: 100%;
+  min-height: 2rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  resize: none;
+  border: 1px solid rgb(209 213 219);
+  border-radius: 0.25rem;
+  background-color: #fff;
+  color: rgb(17 24 39);
+}
+
+html.theme-dark trix-editor textarea.attachment__caption-editor {
+  background-color: rgb(55 65 81);
+  border-color: rgb(75 85 99);
+  color: rgb(243 244 246);
+}
+
+trix-editor textarea.trix-autoresize-clone {
+  pointer-events: none !important;
+}
+
+trix-editor .attachment__toolbar {
+  z-index: 2;
+}
+
 /* Rich text display — views use .prose but @tailwindcss/typography is not installed */
 .prose.max-w-none,
 .trix-content {
