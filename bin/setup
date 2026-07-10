@@ -74,7 +74,14 @@ def production_environment(database_root:, database_user:, app_url: nil)
   if app_url.to_s.strip != ""
     env["APP_HOST"] = app_url
     env["CALLBACK_HOST"] = app_url
+    env["MAILER_SENDER"] = ENV["MAILER_SENDER"].to_s.strip
+    app_domain = domain_from_url(app_url)
+    if env["MAILER_SENDER"] == "" && app_domain
+      env["MAILER_SENDER"] = "no-reply@#{app_domain}"
+    end
   end
+
+  env["MAIL_DELIVERY_METHOD"] = ENV.fetch("MAIL_DELIVERY_METHOD", "sendmail")
 
   env
 end

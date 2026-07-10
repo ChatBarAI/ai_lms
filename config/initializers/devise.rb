@@ -1,5 +1,23 @@
 # frozen_string_literal: true
 
+require "uri"
+
+devise_mailer_sender = ENV["MAILER_SENDER"].presence
+if devise_mailer_sender.blank?
+  begin
+    devise_app_host = ENV["APP_HOST"].presence || ENV["CALLBACK_HOST"].presence
+    if devise_app_host.present?
+      unless devise_app_host.match?(%r{\Ahttps?://})
+        devise_app_host = "https://#{devise_app_host}"
+      end
+      devise_mailer_sender = "no-reply@#{URI.parse(devise_app_host).host}"
+    end
+  rescue URI::InvalidURIError
+    devise_mailer_sender = nil
+  end
+end
+devise_mailer_sender ||= "please-change-me-at-config-initializers-devise@example.com"
+
 # Assuming you have not yet modified this file, each configuration option below
 # is set to its default value. Note that some are commented out while others
 # are not: uncommented lines are intended to protect your configuration from
@@ -24,7 +42,7 @@ Devise.setup do |config|
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
   # with default "from" parameter.
-  config.mailer_sender = "please-change-me-at-config-initializers-devise@example.com"
+  config.mailer_sender = devise_mailer_sender
 
   # Configure the class responsible to send e-mails.
   # config.mailer = 'Devise::Mailer'

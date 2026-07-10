@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_30_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_09_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -307,6 +307,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_30_000000) do
     t.boolean "kinde_google_sign_in_enabled", default: true, null: false
     t.boolean "kinde_microsoft_sign_in_enabled", default: true, null: false
     t.string "brand_primary_color", default: "#2563eb"
+    t.string "mail_delivery_method"
+    t.string "mailer_sender"
+    t.string "smtp_address"
+    t.integer "smtp_port"
+    t.string "smtp_domain"
+    t.string "smtp_username"
+    t.string "smtp_password"
+    t.string "smtp_authentication"
+    t.boolean "smtp_enable_starttls_auto"
+    t.string "smtp_openssl_verify_mode"
+    t.string "sendmail_location"
+    t.string "sendmail_arguments"
   end
 
   create_table "subjects", force: :cascade do |t|

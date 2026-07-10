@@ -3,7 +3,7 @@
     = hidden_field_tag :section, "integration"
 
     %h2.text-lg.font-semibold.text-gray-900 Integration and jobs
-    %p.text-sm.text-gray-500 App callback URL plus Redis connection for background jobs and queue visibility.
+    %p.text-sm.text-gray-500 App callback URL, email delivery, Redis connection, and queue visibility.
 
     = render "section_errors", section: "integration"
 
@@ -25,6 +25,62 @@
       - else
         .mt-2.rounded.border.border-green-300.bg-green-50.px-3.py-2.text-xs.text-green-800
           %span.font-semibold URL matches current request.
+
+    .mt-6.border-t.border-gray-200.pt-5
+      %h3.font-semibold.text-gray-900 Email delivery
+      %p.mt-1.text-xs.text-gray-500 Password resets and account emails use these settings.
+
+      .mt-4.grid.gap-4.md:grid-cols-2
+        %div
+          = f.label :mail_delivery_method, "Delivery method", class: "block text-sm font-medium mb-1"
+          = f.select :mail_delivery_method,
+              options_for_select([["Local sendmail", "sendmail"], ["SMTP provider", "smtp"]], @site_setting.mail_delivery_method.presence || "sendmail"),
+              {},
+              class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+        %div
+          = f.label :mailer_sender, "Sender email", class: "block text-sm font-medium mb-1"
+          = f.email_field :mailer_sender, placeholder: "no-reply@example.com", class: "w-full border border-gray-300 rounded px-3 py-2"
+
+      .mt-5.grid.gap-4.md:grid-cols-2
+        %div
+          = f.label :sendmail_location, "Sendmail path", class: "block text-sm font-medium mb-1"
+          = f.text_field :sendmail_location, placeholder: "/usr/sbin/sendmail", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+        %div
+          = f.label :sendmail_arguments, "Sendmail arguments", class: "block text-sm font-medium mb-1"
+          = f.text_field :sendmail_arguments, placeholder: "-i", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+
+      .mt-5.grid.gap-4.md:grid-cols-2
+        %div
+          = f.label :smtp_address, "SMTP host", class: "block text-sm font-medium mb-1"
+          = f.text_field :smtp_address, placeholder: "smtp.example.com", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+        %div
+          = f.label :smtp_port, "SMTP port", class: "block text-sm font-medium mb-1"
+          = f.number_field :smtp_port, min: 1, max: 65535, placeholder: "587", class: "w-full border border-gray-300 rounded px-3 py-2"
+        %div
+          = f.label :smtp_domain, "SMTP domain", class: "block text-sm font-medium mb-1"
+          = f.text_field :smtp_domain, placeholder: "example.com", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+        %div
+          = f.label :smtp_authentication, "Authentication", class: "block text-sm font-medium mb-1"
+          = f.select :smtp_authentication,
+              options_for_select([["Provider default", ""], ["Plain", "plain"], ["Login", "login"], ["CRAM-MD5", "cram_md5"]], @site_setting.smtp_authentication),
+              {},
+              class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+        %div
+          = f.label :smtp_username, "SMTP username", class: "block text-sm font-medium mb-1"
+          = f.text_field :smtp_username, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+        %div
+          = f.label :smtp_password, "SMTP password", class: "block text-sm font-medium mb-1"
+          = f.password_field :smtp_password, autocomplete: "new-password", placeholder: (@site_setting.smtp_password.present? ? "Saved; leave blank to keep" : nil), class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+        %div
+          = f.label :smtp_openssl_verify_mode, "TLS verification", class: "block text-sm font-medium mb-1"
+          = f.select :smtp_openssl_verify_mode,
+              options_for_select([["Provider default", ""], ["Verify peer", "peer"], ["Do not verify", "none"]], @site_setting.smtp_openssl_verify_mode),
+              {},
+              class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+        .flex.items-center.pt-6
+          - starttls_checked = @site_setting.smtp_enable_starttls_auto.nil? ? true : @site_setting.smtp_enable_starttls_auto
+          = f.check_box :smtp_enable_starttls_auto, { checked: starttls_checked, class: "h-4 w-4 rounded border-gray-300 text-indigo-600" }, "1", "0"
+          = f.label :smtp_enable_starttls_auto, "Enable STARTTLS automatically", class: "ml-2 text-sm text-gray-700"
 
     .mt-5
       = f.label :redis_url, "Redis URL", class: "block text-sm font-medium mb-1"

@@ -21,7 +21,12 @@ class Admin::SiteSettingsController < Admin::BaseController
     "certificates" => %i[
       certificate_template certificate_heading certificate_body certificate_signatory_name certificate_signatory_title
     ],
-    "integration" => %i[app_url redis_url],
+    "integration" => %i[
+      app_url redis_url mail_delivery_method mailer_sender
+      smtp_address smtp_port smtp_domain smtp_username smtp_password
+      smtp_authentication smtp_enable_starttls_auto smtp_openssl_verify_mode
+      sendmail_location sendmail_arguments
+    ],
     "terminology" => []
   }.freeze
 
@@ -89,6 +94,7 @@ class Admin::SiteSettingsController < Admin::BaseController
     purge_requested_attachments(section)
 
     if @site_setting.update(site_setting_params(section))
+      MailerConfiguration.ensure_fresh! if section == "integration"
       redirect_to edit_admin_site_setting_path(anchor: section), notice: "#{SECTION_TITLES.fetch(section)} settings updated."
     else
       @active_section = section
@@ -114,7 +120,9 @@ class Admin::SiteSettingsController < Admin::BaseController
     if section == "terminology"
       params.require(:site_setting).permit(terminology: I18n.available_locales.index_with { SiteSetting::TERMINOLOGY_KEYS })
     else
-      params.require(:site_setting).permit(*SECTION_ATTRIBUTES.fetch(section))
+      permitted = params.require(:site_setting).permit(*SECTION_ATTRIBUTES.fetch(section))
+      permitted.delete(:smtp_password) if section == "integration" && permitted[:smtp_password].blank?
+      permitted
     end
   end
 

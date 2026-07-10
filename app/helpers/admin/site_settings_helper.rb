@@ -7,7 +7,7 @@ module Admin::SiteSettingsHelper
     [ "terminology", "Terminology", "Rename lesson/course/subject" ],
     [ "hero", "Home hero", "Homepage banner content" ],
     [ "certificates", "Certificates", "Default template and signer" ],
-    [ "integration", "Integration", "App URL, Redis, and background jobs" ]
+    [ "integration", "Integration", "App URL, email, Redis, jobs" ]
   ].freeze
 
   def site_settings_section_nav_items

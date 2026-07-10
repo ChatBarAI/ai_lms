@@ -1,4 +1,6 @@
 require "active_support/core_ext/integer/time"
+require "uri"
+require "shellwords"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -78,9 +80,63 @@ Rails.application.configure do
   # caching is enabled.
   config.action_mailer.perform_caching = false
 
+  # Devise mailers generate absolute URLs, such as password reset links.
+  # bin/setup writes APP_HOST into generated production services when
+  # --app-url is provided; CALLBACK_HOST is accepted for older deploy notes.
+  public_app_url = ENV["APP_HOST"].presence || ENV["CALLBACK_HOST"].presence
+  if public_app_url.present?
+    unless public_app_url.match?(%r{\Ahttps?://})
+      public_app_url = "https://#{public_app_url}"
+    end
+    uri = URI.parse(public_app_url)
+    default_url_options = {
+      host: uri.host,
+      protocol: "#{uri.scheme}://"
+    }
+    default_url_options[:port] = uri.port unless [ 80, 443 ].include?(uri.port)
+    config.action_mailer.default_url_options = default_url_options
+  end
+
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
   # config.action_mailer.raise_delivery_errors = false
+
+  mailer_sender = ENV["MAILER_SENDER"].presence
+  if mailer_sender.blank? && config.action_mailer.default_url_options&.key?(:host)
+    mailer_sender = "no-reply@#{config.action_mailer.default_url_options[:host]}"
+  end
+  if mailer_sender.present?
+    config.action_mailer.default_options = { from: mailer_sender }
+  end
+
+  mail_delivery_method = ENV["MAIL_DELIVERY_METHOD"].presence ||
+                         (ENV["SMTP_ADDRESS"].present? ? "smtp" : "sendmail")
+  config.action_mailer.delivery_method = mail_delivery_method.to_sym
+
+  if mail_delivery_method == "smtp"
+    smtp_settings = {
+      address: ENV.fetch("SMTP_ADDRESS", "localhost"),
+      port: ENV.fetch("SMTP_PORT", "587").to_i,
+      domain: ENV["SMTP_DOMAIN"].presence ||
+              config.action_mailer.default_url_options&.fetch(:host, nil),
+      enable_starttls_auto: ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", "true") != "false"
+    }.compact
+
+    smtp_settings[:user_name] = ENV["SMTP_USERNAME"] if ENV["SMTP_USERNAME"].present?
+    smtp_settings[:password] = ENV["SMTP_PASSWORD"] if ENV["SMTP_PASSWORD"].present?
+    if ENV["SMTP_AUTHENTICATION"].present?
+      smtp_settings[:authentication] = ENV["SMTP_AUTHENTICATION"].to_sym
+    end
+    if ENV["SMTP_OPENSSL_VERIFY_MODE"].present?
+      smtp_settings[:openssl_verify_mode] = ENV["SMTP_OPENSSL_VERIFY_MODE"]
+    end
+    config.action_mailer.smtp_settings = smtp_settings
+  elsif mail_delivery_method == "sendmail"
+    config.action_mailer.sendmail_settings = {
+      location: ENV.fetch("SENDMAIL_LOCATION", "/usr/sbin/sendmail"),
+      arguments: Shellwords.split(ENV.fetch("SENDMAIL_ARGUMENTS", "-i"))
+    }
+  end
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

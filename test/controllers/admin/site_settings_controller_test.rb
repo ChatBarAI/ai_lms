@@ -39,6 +39,15 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
       site_setting: {
         app_url: "https://lms.example.com",
         redis_url: "redis://localhost:6379/2",
+        mail_delivery_method: "smtp",
+        mailer_sender: "no-reply@lms.example.com",
+        smtp_address: "smtp.example.com",
+        smtp_port: 587,
+        smtp_domain: "lms.example.com",
+        smtp_username: "mailer",
+        smtp_password: "secret",
+        smtp_authentication: "plain",
+        smtp_enable_starttls_auto: "1",
         brand_name: "Should Not Persist"
       }
     }
@@ -46,8 +55,40 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
     setting.reload
     assert_equal "https://lms.example.com", setting.app_url
     assert_equal "redis://localhost:6379/2", setting.redis_url
+    assert_equal "smtp", setting.mail_delivery_method
+    assert_equal "no-reply@lms.example.com", setting.mailer_sender
+    assert_equal "smtp.example.com", setting.smtp_address
+    assert_equal 587, setting.smtp_port
+    assert_equal "lms.example.com", setting.smtp_domain
+    assert_equal "mailer", setting.smtp_username
+    assert_equal "secret", setting.smtp_password
+    assert_equal "plain", setting.smtp_authentication
+    assert_equal true, setting.smtp_enable_starttls_auto
     assert_equal original_brand_name, setting.brand_name
     assert_redirected_to edit_admin_site_setting_path(anchor: "integration")
+  end
+
+  test "blank smtp password keeps the existing password" do
+    sign_in users(:admin)
+    setting = SiteSetting.current
+    setting.update!(
+      mail_delivery_method: "smtp",
+      smtp_address: "smtp.example.com",
+      smtp_password: "existing-secret"
+    )
+
+    patch admin_site_setting_path, params: {
+      section: "integration",
+      site_setting: {
+        mail_delivery_method: "smtp",
+        smtp_address: "smtp2.example.com",
+        smtp_password: ""
+      }
+    }
+
+    setting.reload
+    assert_equal "smtp2.example.com", setting.smtp_address
+    assert_equal "existing-secret", setting.smtp_password
   end
 
   test "terminology section updates locale-specific terminology keys" do

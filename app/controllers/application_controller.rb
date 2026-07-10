@@ -4,6 +4,7 @@ class ApplicationController < ActionController::Base
 
   around_action :switch_locale
   before_action :refresh_terminology
+  before_action :refresh_mailer_configuration
   before_action :configure_permitted_parameters, if: :devise_controller?
   before_action :enforce_sso_requirement
 
@@ -64,6 +65,10 @@ class ApplicationController < ActionController::Base
 
   def refresh_terminology
     TerminologyApplier.ensure_fresh!
+  end
+
+  def refresh_mailer_configuration
+    MailerConfiguration.ensure_fresh!
   end
 
   def switch_locale(&action)

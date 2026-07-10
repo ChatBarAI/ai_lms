@@ -422,9 +422,11 @@ Before the first deploy the target host needs:
   on the server out of band.
 - Environment variables in the systemd unit or an `EnvironmentFile`:
   `RAILS_ENV=production`, `RAILS_MASTER_KEY`, `DATABASE_URL` (or
-  `AI_LMS_DATABASE_PASSWORD`), `PUMA_BIND=unix:///run/ai_lms/puma.sock`,
-  and optionally `CALLBACK_HOST=https://<your-host>` for the ChatBar Task
-  API callback URL.
+  `AI_LMS_DATABASE_PASSWORD`), `APP_HOST=https://<your-host>` for Devise
+  email links, `MAILER_SENDER=no-reply@<your-host>`,
+  `MAIL_DELIVERY_METHOD=sendmail`, `PUMA_BIND=unix:///run/ai_lms/puma.sock`,
+  and optionally `CALLBACK_HOST=https://<your-host>` for the ChatBar Task API
+  callback URL.
 - A Puma systemd unit (`puma-ai_lms.service`) with `RuntimeDirectory=ai_lms`
   and a reverse proxy (Nginx/Caddy) terminating TLS and forwarding to the
   Puma UNIX socket.
@@ -434,6 +436,23 @@ Before the first deploy the target host needs:
 - `config/database.yml` — Postgres connection. The username defaults to
   the current OS user (peer auth); override via `PGUSER` env var or
   `DATABASE_URL` in production.
+- Production email:
+  configure delivery from Admin -> Site settings -> Integration after the
+  database migrations have run. Environment variables still work as bootstrap
+  defaults and fallbacks.
+
+  By default production uses the local `sendmail` command so a local MTA such
+  as Postfix can deliver Devise emails without Rails connecting to
+  `localhost:25` over SMTP. Override `SENDMAIL_LOCATION` or
+  `SENDMAIL_ARGUMENTS` in the environment, or set the equivalent fields in the
+  Admin panel, if your server uses non-standard paths.
+
+  To use an SMTP provider instead, set `MAIL_DELIVERY_METHOD=smtp` and provide
+  `SMTP_ADDRESS`, `SMTP_PORT`, `SMTP_DOMAIN`, `SMTP_USERNAME`,
+  `SMTP_PASSWORD`, and `SMTP_AUTHENTICATION` as required by the provider.
+  You can also enter these values in Admin -> Site settings -> Integration.
+  `SMTP_ENABLE_STARTTLS_AUTO=false` disables STARTTLS for a trusted local relay;
+  do not disable TLS verification for internet SMTP providers.
 - `config/initializers/devise.rb` + `app/controllers/kinde_auth_controller.rb` — auth setup.
   Kinde is the primary SSO path; sign-in and JIT behavior are controlled by
   `SiteSetting` auth policy fields and, optionally, per-organization SSO settings.

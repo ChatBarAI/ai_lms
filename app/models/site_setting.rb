@@ -22,6 +22,21 @@ class SiteSetting < ApplicationRecord
   validates :app_url, format: { with: /\Ahttps?:\/\/.+\z/, message: "must start with http:// or https://" }, allow_blank: true
   validates :redis_url, format: { with: /\Aredis(?:s)?:\/\/.+\z/, message: "must start with redis:// or rediss://" }, allow_blank: true
 
+  MAIL_DELIVERY_METHODS = %w[sendmail smtp].freeze
+  SMTP_AUTHENTICATION_METHODS = %w[plain login cram_md5].freeze
+  SMTP_OPENSSL_VERIFY_MODES = %w[none peer].freeze
+
+  validates :mail_delivery_method, inclusion: { in: MAIL_DELIVERY_METHODS }, allow_blank: true
+  validates :mailer_sender,
+            format: { with: URI::MailTo::EMAIL_REGEXP, message: "must be a valid email address" },
+            allow_blank: true
+  validates :smtp_port,
+            numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 65_535 },
+            allow_blank: true
+  validates :smtp_authentication, inclusion: { in: SMTP_AUTHENTICATION_METHODS }, allow_blank: true
+  validates :smtp_openssl_verify_mode, inclusion: { in: SMTP_OPENSSL_VERIFY_MODES }, allow_blank: true
+  validate :smtp_address_available_when_smtp_selected
+
   HERO_CONTENT_FORMATS = %w[markdown html].freeze
 
   validates :hero_content_format, inclusion: { in: HERO_CONTENT_FORMATS }
@@ -125,5 +140,12 @@ class SiteSetting < ApplicationRecord
 
   def flat_terminology?(hash)
     (hash.keys & TERMINOLOGY_KEYS).any?
+  end
+
+  def smtp_address_available_when_smtp_selected
+    return unless mail_delivery_method == "smtp"
+    return if smtp_address.present? || ENV["SMTP_ADDRESS"].present?
+
+    errors.add(:smtp_address, "is required when SMTP delivery is selected")
   end
 end
