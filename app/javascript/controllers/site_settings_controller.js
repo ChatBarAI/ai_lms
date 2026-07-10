@@ -1,7 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["authOrgCta", "googleSignInToggle", "microsoftSignInToggle", "googleJitGroup", "microsoftJitGroup"]
+  static targets = [
+    "authOrgCta", "googleSignInToggle", "microsoftSignInToggle", "googleJitGroup", "microsoftJitGroup",
+    "mailDeliveryMethod", "sendmailFields", "smtpFields"
+  ]
 
   static values = {
     defaults: Object,
@@ -12,6 +15,7 @@ export default class extends Controller {
     const initialSection = this.activeSectionValue || this.tabButtons[0]?.dataset.siteSettingsTabKey
     if (initialSection) this.setActiveSection(initialSection)
     this.refreshAuthOrgCta()
+    this.refreshMailDeliveryFields()
   }
 
   refreshAuthOrgCta() {
@@ -30,6 +34,14 @@ export default class extends Controller {
     if (this.hasMicrosoftJitGroupTarget) {
       this.microsoftJitGroupTarget.classList.toggle("hidden", !microsoftEnabled)
     }
+  }
+
+  refreshMailDeliveryFields() {
+    if (!this.hasMailDeliveryMethodTarget) return
+
+    const smtpSelected = this.mailDeliveryMethodTarget.value === "smtp"
+    if (this.hasSendmailFieldsTarget) this.sendmailFieldsTarget.classList.toggle("hidden", smtpSelected)
+    if (this.hasSmtpFieldsTarget) this.smtpFieldsTarget.classList.toggle("hidden", !smtpSelected)
   }
 
   activateTab(event) {

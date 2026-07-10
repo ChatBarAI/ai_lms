@@ -36,12 +36,14 @@
           = f.select :mail_delivery_method,
               options_for_select([["Local sendmail", "sendmail"], ["SMTP provider", "smtp"]], @site_setting.mail_delivery_method.presence || "sendmail"),
               {},
-              class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+              class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
+              data: { site_settings_target: "mailDeliveryMethod", action: "change->site-settings#refreshMailDeliveryFields" }
         %div
           = f.label :mailer_sender, "Sender email", class: "block text-sm font-medium mb-1"
           = f.email_field :mailer_sender, placeholder: "no-reply@example.com", class: "w-full border border-gray-300 rounded px-3 py-2"
 
-      .mt-5.grid.gap-4.md:grid-cols-2
+      - smtp_selected = @site_setting.mail_delivery_method == "smtp"
+      .mt-5.grid.gap-4.md:grid-cols-2{ class: (smtp_selected ? "hidden" : nil), data: { site_settings_target: "sendmailFields" } }
         %div
           = f.label :sendmail_location, "Sendmail path", class: "block text-sm font-medium mb-1"
           = f.text_field :sendmail_location, placeholder: "/usr/sbin/sendmail", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
@@ -49,7 +51,7 @@
           = f.label :sendmail_arguments, "Sendmail arguments", class: "block text-sm font-medium mb-1"
           = f.text_field :sendmail_arguments, placeholder: "-i", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
 
-      .mt-5.grid.gap-4.md:grid-cols-2
+      .mt-5.grid.gap-4.md:grid-cols-2{ class: (smtp_selected ? nil : "hidden"), data: { site_settings_target: "smtpFields" } }
         %div
           = f.label :smtp_address, "SMTP host", class: "block text-sm font-medium mb-1"
           = f.text_field :smtp_address, placeholder: "smtp.example.com", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
@@ -81,6 +83,13 @@
           - starttls_checked = @site_setting.smtp_enable_starttls_auto.nil? ? true : @site_setting.smtp_enable_starttls_auto
           = f.check_box :smtp_enable_starttls_auto, { checked: starttls_checked, class: "h-4 w-4 rounded border-gray-300 text-indigo-600" }, "1", "0"
           = f.label :smtp_enable_starttls_auto, "Enable STARTTLS automatically", class: "ml-2 text-sm text-gray-700"
+        .flex.items-center
+          = f.check_box :smtp_ssl, class: "h-4 w-4 rounded border-gray-300 text-indigo-600"
+          = f.label :smtp_ssl, "Enable SSL (implicit TLS, commonly port 465)", class: "ml-2 text-sm text-gray-700"
+        .flex.items-center
+          = f.check_box :smtp_tls, class: "h-4 w-4 rounded border-gray-300 text-indigo-600"
+          = f.label :smtp_tls, "Enable TLS", class: "ml-2 text-sm text-gray-700"
+        %p.text-xs.text-gray-500.md:col-span-2 SSL/TLS uses an implicit encrypted connection (commonly port 465) and overrides STARTTLS.
 
     .mt-5
       = f.label :redis_url, "Redis URL", class: "block text-sm font-medium mb-1"

@@ -130,6 +130,9 @@ Rails.application.configure do
     if ENV["SMTP_OPENSSL_VERIFY_MODE"].present?
       smtp_settings[:openssl_verify_mode] = ENV["SMTP_OPENSSL_VERIFY_MODE"]
     end
+    smtp_settings[:ssl] = ActiveModel::Type::Boolean.new.cast(ENV["SMTP_SSL"]) if ENV["SMTP_SSL"].present?
+    smtp_settings[:tls] = ActiveModel::Type::Boolean.new.cast(ENV["SMTP_TLS"]) if ENV["SMTP_TLS"].present?
+    smtp_settings[:enable_starttls_auto] = false if smtp_settings[:ssl] || smtp_settings[:tls]
     config.action_mailer.smtp_settings = smtp_settings
   elsif mail_delivery_method == "sendmail"
     config.action_mailer.sendmail_settings = {

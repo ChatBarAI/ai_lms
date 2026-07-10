@@ -109,24 +109,26 @@ class MailerConfiguration
     end
 
     def smtp_settings(setting, app_url_options)
-      {
+      settings = {
         address: setting_value(setting, :smtp_address).presence || ENV.fetch("SMTP_ADDRESS", "localhost"),
         port: (setting_value(setting, :smtp_port).presence || ENV.fetch("SMTP_PORT", "587")).to_i,
         domain: setting_value(setting, :smtp_domain).presence ||
                 ENV["SMTP_DOMAIN"].presence ||
                 app_url_options[:host],
         enable_starttls_auto: smtp_starttls_enabled?(setting)
-      }.compact.tap do |settings|
-        settings[:user_name] = setting_value(setting, :smtp_username).presence || ENV["SMTP_USERNAME"].presence
-        settings[:password] = setting_value(setting, :smtp_password).presence || ENV["SMTP_PASSWORD"].presence
-        auth = setting_value(setting, :smtp_authentication).presence || ENV["SMTP_AUTHENTICATION"].presence
-        verify_mode = setting_value(setting, :smtp_openssl_verify_mode).presence ||
-                      ENV["SMTP_OPENSSL_VERIFY_MODE"].presence
+      }.compact
+      settings[:user_name] = setting_value(setting, :smtp_username).presence || ENV["SMTP_USERNAME"].presence
+      settings[:password] = setting_value(setting, :smtp_password).presence || ENV["SMTP_PASSWORD"].presence
+      auth = setting_value(setting, :smtp_authentication).presence || ENV["SMTP_AUTHENTICATION"].presence
+      verify_mode = setting_value(setting, :smtp_openssl_verify_mode).presence ||
+                    ENV["SMTP_OPENSSL_VERIFY_MODE"].presence
 
-        settings[:authentication] = auth.to_sym if auth.present?
-        settings[:openssl_verify_mode] = verify_mode if verify_mode.present?
-        settings.compact!
-      end
+      settings[:authentication] = auth.to_sym if auth.present?
+      settings[:openssl_verify_mode] = verify_mode if verify_mode.present?
+      settings[:ssl] = smtp_boolean_setting(setting, :smtp_ssl, "SMTP_SSL")
+      settings[:tls] = smtp_boolean_setting(setting, :smtp_tls, "SMTP_TLS")
+      settings[:enable_starttls_auto] = false if settings[:ssl] || settings[:tls]
+      settings.compact
     end
 
     def smtp_starttls_enabled?(setting)
@@ -134,6 +136,14 @@ class MailerConfiguration
       return configured unless configured.nil?
 
       ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", "true") != "false"
+    end
+
+    def smtp_boolean_setting(setting, attribute, env_key)
+      configured = setting_value(setting, attribute)
+      return configured unless configured.nil?
+      return if ENV[env_key].blank?
+
+      ActiveModel::Type::Boolean.new.cast(ENV[env_key])
     end
 
     def sendmail_settings(setting)
@@ -157,7 +167,7 @@ class MailerConfiguration
       %w[
         APP_HOST CALLBACK_HOST MAILER_SENDER MAIL_DELIVERY_METHOD
         SMTP_ADDRESS SMTP_PORT SMTP_DOMAIN SMTP_USERNAME SMTP_PASSWORD SMTP_AUTHENTICATION
-        SMTP_ENABLE_STARTTLS_AUTO SMTP_OPENSSL_VERIFY_MODE
+        SMTP_ENABLE_STARTTLS_AUTO SMTP_OPENSSL_VERIFY_MODE SMTP_SSL SMTP_TLS
         SENDMAIL_LOCATION SENDMAIL_ARGUMENTS
       ].map { |key| "#{key}=#{ENV[key]}" }.join("|")
     end

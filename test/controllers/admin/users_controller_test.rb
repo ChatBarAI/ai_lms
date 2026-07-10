@@ -112,6 +112,28 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       post reset_password_admin_user_path(users(:student))
     end
     assert_redirected_to admin_user_path(users(:student))
+    assert_equal "Password reset email sent to #{users(:student).email}.", flash[:notice]
+  end
+
+  test "admin sees an error when a password reset email cannot be sent" do
+    sign_in users(:admin)
+    user = users(:student)
+
+    delivery_failure = ->(*) do
+      raise Mail::Sendmail::DeliveryError, "Delivery failed with exitstatus 1"
+    end
+
+    user.stub(:send_reset_password_instructions, delivery_failure) do
+      User.stub(:find, user) do
+        assert_no_emails do
+          post reset_password_admin_user_path(user)
+        end
+      end
+    end
+
+    assert_redirected_to admin_user_path(user)
+    assert_equal "The password reset email could not be sent. Check the email settings and server logs, then try again.",
+                 flash[:alert]
   end
 
   test "admin can export users as CSV" do

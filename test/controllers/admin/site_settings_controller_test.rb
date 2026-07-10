@@ -48,6 +48,8 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
         smtp_password: "secret",
         smtp_authentication: "plain",
         smtp_enable_starttls_auto: "1",
+        smtp_ssl: "1",
+        smtp_tls: "1",
         brand_name: "Should Not Persist"
       }
     }
@@ -64,6 +66,8 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "secret", setting.smtp_password
     assert_equal "plain", setting.smtp_authentication
     assert_equal true, setting.smtp_enable_starttls_auto
+    assert_equal true, setting.smtp_ssl
+    assert_equal true, setting.smtp_tls
     assert_equal original_brand_name, setting.brand_name
     assert_redirected_to edit_admin_site_setting_path(anchor: "integration")
   end

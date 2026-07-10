@@ -9,7 +9,7 @@
         · #{link_to @user.organization.name, admin_organization_path(@user.organization), class: "text-indigo-600 hover:underline"}
   .flex.gap-2
     = link_to "Edit", edit_admin_user_path(@user), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
-    = button_to "Send password reset", reset_password_admin_user_path(@user), method: :post, class: "px-3 py-1.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 text-sm cursor-pointer"
+    = button_to "Send password reset", reset_password_admin_user_path(@user), method: :post, form: { data: { turbo: false } }, class: "px-3 py-1.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 text-sm cursor-pointer"
     - if @user != current_user
       = button_to "Delete", admin_user_path(@user), method: :delete, data: { turbo_confirm: "Delete #{@user.email}?" }, class: "px-3 py-1.5 rounded bg-red-100 text-red-800 hover:bg-red-200 border border-red-200 text-sm cursor-pointer"
 

@@ -71,6 +71,14 @@ class Admin::UsersController < Admin::BaseController
   def reset_password
     @user.send_reset_password_instructions
     redirect_to admin_user_path(@user), notice: "Password reset email sent to #{@user.email}."
+  rescue StandardError => error
+    Rails.logger.error(
+      "Password reset email delivery failed " \
+      "user_id=#{@user.id} recipient=#{@user.email.inspect} " \
+      "error=#{error.class}: #{error.message}"
+    )
+    redirect_to admin_user_path(@user),
+                alert: "The password reset email could not be sent. Check the email settings and server logs, then try again."
   end
 
   def export

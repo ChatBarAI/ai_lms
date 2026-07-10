@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_09_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_10_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -319,6 +319,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_09_000000) do
     t.string "smtp_openssl_verify_mode"
     t.string "sendmail_location"
     t.string "sendmail_arguments"
+    t.boolean "smtp_ssl"
+    t.boolean "smtp_tls"
   end
 
   create_table "subjects", force: :cascade do |t|

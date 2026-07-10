@@ -24,7 +24,7 @@ class Admin::SiteSettingsController < Admin::BaseController
     "integration" => %i[
       app_url redis_url mail_delivery_method mailer_sender
       smtp_address smtp_port smtp_domain smtp_username smtp_password
-      smtp_authentication smtp_enable_starttls_auto smtp_openssl_verify_mode
+      smtp_authentication smtp_enable_starttls_auto smtp_openssl_verify_mode smtp_ssl smtp_tls
       sendmail_location sendmail_arguments
     ],
     "terminology" => []

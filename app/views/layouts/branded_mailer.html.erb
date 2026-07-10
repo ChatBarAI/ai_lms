@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body style="margin:0;padding:0;background:<%= @page_background %>;color:<%= @page_foreground %>;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:<%= @page_background %>;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+            <tr>
+              <td align="center" style="padding:0 0 20px;">
+                <img src="<%= @logo_cid %>" alt="<%= @brand_name %>" style="display:block;max-width:220px;max-height:72px;width:auto;height:auto;border:0;">
+                <% if @site_setting.show_brand_name? %>
+                  <div style="margin-top:12px;font-size:20px;font-weight:700;color:<%= @page_foreground %>;"><%= @brand_name %></div>
+                <% end %>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;background:<%= @card_background %>;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.10);">
+                <%= yield %>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:20px 16px 0;color:#6b7280;font-size:12px;line-height:18px;">
+                This message was sent by <%= @brand_name %>.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
