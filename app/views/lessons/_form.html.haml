@@ -42,20 +42,24 @@
         = f.text_field :anam_persona_id, placeholder: "e.g. 7c1f...", title: "Persona ID from the Anam lab used when creating the session token.", class: "w-full border border-gray-300 rounded px-3 h-10"
       %div{ data: { "ai-tutor-provider-target": "customFields" } }
         = f.label :custom_tutor_embed_type, "Embed type", class: "block text-sm font-medium mb-1"
-        = f.select :custom_tutor_embed_type, [["iFrame (URL)", "iframe"], ["Script tag", "script"]], {}, title: "iFrame loads the URL in a sandboxed panel. Script tag lets you paste the widget provider embed code.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white", data: { action: "change->ai-tutor-provider#update", "ai-tutor-provider-target": "customEmbedTypeSelect" }
+        - embed_type_options = current_user.admin? ? [["iFrame (URL)", "iframe"], ["Script tag", "script"]] : [[lesson.custom_tutor_embed_type_or_default == "script" ? "Script tag (admin managed)" : "iFrame (URL)", lesson.custom_tutor_embed_type_or_default]]
+        = f.select :custom_tutor_embed_type, embed_type_options, {}, disabled: (!current_user.admin? && lesson.custom_tutor_embed_type_or_default == "script"), title: "Custom scripts can only be configured by administrators.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white", data: { action: "change->ai-tutor-provider#update", "ai-tutor-provider-target": "customEmbedTypeSelect" }
       %div{ data: { "ai-tutor-provider-target": "customUrlField" } }
         = f.label :custom_tutor_embed_url, "Custom tutor URL", class: "block text-sm font-medium mb-1"
         = f.url_field :custom_tutor_embed_url, placeholder: "https://", spellcheck: false, autocapitalize: "none", autocorrect: "off", title: "HTTPS URL to load in an iframe.", class: "w-full border border-gray-300 rounded px-3 h-10"
       %div{ data: { "ai-tutor-provider-target": "customScriptField" } }
         = f.label :custom_tutor_embed_script, "Custom tutor script", class: "block text-sm font-medium mb-1"
-        = f.text_area :custom_tutor_embed_script, rows: 6, placeholder: "<script src=\"https://example.com/widget.js\"></script>", spellcheck: false, autocapitalize: "none", autocorrect: "off", title: "Paste your provider script tag or inline JS for the tutor widget.", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
-        %p.mt-1.text-xs.text-gray-500
-          Script mode provides default mount ids:
-          %code auto_ai_search_bot
-          ,
-          %code ai_search_bot
-          ,
-          %code custom_ai_tutor_mount
+        - if current_user.admin?
+          = f.text_area :custom_tutor_embed_script, rows: 6, placeholder: "<script src=\"https://example.com/widget.js\"></script>", spellcheck: false, autocapitalize: "none", autocorrect: "off", title: "Paste your provider script tag or inline JS for the tutor widget.", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+          %p.mt-1.text-xs.text-gray-500
+            Script mode provides default mount ids:
+            %code auto_ai_search_bot
+            ,
+            %code ai_search_bot
+            ,
+            %code custom_ai_tutor_mount
+        - else
+          %p.text-sm.text-gray-500 Custom tutor scripts can only be configured by an administrator.
 
     .flex.flex-col.gap-4.sm:flex-row.sm:items-end
       %div.flex-1

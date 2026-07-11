@@ -51,9 +51,39 @@ class LessonFormAssignmentServiceTest < ActiveSupport::TestCase
       }
     )
 
-    assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
+    assert LessonFormAssignmentService.new(lesson: lesson, params: params, allow_custom_tutor_script: true).call
 
     assert_nil lesson.custom_tutor_embed_url
     assert_equal "<script src=\"https://example.com/widget.js\"></script>", lesson.custom_tutor_embed_script
+  end
+
+  test "rejects custom tutor scripts without administrator permission" do
+    lesson = lessons(:intro)
+    assert_nil lesson.custom_tutor_embed_script
+    params = ActionController::Parameters.new(
+      lesson: {
+        ai_tutor_provider: "custom",
+        custom_tutor_embed_type: "script",
+        custom_tutor_embed_script: "<script>alert('unsafe')</script>"
+      }
+    )
+
+    assert_not LessonFormAssignmentService.new(lesson: lesson, params: params).call
+    assert_nil lesson.custom_tutor_embed_script
+    assert_includes lesson.errors[:custom_tutor_embed_script], "can only be configured by an administrator"
+  end
+
+  test "preserves an admin-managed script during an unrelated instructor edit" do
+    lesson = lessons(:intro)
+    lesson.custom_tutor_embed_type = "script"
+    lesson.custom_tutor_embed_script = "<script src=\"https://trusted.example/widget.js\"></script>"
+    params = ActionController::Parameters.new(
+      lesson: { title: "Instructor title update", ai_tutor_provider: "custom" }
+    )
+
+    assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
+    assert_equal "Instructor title update", lesson.title
+    assert_equal "script", lesson.custom_tutor_embed_type
+    assert_equal "<script src=\"https://trusted.example/widget.js\"></script>", lesson.custom_tutor_embed_script
   end
 end

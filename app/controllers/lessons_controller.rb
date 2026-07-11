@@ -301,7 +301,11 @@ class LessonsController < ApplicationController
   end
 
   def assign_lesson_form_attributes
-    LessonFormAssignmentService.new(lesson: @lesson, params: params).call
+    LessonFormAssignmentService.new(
+      lesson: @lesson,
+      params: params,
+      allow_custom_tutor_script: current_user.admin?
+    ).call
   end
 
   def fetch_anam_session_token

@@ -37,7 +37,14 @@ class CbaiClient
   # Yields a Tempfile containing the recording binary; caller owns the file.
   def download_recording(recording_id, &block)
     uri = build_uri("/api/cbai/recordings/#{recording_id}/download")
-    download_to_tempfile(uri, &block)
+    secure_downloader.download(
+      uri.to_s,
+      tempfile_prefix: "cbai-recording",
+      headers_for: method(:download_headers_for),
+      &block
+    )
+  rescue SecureRemoteDownloader::Error => e
+    raise Error, e.message
   end
 
   # Submits a Task to the ChatBar AI Task API. Returns the parsed response hash.
@@ -134,32 +141,28 @@ class CbaiClient
     end
   end
 
-  def download_to_tempfile(uri, redirects_left: 5, &block)
-    file = Tempfile.new([ "cbai-recording", ".bin" ], binmode: true)
-    Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 120) do |http|
-      req = Net::HTTP::Get.new(uri.request_uri)
-      # Only send our Authorization header to the chatbar host; never to the
-      # final signed-URL host (which already authenticates via the signature).
-      req["Authorization"] = @api_key if ALLOWED_HOSTS.include?(uri.host)
-      http.request(req) do |res|
-        case res
-        when Net::HTTPSuccess
-          res.read_body { |chunk| file.write(chunk) }
-        when Net::HTTPRedirection
-          file.close!
-          raise Error, "Too many redirects" if redirects_left <= 0
-          next_uri = URI.parse(res["Location"])
-          next_uri = URI.join(uri, next_uri) unless next_uri.absolute?
-          return download_to_tempfile(next_uri, redirects_left: redirects_left - 1, &block)
-        else
-          file.close!
-          raise Error, "CBAI download error #{res.code}: #{res.body.to_s[0, 200]}"
-        end
-      end
-    end
-    file.rewind
-    yield file
-  ensure
-    file.close! if file && !file.closed?
+  def secure_downloader
+    @secure_downloader ||= SecureRemoteDownloader.new(
+      allow_private_network: local_base_url_override?,
+      allow_http: local_base_url_override?,
+      allowed_hosts: download_allowed_hosts
+    )
+  end
+
+  def download_headers_for(uri)
+    credential_hosts.include?(uri.host) ? { "Authorization" => @api_key } : {}
+  end
+
+  def credential_hosts
+    @credential_hosts ||= (ALLOWED_HOSTS + [ URI.parse(@base_url).host ]).compact.uniq
+  end
+
+  def local_base_url_override?
+    @base_url != DEFAULT_BASE_URL && !Rails.env.production?
+  end
+
+  def download_allowed_hosts
+    configured = ENV.fetch("VIDEO_DOWNLOAD_ALLOWED_HOSTS", "").split(",").map(&:strip).reject(&:blank?)
+    configured.empty? ? nil : (configured + credential_hosts).uniq
   end
 end

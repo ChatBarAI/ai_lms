@@ -11,7 +11,7 @@
             %p.text-xs.text-indigo-600.font-medium Queued for marking…
         - elsif progress.score.present?
           %p.text-xs.text-gray-500= t("lessons.show.score", score: progress.score)
-      - if !progress.completed?
+      - if !progress.completed? && lesson.questions.none?
         - unless ai_scoring_pending
           = form_with model: progress, url: progress_path(progress.id), method: :patch, local: true do |f|
             = f.hidden_field :status, value: "completed"

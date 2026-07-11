@@ -1,6 +1,5 @@
 require "json"
 require "net/http"
-require "tempfile"
 require "uri"
 
 class SynthesiaClient
@@ -39,9 +38,15 @@ class SynthesiaClient
     filename = build_filename(video_payload, uri)
     content_type = content_type_for(uri)
 
-    download_to_tempfile(uri) do |file|
+    secure_downloader.download(
+      uri.to_s,
+      tempfile_prefix: "synthesia-video",
+      headers_for: method(:download_headers_for)
+    ) do |file|
       yield file, filename: filename, content_type: content_type
     end
+  rescue SecureRemoteDownloader::Error => e
+    raise Error, e.message
   end
 
   private
@@ -79,28 +84,29 @@ class SynthesiaClient
     raise Error, "Synthesia API network error: #{e.class}: #{e.message}"
   end
 
-  def download_to_tempfile(uri)
-    file = Tempfile.new([ "synthesia-video", File.extname(uri.path).presence || ".mp4" ], binmode: true)
+  def secure_downloader
+    @secure_downloader ||= SecureRemoteDownloader.new(
+      allow_private_network: local_base_url_override?,
+      allow_http: local_base_url_override?,
+      allowed_hosts: download_allowed_hosts
+    )
+  end
 
-    Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 120) do |http|
-      request = Net::HTTP::Get.new(uri.request_uri)
-      request["Authorization"] = @api_key if ALLOWED_HOSTS.include?(uri.host)
+  def download_headers_for(uri)
+    credential_hosts.include?(uri.host) ? { "Authorization" => @api_key } : {}
+  end
 
-      http.request(request) do |response|
-        case response
-        when Net::HTTPSuccess
-          response.read_body { |chunk| file.write(chunk) }
-        else
-          file.close!
-          raise Error, "Synthesia download error #{response.code}: #{response.body.to_s[0, 200]}"
-        end
-      end
-    end
+  def credential_hosts
+    @credential_hosts ||= (ALLOWED_HOSTS + [ URI.parse(@base_url).host ]).compact.uniq
+  end
 
-    file.rewind
-    yield file
-  ensure
-    file.close! if file && !file.closed?
+  def local_base_url_override?
+    @base_url != DEFAULT_BASE_URL && !Rails.env.production?
+  end
+
+  def download_allowed_hosts
+    configured = ENV.fetch("VIDEO_DOWNLOAD_ALLOWED_HOSTS", "").split(",").map(&:strip).reject(&:blank?)
+    configured.empty? ? nil : (configured + credential_hosts).uniq
   end
 
   def build_filename(video_payload, uri)

@@ -216,6 +216,7 @@ en:
   progresses:
     flash:
       saved: "Progress saved."
+      cannot_mark_complete: "This lesson cannot be marked complete manually."
 
   validation_messages:
     required: "is required"

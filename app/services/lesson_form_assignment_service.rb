@@ -27,12 +27,18 @@ class LessonFormAssignmentService
     :custom_tutor_embed_script
   ].freeze
 
-  def initialize(lesson:, params:)
+  def initialize(lesson:, params:, allow_custom_tutor_script: false)
     @lesson = lesson
     @params = params
+    @allow_custom_tutor_script = allow_custom_tutor_script
   end
 
   def call
+    unless custom_tutor_script_allowed?
+      @lesson.errors.add(:custom_tutor_embed_script, "can only be configured by an administrator")
+      return false
+    end
+
     attrs = normalized_attributes
     @lesson.assign_attributes(attrs)
     sync_cbai_details(attrs)
@@ -67,12 +73,20 @@ class LessonFormAssignmentService
 
   def clear_inactive_custom_tutor_embed(attrs)
     return unless attrs["ai_tutor_provider"] == "custom"
+    return unless attrs.key?("custom_tutor_embed_type")
 
     if attrs["custom_tutor_embed_type"] == "script"
       attrs["custom_tutor_embed_url"] = nil
     else
       attrs["custom_tutor_embed_script"] = nil
     end
+  end
+
+  def custom_tutor_script_allowed?
+    return true if @allow_custom_tutor_script
+
+    !lesson_input.key?(:custom_tutor_embed_script) &&
+      lesson_input[:custom_tutor_embed_type] != "script"
   end
 
   def sync_cbai_details(attrs)

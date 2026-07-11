@@ -406,6 +406,30 @@ If Puma also needs to pick up the same change, restart both services:
 sudo systemctl restart puma-ai_lms.service sidekiq-ai_lms.service
 ```
 
+### Rate limiting
+
+Production request throttling is provided by Rack::Attack. Rules protect
+password login and reset, Kinde and SSO routes, public token-based endpoints,
+certificate verification, callbacks, video imports, and AI question
+generation. Throttled requests return `429 Too Many Requests` with a
+`Retry-After` header.
+
+Rack::Attack stores its counters in Redis using the URL configured in
+**Admin → Site settings → Integration**. If that setting is blank, it uses
+`REDIS_URL`, then falls back to `redis://localhost:6379/0`. Counters use the
+`ai_lms:rack_attack` namespace so they do not collide with Sidekiq or other
+application keys in the same Redis database.
+
+Each deployed LMS instance sharing a Redis server must use a unique Redis DB
+number in its URL, for example `redis://localhost:6379/2`. All Puma processes
+for one instance must use the same URL and DB so they share counters. Redis
+configuration is read at boot; restart Puma and Sidekiq after changing it in
+Admin. Moving an instance to another Redis DB also starts a fresh set of rate
+limit counters.
+
+Throttle names, limits, and periods are defined centrally in
+[`config/initializers/rack_attack.rb`](config/initializers/rack_attack.rb).
+
 ### First-time server setup
 
 Before the first deploy the target host needs:
@@ -461,6 +485,12 @@ Before the first deploy the target host needs:
   client at a non-production host in development, `CBAI_TASK_API_URL` to
   point the Task API client elsewhere, and `CALLBACK_HOST` to control the
   public host used when generating Task API callback URLs.
+- Imported videos are downloaded through an SSRF-safe, size-bounded downloader.
+  Set `VIDEO_DOWNLOAD_ALLOWED_HOSTS` to a comma-separated list of exact storage
+  hostnames to additionally restrict ChatBar, Synthesia, and HeyGen download
+  redirects in production (for example, your S3 or CDN hostnames). Provider API
+  hosts are added automatically. Downloads otherwise require public HTTPS
+  destinations and are capped at 100 MB.
 - Logs filter `:password`, `:api_key`, and similar parameters
   (`[FILTERED]`). Inspect stored credentials with
   `bin/rails runner` if you need to debug them.

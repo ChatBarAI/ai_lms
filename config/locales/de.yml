@@ -217,6 +217,7 @@ de:
   progresses:
     flash:
       saved: "Fortschritt gespeichert."
+      cannot_mark_complete: "Diese Lektion kann nicht manuell abgeschlossen werden."
 
   validation_messages:
     required: "ist erforderlich"

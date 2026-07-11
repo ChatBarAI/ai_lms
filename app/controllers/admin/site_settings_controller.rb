@@ -91,11 +91,16 @@ class Admin::SiteSettingsController < Admin::BaseController
 
   def update
     section = current_section
+    permitted_settings = site_setting_params(section)
+    redis_url_changed = section == "integration" && permitted_settings.key?(:redis_url) &&
+                        permitted_settings[:redis_url].to_s != @site_setting.redis_url.to_s
     purge_requested_attachments(section)
 
-    if @site_setting.update(site_setting_params(section))
+    if @site_setting.update(permitted_settings)
       MailerConfiguration.ensure_fresh! if section == "integration"
-      redirect_to edit_admin_site_setting_path(anchor: section), notice: "#{SECTION_TITLES.fetch(section)} settings updated."
+      notice = "#{SECTION_TITLES.fetch(section)} settings updated."
+      notice += " Restart the web server and Sidekiq for the Redis change to take effect." if redis_url_changed
+      redirect_to edit_admin_site_setting_path(anchor: section), notice: notice
     else
       @active_section = section
       @current_base_url = request.base_url

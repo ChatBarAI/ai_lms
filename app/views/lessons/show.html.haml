@@ -79,7 +79,7 @@
                      mini_svg_width: "170",
                      show_attempt_numbers: true,
                      axis_label: "Attempt Number"
-      - if !@progress.completed?
+      - if !@progress.completed? && @lesson.questions.none?
         - unless @marking_pending
           .self-center.ml-auto
             = form_with model: @progress, url: progress_path(@progress.id), method: :patch, local: true do |f|

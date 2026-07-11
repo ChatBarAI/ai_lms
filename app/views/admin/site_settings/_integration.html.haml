@@ -96,6 +96,7 @@
       = f.text_field :redis_url, placeholder: "redis://localhost:6379/0", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
       %p.text-xs.text-gray-500.mt-1
         Include the DB number in the URL path (for example, redis://localhost:6379/2).
+        Each app instance must use a unique DB number. Restart the web server and Sidekiq after changing this value.
 
     .mt-4
       - if @redis_info[:error]

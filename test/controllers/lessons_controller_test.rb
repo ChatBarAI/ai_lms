@@ -38,6 +38,41 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed", lessons(:intro).reload.title
   end
 
+  test "instructor cannot configure a custom tutor script" do
+    lesson = lessons(:intro)
+    assert_nil lesson.custom_tutor_embed_script
+    sign_in users(:instructor)
+
+    patch course_lesson_path(courses(:algebra), lesson), params: {
+      lesson: {
+        ai_tutor_provider: "custom",
+        custom_tutor_embed_type: "script",
+        custom_tutor_embed_script: "<script>alert('unsafe')</script>"
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil lesson.reload.custom_tutor_embed_script
+  end
+
+  test "admin can configure a custom tutor script" do
+    lesson = lessons(:intro)
+    sign_in users(:admin)
+
+    patch course_lesson_path(courses(:algebra), lesson), params: {
+      lesson: {
+        ai_tutor_provider: "custom",
+        custom_tutor_embed_type: "script",
+        custom_tutor_embed_script: "<script src=\"https://trusted.example/widget.js\"></script>"
+      }
+    }
+
+    assert_redirected_to course_lesson_path(courses(:algebra), lesson)
+    lesson.reload
+    assert_equal "script", lesson.custom_tutor_embed_type
+    assert_equal "<script src=\"https://trusted.example/widget.js\"></script>", lesson.custom_tutor_embed_script
+  end
+
   test "show hides ai tutor when display mode is none" do
     lessons(:intro).update!(cbai_display_mode: "none", cbai_token: "tok_intro")
 

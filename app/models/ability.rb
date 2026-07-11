@@ -48,7 +48,6 @@ class Ability
     can :read, Enrollment, user_id: user.id
     can :create, Enrollment, user_id: user.id
     can :read, Progress, enrollment: { user_id: user.id }
-    can :update, Progress, enrollment: { user_id: user.id }
     can [ :create, :read ], QuestionAnswer, enrollment: { user_id: user.id }
     can :create, LessonMaterialAcknowledgement, enrollment: { user_id: user.id }
     can :read, LessonMaterialAcknowledgement, enrollment: { user_id: user.id }

@@ -63,7 +63,7 @@
 .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
     .flex.items-center.gap-2
-      = "Materials (readings & listenings)"
+      = "Materials"
       %span.inline-flex.items-center.px-1.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-500= @lesson.lesson_materials.size
     = collapsible_icon_badge
   %div{data: { collapsible_target: "content" }}
@@ -104,4 +104,3 @@
     = collapsible_icon_badge
   %div{data: { collapsible_target: "content" }}
     = render "form", lesson: @lesson, course: @course
-

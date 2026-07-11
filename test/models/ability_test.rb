@@ -78,4 +78,11 @@ class AbilityTest < ActiveSupport::TestCase
     other = Enrollment.new(user: users(:student), course: courses(:algebra))
     assert_not a.can?(:create, other)
   end
+
+  test "student cannot directly update progress" do
+    a = ability_for(users(:student))
+
+    assert a.can?(:read, progresses(:student_intro))
+    assert_not a.can?(:update, progresses(:student_intro))
+  end
 end
