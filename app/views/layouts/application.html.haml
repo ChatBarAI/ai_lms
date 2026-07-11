@@ -61,7 +61,7 @@
             = link_to t("layouts.application.sign_in"), new_user_session_path, class: "text-sm hover:opacity-80"
             - if SiteSetting.current.self_service_sign_up_enabled?
               = link_to t("layouts.application.sign_up"), new_user_registration_path, class: "text-sm font-medium px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700"
-    %main.max-w-6xl.mx-auto.px-4.py-8
+    %main.site-main.max-w-6xl.mx-auto.px-4.py-8
       - flash.reject { |type, _| %w[popup popup_alert popup_title].include?(type) }.each do |type, msg|
         - level = (type.to_s == "notice" ? "bg-green-50 text-green-800 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200")
         .mb-4.px-4.py-2.border.rounded{ class: level }

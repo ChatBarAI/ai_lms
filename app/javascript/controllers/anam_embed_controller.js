@@ -30,10 +30,14 @@ export default class extends Controller {
 
     this.onBeforeVisit = () => this.close()
     this.onPageHide = () => this.stopStreaming()
+    this.onResize = () => {
+      if (!this.overlayTarget.classList.contains("hidden")) this.applyPresentation()
+    }
 
     document.addEventListener("keydown", this.onEscape)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
     window.addEventListener("pagehide", this.onPageHide)
+    window.addEventListener("resize", this.onResize)
 
     this.element._anamDestroy = () => this.close()
   }
@@ -42,6 +46,7 @@ export default class extends Controller {
     document.removeEventListener("keydown", this.onEscape)
     document.removeEventListener("turbo:before-visit", this.onBeforeVisit)
     window.removeEventListener("pagehide", this.onPageHide)
+    window.removeEventListener("resize", this.onResize)
     delete this.element._anamDestroy
 
     this.stopStreaming()
@@ -76,7 +81,7 @@ export default class extends Controller {
     if (!this.hasOverlayTarget) return
 
     this.overlayTarget.classList.remove("hidden")
-    document.body.classList.add("overflow-hidden")
+    this.applyPresentation()
     await this.startStreaming()
   }
 
@@ -94,10 +99,26 @@ export default class extends Controller {
 
     const popup = ["top-1/2", "left-1/2", "-translate-x-1/2", "-translate-y-1/2", "w-[min(92vw,760px)]", "h-[min(88vh,860px)]", "rounded-lg"]
     const drawer = ["top-0", "right-0", "h-full", "w-[min(92vw,540px)]", "rounded-none"]
-    const style = this.displayModeValue === "drawer" ? drawer : popup
+    const inline = ["ai-tutor-inline-panel", "rounded-none"]
+    let style = popup
+    if (this.displayModeValue === "drawer" || (this.displayModeValue === "inline" && !this.inlineAvailable)) style = drawer
+    if (this.displayModeValue === "inline" && this.inlineAvailable) style = inline
 
-    popup.concat(drawer).forEach((klass) => this.panelTarget.classList.remove(klass))
+    popup.concat(drawer, inline).forEach((klass) => this.panelTarget.classList.remove(klass))
     style.forEach((klass) => this.panelTarget.classList.add(klass))
+  }
+
+  applyPresentation() {
+    this.applyStyle()
+    const inline = this.displayModeValue === "inline" && this.inlineAvailable
+    this.overlayTarget.classList.toggle("ai-tutor-inline-overlay", inline)
+    this.overlayTarget.setAttribute("aria-modal", inline ? "false" : "true")
+    document.body.classList.toggle("ai-tutor-inline-active", inline)
+    document.body.classList.toggle("overflow-hidden", !inline)
+  }
+
+  get inlineAvailable() {
+    return window.matchMedia("(min-width: 960px)").matches
   }
 
   async startStreaming() {
@@ -152,6 +173,8 @@ export default class extends Controller {
 
   unlockBody() {
     document.body.classList.remove("overflow-hidden")
+    document.body.classList.remove("ai-tutor-inline-active")
+    if (this.hasOverlayTarget) this.overlayTarget.classList.remove("ai-tutor-inline-overlay")
   }
 
   setStatus(text) {

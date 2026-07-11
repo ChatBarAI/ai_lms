@@ -1,6 +1,6 @@
 -# Embeds the chatbar-ai AI tutor scoped to this lesson.
 -# Renders a launcher button. The tutor is mounted lazily on first open
--# inside either a centered modal (popup) or a right-side drawer (slide-in).
+-# inside a centered modal, right-side drawer, or responsive right inline column.
 - mount_id = "cbai_lesson_tutor_#{lesson.id}"
 - root_id  = "cbai_launcher_#{lesson.id}"
 - ctx      = "Lesson: #{lesson.title}. Course: #{lesson.course.title}."
@@ -17,7 +17,7 @@
       = site_favicon_img_tag
       Ask AI tutor
 
-  -# Overlay (hidden by default). JS toggles `hidden` and swaps classes between popup and drawer modes.
+  -# Overlay (hidden by default). In inline mode it becomes a non-blocking column shell.
   .fixed.inset-0.z-50.hidden{ data: { cbai_embed_target: "overlay" }, role: "dialog", aria: { modal: "true", labelledby: "#{root_id}_title" } }
     %div{ data: { action: "click->cbai-embed#close" }, class: "absolute inset-0 backdrop-blur-[1px] bg-transparent" }
     %div{ data: { cbai_embed_target: "panel" }, class: "absolute bg-white shadow-xl flex flex-col" }

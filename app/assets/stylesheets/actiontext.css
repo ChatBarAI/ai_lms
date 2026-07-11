@@ -165,6 +165,13 @@ trix-editor .attachment__toolbar {
   z-index: 2;
 }
 
+/* Let authors drag the bottom edge of rich-text editors to adjust their height. */
+trix-editor.resizable-rich-text-editor {
+  min-height: 10rem;
+  overflow: auto;
+  resize: vertical;
+}
+
 /* Rich text display — views use .prose but @tailwindcss/typography is not installed */
 .prose.max-w-none,
 .trix-content {

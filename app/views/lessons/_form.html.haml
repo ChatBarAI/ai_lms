@@ -15,7 +15,7 @@
 
     %div{ data: { controller: "trix-insert-html" } }
       = f.label :body, "Lesson description", class: "block text-sm font-medium mb-1"
-      = f.rich_text_area :body, class: "block w-full border border-gray-300 rounded"
+      = f.rich_text_area :body, class: "resizable-rich-text-editor block w-full border border-gray-300 rounded"
       .flex.justify-end.mt-2
         %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800.hover:bg-gray-200.border.border-gray-200{ type: "button", data: { action: "trix-insert-html#toggle" } } &lt;&gt; Insert HTML
       .hidden.mt-2.p-3.bg-gray-50.border.border-gray-200.rounded{ data: { trix_insert_html_target: "panel" } }
@@ -30,7 +30,7 @@
         = f.select :ai_tutor_provider, [["ChatBar AI", "chatbar"], ["Anam Avatar", "anam"], ["Custom embed", "custom"], ["No AI Tutor", "none"]], {}, title: "Choose which tutor integration this lesson should use.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white", data: { action: "change->ai-tutor-provider#update", "ai-tutor-provider-target": "providerSelect" }
       %div{ data: { "ai-tutor-provider-target": "displayField" } }
         = f.label :cbai_display_mode, "AI Tutor display", class: "block text-sm font-medium mb-1"
-        = f.select :cbai_display_mode, [["Pop up", "popup"], ["Slide-in", "drawer"], ["None", "none"]], {}, title: "Choose how the tutor opens, or disable it for this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
+        = f.select :cbai_display_mode, [["Pop up", "popup"], ["Slide-in", "drawer"], ["Inline column", "inline"], ["None", "none"]], {}, title: "Choose how the tutor opens, or disable it for this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
       %div{ data: { "ai-tutor-provider-target": "chatbarFields" } }
         = f.label :cbai_api_key, "ChatBar AI API key", class: "block text-sm font-medium mb-1"
         = f.password_field :cbai_api_key, value: lesson.cbai_api_key, autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", inputmode: "text", title: "Provide the ChatBar AI API key to fetch the instance details automatically and save its token on this lesson.", class: "w-full border border-gray-300 rounded px-3 h-10"

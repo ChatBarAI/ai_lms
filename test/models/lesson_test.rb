@@ -54,7 +54,7 @@ class LessonTest < ActiveSupport::TestCase
     l = lessons(:intro)
     l.cbai_display_mode = "weird"
     assert_not l.valid?
-    %w[popup drawer none].each do |mode|
+    %w[popup drawer inline none].each do |mode|
       l.cbai_display_mode = mode
       assert l.valid?, "expected #{mode} to be valid"
     end

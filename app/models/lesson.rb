@@ -56,7 +56,7 @@ class Lesson < ApplicationRecord
 
   before_validation :assign_position, on: :create
 
-  CBAI_DISPLAY_MODES = %w[popup drawer none].freeze
+  CBAI_DISPLAY_MODES = %w[popup drawer inline none].freeze
   validates :cbai_display_mode, inclusion: { in: CBAI_DISPLAY_MODES }, allow_blank: true
 
   AI_TUTOR_PROVIDERS = %w[chatbar anam custom none].freeze

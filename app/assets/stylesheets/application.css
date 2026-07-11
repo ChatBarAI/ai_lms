@@ -34,3 +34,31 @@
     transform: rotate(-45deg);
     margin-left: -0.125rem;
 }
+
+/* Wide-screen right-side inline AI tutor. Controllers fall back to a drawer below 960px. */
+@media (min-width: 960px) {
+    body.ai-tutor-inline-active .site-nav,
+    body.ai-tutor-inline-active .site-main {
+        margin-right: 480px;
+    }
+
+    body.ai-tutor-inline-active .site-main {
+        width: calc(100% - 480px);
+    }
+
+    .ai-tutor-inline-overlay {
+        pointer-events: none;
+    }
+
+    .ai-tutor-inline-overlay > :first-child {
+        display: none;
+    }
+
+    .ai-tutor-inline-overlay .ai-tutor-inline-panel {
+        right: 0;
+        top: 0;
+        width: 480px;
+        height: 100%;
+        pointer-events: auto;
+    }
+}
