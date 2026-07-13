@@ -1,4 +1,22 @@
+import "trix"
+
 // Trix runs inside Rails forms. Several browser + Turbo interactions need guards.
+
+// Don't fall back to filename/filesize when caption is cleared — show nothing instead.
+;(function disableDefaultAttachmentCaptions() {
+  const attachments = window.Trix?.config?.attachments
+  if (!attachments) return
+
+  if (attachments.preview?.caption) {
+    attachments.preview.caption.name = false
+    attachments.preview.caption.size = false
+  }
+
+  if (attachments.file?.caption) {
+    attachments.file.caption.name = false
+    attachments.file.caption.size = false
+  }
+})()
 
 function findTrixEditor(element) {
   return element?.closest?.("trix-editor")
@@ -43,7 +61,8 @@ document.addEventListener("turbo:before-cache", () => {
 })
 
 // Uploaded images are wrapped in <a href="..."> for display. Without this, clicking the
-// image can follow the blob URL instead of selecting the attachment for caption editing.
+// image while an attachment is already open can re-trigger insert/select and duplicate it.
+// Only block media re-clicks — never the remove toolbar or caption editor.
 document.addEventListener(
   "mousedown",
   (event) => {
@@ -51,8 +70,15 @@ document.addEventListener(
     const trixEditor = findTrixEditor(event.target)
     if (!figure || !trixEditor?.editor) return
 
+    // Remove button, caption field, and other chrome must keep working.
+    if (event.target.closest(".attachment__toolbar")) return
+    if (event.target.closest("[data-trix-action]")) return
     if (event.target.closest("textarea.attachment__caption-editor")) return
     if (event.target.closest("figcaption")) return
+
+    // Only suppress clicks on the preview image / its display link.
+    const media = event.target.closest("img, a")
+    if (!media || !figure.contains(media)) return
 
     const editingAttachment = trixEditor.editor.composition?.editingAttachment
     if (!editingAttachment) return

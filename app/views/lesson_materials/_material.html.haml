@@ -1,13 +1,9 @@
 - acknowledged = local_assigns.fetch(:acknowledged, material.acknowledged_by?(enrollment))
-- collapsed = local_assigns.fetch(:collapsed, acknowledged)
+- collapsed = local_assigns.fetch(:collapsed, true)
 %section.bg-white.border.border-gray-200.rounded-lg.p-4.mb-4{ id: "material-#{material.id}", data: { controller: "collapsible", expanded: (collapsed ? "false" : "true") } }
   .flex.items-center.justify-between.gap-3
     %h3.font-semibold= material.title
     .flex.items-center.gap-2
-      .flex.items-center.text-xs.text-gray-500
-        = material.kind_label
-        - if material.required?
-          %span.ml-1.inline-flex.items-center.px-1.5.py-0.5.rounded.bg-amber-100.text-amber-800 Required
       - if enrollment
         - if acknowledged
           %span.inline-flex.items-center.gap-1.text-sm.text-green-700
