@@ -66,6 +66,13 @@ module ActiveStorageAccessControl
   end
 
   def require_active_storage_user_for_blob!(blob)
+    # Rich text direct uploads are temporarily unattached until the form is saved.
+    # Allow signed-in authors to preview those blobs in the editor.
+    if blob.attachments.empty?
+      return require_active_storage_user! unless user_signed_in?
+      return
+    end
+
     return require_active_storage_user! unless user_signed_in?
     return if active_storage_blob_readable_by_current_user?(blob)
 
