@@ -147,6 +147,31 @@ class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "signed in user can access unattached blob for rich text preview" do
+    sign_in users(:instructor)
+    blob = ActiveStorage::Blob.create_and_upload!(
+      io: StringIO.new("preview-image-bytes"),
+      filename: "preview.png",
+      content_type: "image/png"
+    )
+
+    get rails_blob_path(blob)
+
+    assert_response :success
+  end
+
+  test "anonymous user cannot access unattached blob" do
+    blob = ActiveStorage::Blob.create_and_upload!(
+      io: StringIO.new("preview-image-bytes"),
+      filename: "preview.png",
+      content_type: "image/png"
+    )
+
+    get rails_blob_path(blob)
+
+    assert_response :unauthorized
+  end
+
   private
 
   def attach_trix_image_to(lesson)

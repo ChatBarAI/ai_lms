@@ -46,6 +46,11 @@
   font-style: italic;
 }
 
+.trix-content .attachment__caption:empty,
+trix-editor .attachment__caption:empty {
+  display: none;
+}
+
 html.theme-dark .trix-content .attachment__caption {
   color: rgb(156 163 175); /* gray-400 */
 }
@@ -161,8 +166,15 @@ trix-editor textarea.trix-autoresize-clone {
   pointer-events: none !important;
 }
 
+/* Keep remove (X) and metadata above the image so they stay clickable. */
 trix-editor .attachment__toolbar {
-  z-index: 2;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+trix-editor .attachment__toolbar .trix-button--remove {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* Let authors drag the bottom edge of rich-text editors to adjust their height. */
