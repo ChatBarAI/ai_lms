@@ -567,4 +567,51 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#lesson-course-sidebar img[class~=?]", "aspect-[728/320]"
     assert_select "#lesson-course-sidebar img[class~=h-28]", count: 0
   end
+
+  test "non-purchaser is redirected from paid course lesson with alert" do
+    courses(:algebra).update!(price_cents: 999)
+    sign_in users(:other_student)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_redirected_to course_path(courses(:algebra))
+    assert_equal "Please purchase this course to view this lesson.", flash[:alert]
+  end
+
+  test "anonymous user is redirected from paid course lesson" do
+    courses(:algebra).update!(price_cents: 999)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_redirected_to course_path(courses(:algebra))
+    assert_equal "Please purchase this course to view this lesson.", flash[:alert]
+  end
+
+  test "purchaser can access paid course lesson" do
+    courses(:algebra).update!(price_cents: 999)
+    CoursePurchase.create!(user: users(:other_student), course: courses(:algebra), amount_cents: 999)
+    sign_in users(:other_student)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+  end
+
+  test "course owner can access their own paid course lesson without purchase" do
+    courses(:algebra).update!(price_cents: 999)
+    sign_in users(:instructor)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+  end
+
+  test "admin can access any paid course lesson" do
+    courses(:algebra).update!(price_cents: 999)
+    sign_in users(:admin)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+  end
 end

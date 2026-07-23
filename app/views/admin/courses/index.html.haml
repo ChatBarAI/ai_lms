@@ -27,6 +27,7 @@
       - if @sort == "learning_order"
         %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The position of this #{terms[:course_l]} in the learning sequence." } Learning order
       %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The number of #{terms[:lessons_l]} in this #{terms[:course_l]}." }= terms[:lessons]
+      %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Price charged for one-time access. Blank means free." } Price
       %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Available actions for this #{terms[:course_l]}." }
   %tbody
     - @courses.each do |c|
@@ -47,6 +48,11 @@
           %td.px-3.py-2.text-center.text-sm.text-gray-600= c.learning_order.presence || "—"
         %td.px-3.py-2.text-center.text-sm
           = link_to c.lessons.size, admin_course_lessons_path(c), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors"
+        %td.px-3.py-2.text-center.text-sm
+          - if c.paid?
+            %span.inline-flex.items-center.px-2.py-0.5.rounded-full.text-xs.font-semibold.bg-indigo-100.text-indigo-800= "$#{'%.2f' % c.price}"
+          - else
+            %span.text-xs.text-gray-400 Free
         %td.px-3.py-2.text-right
           .flex.flex-wrap.justify-end.gap-2
             = link_to "View", course_path(c), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"

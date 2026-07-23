@@ -9,6 +9,7 @@ class Admin::SiteSettingsController < Admin::BaseController
     ],
     "general" => %i[
       subjects_enabled allow_guest_access pass_mark
+      stripe_enabled
       self_service_sign_up_enabled
       kinde_google_sign_in_enabled
       kinde_microsoft_sign_in_enabled
