@@ -3,7 +3,7 @@
 - queued_for_marking_lesson_ids = local_assigns.fetch(:queued_for_marking_lesson_ids, [])
 - show_course_info = local_assigns.fetch(:show_course_info, true)
 
-= link_to course_lesson_path(lesson.course, lesson), class: "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-indigo-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-indigo-500" do
+= link_to course_lesson_path(lesson.course, lesson), data: { turbo: false }, class: "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-indigo-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-indigo-500" do
   .relative
     - if lesson.cover_image.attached?
       = image_tag lesson.cover_image, class: "w-full h-40 object-cover"

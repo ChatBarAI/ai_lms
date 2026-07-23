@@ -7,6 +7,7 @@ class Course < ApplicationRecord
   has_many :lessons, -> { order(:position) }, dependent: :destroy
   has_many :enrollments, dependent: :destroy
   has_many :students, through: :enrollments, source: :user
+  has_many :course_purchases, dependent: :destroy
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
@@ -24,6 +25,7 @@ class Course < ApplicationRecord
                    format: { with: /\A[a-z0-9-]+\z/ }
 
   before_validation :assign_slug, on: :create
+  before_validation :apply_free_course
 
   scope :published, -> { where(published_at: ..Time.current) }
   scope :publicly_accessible, -> { published.where(public_access_enabled: true) }
@@ -43,7 +45,7 @@ class Course < ApplicationRecord
   }
 
   def self.ransackable_attributes(_auth = nil)
-    %w[title slug description locale owner_id subject_id published_at public_access_enabled created_at updated_at id]
+    %w[title slug description locale owner_id subject_id published_at public_access_enabled price_cents created_at updated_at id]
   end
 
   def self.ransackable_associations(_auth = nil)
@@ -98,6 +100,46 @@ class Course < ApplicationRecord
 
   def published?
     published_at.present? && published_at <= Time.current
+  end
+
+  # True when the course requires a one-time purchase (price_cents > 0).
+  def paid?
+    price_cents.to_i > 0
+  end
+
+  # Price as a decimal dollar amount.
+  def price
+    price_cents.to_i / 100.0
+  end
+
+  # Virtual attribute: accept price in dollars from forms and convert to cents.
+  def price_in_dollars=(val)
+    cents = (val.to_f * 100).round
+    self.price_cents = cents > 0 ? cents : nil
+  end
+
+  def price_in_dollars
+    price_cents.to_i > 0 ? price_cents / 100.0 : nil
+  end
+
+  def free_course
+    return @free_course unless @free_course.nil?
+
+    !paid?
+  end
+
+  def free_course=(value)
+    @free_course = ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  # Whether a given user has already paid for (or is exempt from paying for) this course.
+  # Owners, admins, and users with an existing purchase are considered "paid".
+  def purchased_by?(user)
+    return true unless paid?
+    return false if user.nil?
+    return true if user.admin? || user.id == owner_id
+
+    course_purchases.exists?(user_id: user.id)
   end
 
   def public_to_guests?
@@ -167,6 +209,10 @@ class Course < ApplicationRecord
   end
 
   private
+
+  def apply_free_course
+    self.price_cents = nil if ActiveModel::Type::Boolean.new.cast(free_course)
+  end
 
   def self.csv_export_row(course)
     [

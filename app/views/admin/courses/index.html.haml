@@ -20,6 +20,7 @@
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Shows whether this course is published or still a draft." } Status
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Displays when a Course and Lessons are publicly viewable without sign in." } Access
       %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The number of lessons in this course." } Lessons
+      %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Price charged for one-time access. Blank means free." } Price
       %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Available actions for this course." }
   %tbody
     - @courses.each do |c|
@@ -38,6 +39,11 @@
             %span.text-xs.text-gray-400 —
         %td.px-3.py-2.text-center.text-sm
           = link_to c.lessons.size, admin_course_lessons_path(c), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors"
+        %td.px-3.py-2.text-center.text-sm
+          - if c.paid?
+            %span.inline-flex.items-center.px-2.py-0.5.rounded-full.text-xs.font-semibold.bg-indigo-100.text-indigo-800= "$#{'%.2f' % c.price}"
+          - else
+            %span.text-xs.text-gray-400 Free
         %td.px-3.py-2.text-right
           .flex.flex-wrap.justify-end.gap-2
             = link_to "View", course_path(c), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"

@@ -17,13 +17,17 @@
   - if @course.cover_image.attached?
     = image_tag @course.cover_image, class: "float-right ml-4 mb-2 object-contain max-w-full sm:max-w-96"
   %h1.text-2xl.font-bold.mb-1= @course.title
-  %p.text-sm.text-gray-500
-    - if subjects_enabled? && @course.subject
-      = @course.subject.name
-    - if @course.published?
-      · #{t(".published_on", date: l(@course.published_at.to_date, format: :long))}
-    - else
-      · #{content_tag(:span, t("common.draft"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800")}
+  .flex.items-center.gap-2.mt-1
+    %p.text-sm.text-gray-500
+      - if subjects_enabled? && @course.subject
+        = @course.subject.name
+      - if @course.published?
+        · #{t(".published_on", date: l(@course.published_at.to_date, format: :long))}
+      - else
+        · #{content_tag(:span, t("common.draft"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800")}
+    - if @course.paid? && SiteSetting.current.stripe_enabled?
+      %span.inline-flex.items-center.px-2.py-0.5.rounded-full.text-xs.font-semibold.bg-indigo-100.text-indigo-800
+        = "$#{'%.2f' % @course.price}"
   - if @course.description.present?
     %p.text-gray-700.mt-4= simple_format(@course.description)
 
@@ -43,9 +47,16 @@
             = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
           = button_to t(".unenrol"), course_enrollment_path(@course, @enrollment), method: :delete, data: { turbo_confirm: t(".unenrol_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer transition-colors"
       - else
-        .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
-          %p.flex-1= t(".enrol_prompt", **terms)
-          = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
+        - if @course.paid? && !@course.purchased_by?(current_user) && SiteSetting.current.stripe_enabled?
+          .bg-indigo-50.border.border-indigo-200.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+            .flex.flex-col.gap-0.5
+              %p.font-semibold.text-indigo-900= "#{@course.title} — $#{'%.2f' % @course.price}"
+              %p.text-indigo-700= t(".enrol_prompt", **terms)
+            = button_to "Buy for $#{'%.2f' % @course.price}", course_purchase_path(@course), method: :post, data: { turbo: false }, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer transition-colors"
+        - else
+          .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+            %p.flex-1= t(".enrol_prompt", **terms)
+            = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
     - else
       .bg-blue-50.border.border-blue-200.text-blue-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
         %p.flex-1= t(".signin_prompt", **terms)
