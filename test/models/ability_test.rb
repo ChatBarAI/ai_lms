@@ -85,4 +85,33 @@ class AbilityTest < ActiveSupport::TestCase
     assert a.can?(:read, progresses(:student_intro))
     assert_not a.can?(:update, progresses(:student_intro))
   end
+
+  test "authenticated user cannot read lesson of a non-public unpurchased paid course" do
+    courses(:other_owner_course).update!(price_cents: 999)
+    lesson = Lesson.find(lessons(:physics_lesson).id)
+    a = ability_for(users(:student))
+    assert_not a.can?(:read, lesson)
+  end
+
+  test "course owner can still read lessons of their own paid course" do
+    courses(:other_owner_course).update!(price_cents: 999)
+    lesson = Lesson.find(lessons(:physics_lesson).id)
+    a = ability_for(users(:other_instructor))
+    assert a.can?(:read, lesson)
+  end
+
+  test "purchaser can read lesson of a non-public paid course" do
+    courses(:other_owner_course).update!(price_cents: 999)
+    CoursePurchase.create!(user: users(:student), course: courses(:other_owner_course), amount_cents: 999)
+    lesson = Lesson.find(lessons(:physics_lesson).id)
+    a = ability_for(users(:student))
+    assert a.can?(:read, lesson)
+  end
+
+  test "non-purchaser cannot read lesson of a non-public paid course" do
+    courses(:other_owner_course).update!(price_cents: 999)
+    lesson = Lesson.find(lessons(:physics_lesson).id)
+    a = ability_for(users(:other_student))
+    assert_not a.can?(:read, lesson)
+  end
 end
