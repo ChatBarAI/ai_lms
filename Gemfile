@@ -102,6 +102,7 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
   gem "rails-controller-testing"
-  gem "minitest"
+  # Rails 7.2's parallel test runner uses Minitest APIs removed in Minitest 6.
+  gem "minitest", "< 6"
   gem "minitest-mock"
 end

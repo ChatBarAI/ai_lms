@@ -144,6 +144,62 @@ Provider sign-in toggles and provider JIT toggles are independent:
 - If provider sign-in is disabled, that provider cannot be used at all.
 - If provider sign-in is enabled but JIT is disabled, only pre-existing LMS users can sign in with that provider.
 
+### Kinde Google connection
+
+Configure the Google social connection in the same Kinde environment used by
+the LMS:
+
+1. In Kinde, open **Settings → Environment → Authentication** (shown as
+   **Settings → Authentication** in some dashboard versions).
+2. Under **Social connections**, select **Configure** on the Google tile.
+3. Copy its Connection ID and store it in Rails credentials as
+   `kinde.connections.google`.
+4. In the connection's **Upstream params** field, enter:
+
+   ```json
+   {
+     "prompt": {
+       "value": "select_account"
+     },
+     "login_hint": {
+       "alias": "login_hint"
+     }
+   }
+   ```
+
+5. Enable the connection for the LMS application and save it.
+
+The relevant Rails credentials have this shape:
+
+```yaml
+kinde:
+  domain: https://your-business.kinde.com
+  client_id: your-kinde-client-id
+  client_secret: your-kinde-client-secret
+  host: https://lms.example.com
+  connections:
+    google: conn_your_google_connection_id
+    microsoft: conn_your_microsoft_connection_id
+```
+
+The LMS passes the address entered on its sign-in page to Kinde as
+`login_hint` and requests a fresh Kinde login. The upstream configuration then
+forwards that hint to Google and uses `prompt=select_account` so an existing
+browser Google session does not silently select the wrong account. A login
+hint guides the provider UI; it is not authorization and must not be used as
+proof of identity.
+
+After deploying authentication changes, restart the production Rails process;
+production does not reload controller classes. To troubleshoot, inspect the
+LMS-to-Kinde redirect in the Rails log. A Google request should contain
+`connection_id`, `prompt=login`, and `login_hint` (filtered in some log
+contexts).
+
+Official Kinde documentation:
+
+- [Google social sign-in](https://docs.kinde.com/authenticate/social-sign-in/google/)
+- [Pass parameters to identity providers](https://docs.kinde.com/authenticate/auth-guides/pass-params-idp/)
+
 ### Organization-specific SSO (optional)
 
 Use **Admin → Organizations** to configure per-organization SSO (for org links and domain routing):

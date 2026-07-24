@@ -117,10 +117,45 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
     settings = SiteSetting.current
     settings.update!(kinde_google_sign_in_enabled: true, kinde_microsoft_sign_in_enabled: false)
 
-    stub_auth_url do |expected_url|
+    stub_auth_url do
       get kinde_login_path
-      assert_redirected_to expected_url
+      redirect_uri = URI.parse(response.location)
+      assert_equal "https", redirect_uri.scheme
+      assert_equal "kinde.test", redirect_uri.host
+      assert_equal "/oauth2/auth", redirect_uri.path
+      assert_equal "login", URI.decode_www_form(redirect_uri.query).to_h["prompt"]
       assert_equal "google", session[:kinde_provider_hint]
+    end
+  end
+
+  test "Google login passes a valid email to Kinde as login_hint" do
+    stub_auth_url do
+      get kinde_login_path(provider: "google", login_hint: " brod.justice@gmail.com ")
+
+      redirect_uri = URI.parse(response.location)
+      redirect_params = URI.decode_www_form(redirect_uri.query).to_h
+      assert_equal "brod.justice@gmail.com", redirect_params["login_hint"]
+      assert_equal "login", redirect_params["prompt"]
+    end
+  end
+
+  test "Google login ignores an invalid login_hint" do
+    stub_auth_url do
+      get kinde_login_path(provider: "google", login_hint: "not an email")
+
+      redirect_uri = URI.parse(response.location)
+      assert_nil URI.decode_www_form(redirect_uri.query).to_h["login_hint"]
+    end
+  end
+
+  test "Google login uses the email retained by sso_check when the link has no login_hint" do
+    get sso_check_path, params: { email: "brod.justice@gmail.com" }, as: :json
+
+    stub_auth_url do
+      get kinde_login_path(provider: "google")
+
+      redirect_uri = URI.parse(response.location)
+      assert_equal "brod.justice@gmail.com", URI.decode_www_form(redirect_uri.query).to_h["login_hint"]
     end
   end
 

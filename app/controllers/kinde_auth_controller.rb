@@ -71,6 +71,16 @@ class KindeAuthController < ApplicationController
     end
 
     auth = KindeSdk.auth_url(**auth_options)
+    if provider == "google"
+      # A connection_id alone does not interrupt an existing Kinde SSO session.
+      # Force Kinde to start a fresh login so the Google connection's upstream
+      # prompt=select_account setting is applied.
+      auth[:url] = auth_url_with_params(
+        auth[:url],
+        prompt: "login",
+        login_hint: normalized_login_hint(params[:login_hint]) || session.delete(:kinde_login_hint)
+      )
+    end
     Rails.logger.debug("[Kinde] auth_url generated: #{auth[:url]}")
     # PKCE is enabled by default; persist the code verifier across the redirect
     session[:kinde_code_verifier] = auth[:code_verifier] if auth[:code_verifier].present?
@@ -138,7 +148,9 @@ class KindeAuthController < ApplicationController
   # Only returns a URL when the org has sso_required: true, so voluntary SSO
   # orgs (sso_required: false) don't hijack users who prefer email/password.
   def sso_check
-    org = Organization.for_email_domain(params[:email].to_s)
+    email = normalized_login_hint(params[:email])
+    session[:kinde_login_hint] = email if email
+    org = Organization.for_email_domain(email.to_s)
     if org&.sso_required? && org.sso_configured?
       app_url = SiteSetting.current.app_url.presence ||
                 "#{request.scheme}://#{request.host_with_port}"
@@ -162,5 +174,21 @@ class KindeAuthController < ApplicationController
 
   def kinde_configured?
     Rails.application.credentials.dig(:kinde, :client_id).present?
+  end
+
+  def auth_url_with_params(auth_url, **params)
+    uri = URI.parse(auth_url)
+    query = URI.decode_www_form(uri.query.to_s)
+    params.compact.each do |key, value|
+      query.reject! { |existing_key, _existing_value| existing_key == key.to_s }
+      query << [ key.to_s, value.to_s ]
+    end
+    uri.query = URI.encode_www_form(query)
+    uri.to_s
+  end
+
+  def normalized_login_hint(value)
+    email = value.to_s.strip
+    email if email.match?(URI::MailTo::EMAIL_REGEXP)
   end
 end
