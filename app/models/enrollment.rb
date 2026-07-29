@@ -6,9 +6,12 @@ class Enrollment < ApplicationRecord
   has_many :lesson_material_acknowledgements, dependent: :destroy
   has_many :question_answers, dependent: :destroy
 
-  enum :role, { student: 0, instructor: 1, assistant: 2 }, default: :student
+  enum :role, { student: 0, tutor: 1, assistant: 2 }, default: :student
+
+  attr_accessor :skip_prerequisite_check
 
   validates :user_id, uniqueness: { scope: :course_id }
+  validate :prerequisites_must_be_met, on: :create
 
   before_validation :set_enrolled_at, on: :create
 
@@ -48,5 +51,15 @@ class Enrollment < ApplicationRecord
 
   def set_enrolled_at
     self.enrolled_at ||= Time.current
+  end
+
+  def prerequisites_must_be_met
+    return if skip_prerequisite_check
+    return if course.blank? || user.blank?
+
+    missing = course.missing_prerequisites_for(user)
+    return if missing.empty?
+
+    errors.add(:base, "Complete these courses first: #{missing.map(&:title).to_sentence}")
   end
 end

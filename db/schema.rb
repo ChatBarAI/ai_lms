@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_10_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -63,6 +63,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_10_000000) do
     t.index ["token"], name: "index_certificates_on_token", unique: true
     t.index ["user_id", "course_id"], name: "index_certificates_on_user_id_and_course_id", unique: true
     t.index ["user_id"], name: "index_certificates_on_user_id"
+  end
+
+  create_table "course_prerequisites", force: :cascade do |t|
+    t.bigint "course_id", null: false
+    t.bigint "prerequisite_course_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id", "prerequisite_course_id"], name: "index_course_prerequisites_uniqueness", unique: true
+    t.index ["course_id"], name: "index_course_prerequisites_on_course_id"
+    t.index ["prerequisite_course_id"], name: "index_course_prerequisites_on_prerequisite_course_id"
+    t.check_constraint "course_id <> prerequisite_course_id", name: "course_prerequisites_not_self"
   end
 
   create_table "courses", force: :cascade do |t|
@@ -386,6 +398,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_10_000000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "certificates", "courses"
   add_foreign_key "certificates", "users"
+  add_foreign_key "course_prerequisites", "courses"
+  add_foreign_key "course_prerequisites", "courses", column: "prerequisite_course_id"
   add_foreign_key "courses", "subjects"
   add_foreign_key "courses", "users", column: "owner_id"
   add_foreign_key "enrollments", "courses"

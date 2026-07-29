@@ -20,3 +20,8 @@
         %p.text-sm.text-gray-500.mt-1= course.subject.name
     - if course.description.present?
       %p.text-sm.text-gray-600.mt-2.line-clamp-2.dark:text-gray-400= course.description
+    - if course.prerequisite_courses.any?
+      - locked = !user_signed_in? || !course.prerequisites_met_by?(current_user)
+      - if locked && !current_user&.enrollments&.exists?(course_id: course.id)
+        %p.text-xs.text-amber-700.mt-2.dark:text-amber-300
+          Requires: #{course.prerequisite_courses.map(&:title).to_sentence}
