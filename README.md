@@ -383,82 +383,110 @@ This app is wired for Chrome PWA installability and offline fallback:
 
 ## Deployment
 
-There is no deploy script in the repository — deployment is intentionally
-left to the operator. A typical rsync-over-SSH workflow is:
+Production can be bootstrapped on a fresh Debian server from the committed
+local Git revision:
 
 ```bash
-rsync -avz --delete \
-  --exclude='.git' --exclude='log' --exclude='tmp' \
-  --exclude='storage' --exclude='public/assets' \
-  --exclude='vendor/bundle' --exclude='.bundle' \
-  --exclude='.env*' \
-  ./ deploy_user@your-host:/path/to/ai_lms/
+bin/deploy root@SERVER_IP learn.example.com
 ```
 
-Then SSH in and finish the deploy:
+The Docker Compose stack includes Rails, Sidekiq, PostgreSQL, Redis, persistent
+uploads, and automatic HTTPS through Caddy. See
+[`DEPLOYMENT.md`](DEPLOYMENT.md) for prerequisites, configuration, operations,
+and backups.
+
+> **One instance per server:** the current Docker deployment is not
+> multi-instance safe. It uses fixed Compose, image, container-volume, and
+> deployment names, and its Caddy container owns host ports 80 and 443. Do not
+> start a second copy of this stack on the same server: it could conflict with
+> the first instance or share its persistent data. Multiple instances require
+> unique stack/volume names and a single shared edge proxy that routes each
+> domain to the correct Rails service.
+
+> **Rails maintenance:** Rails 7.2.3.1 contains the current 7.2 security
+> patches, but the Rails 7.2 series reaches end of security support on
+> 2026-08-09. Upgrade to a supported Rails series before that date. Brakeman's
+> temporary EOL exception in `config/brakeman.ignore` must not be extended
+> without an explicit maintenance decision.
+
+### Docker console and logs
+
+Open a production Rails console inside the running web container:
 
 ```bash
-bundle config set deployment true
-bundle config set without 'development test'
-bundle install
+ssh root@SERVER_IP
+docker exec -it ai_lms-web-1 ./bin/rails console
+```
+
+Follow the Rails/Puma log (the Docker equivalent of following the native Puma
+systemd journal):
+
+```bash
+docker logs --follow --tail=200 ai_lms-web-1
+```
+
+Inspect recent Rails, Sidekiq, or Caddy logs:
+
+```bash
+docker logs --since=10m ai_lms-web-1
+docker logs --since=10m ai_lms-worker-1
+docker logs --since=10m ai_lms-proxy-1
+```
+
+Native installations continue to use systemd, for example:
+
+```bash
+sudo journalctl -u puma-ai_lms.service -f
+sudo journalctl -u sidekiq-ai_lms.service -f
+```
+
+### Canonical domain changes
+
+Point the new domain's DNS at the server before changing it, then run:
+
+```bash
+bin/deploy --change-domain root@SERVER_IP new.example.com
+```
+
+Use `--dirty` as well only while testing uncommitted deployment changes. Any
+domains after the canonical domain are treated as the complete alias list:
+
+```bash
+bin/deploy --change-domain root@SERVER_IP \
+  new.example.com alias.example.com
+```
+
+Changing the canonical domain updates the application host, callback host,
+`SiteSetting#app_url`, and Caddy certificate configuration. When Kinde is in
+use, also update its permitted callback and logout URLs:
+
+```text
+https://new.example.com/kinde/callback
+https://new.example.com/kinde/logout_callback
+```
+
+Other external identity providers must likewise allow their callback URL on
+the new domain.
+
+### Source-only sync for native installations
+
+To mirror source files to an existing native installation without performing
+a deployment:
+
+```bash
+bin/sync-source --dry-run USER@HOST /absolute/path/to/ai_lms
+bin/sync-source USER@HOST /absolute/path/to/ai_lms
+```
+
+Set `SSH_PORT=2222` when needed. The command protects runtime data, compiled
+assets, secrets, dependencies, and database dumps. It does not run Bundler,
+migrations, asset compilation, or service restarts. Run the applicable native
+maintenance commands separately after syncing, for example:
+
+```bash
+RAILS_ENV=production bundle install
 RAILS_ENV=production bin/rails db:migrate
 RAILS_ENV=production bin/rails assets:precompile
-sudo systemctl restart puma-ai_lms
-```
-
-### Background jobs
-
-Production uses ActiveJob with Sidekiq and Redis for background work such as
-AI quiz marking and ActiveStorage analysis. The Rails web process does not run
-these jobs by itself, so run a separate Sidekiq worker process on the server.
-
-A basic manual way to start the worker is:
-
-```bash
-nohup env RAILS_ENV=production bundle exec sidekiq >> log/sidekiq.log 2>&1 &
-```
-
-Then confirm it stayed up and is processing the default queue:
-
-```bash
-ps aux | grep sidekiq
-tail -n 100 log/sidekiq.log
-RAILS_ENV=production bin/rails runner 'puts "default queue: #{Sidekiq::Queue.new("default").size}"; puts "retries: #{Sidekiq::RetrySet.new.size}"; puts "dead: #{Sidekiq::DeadSet.new.size}"'
-```
-
-Sidekiq and the Rails web process must use the same Redis URL. The app resolves
-Redis from `SiteSetting#redis_url`, then `REDIS_URL`, then falls back to
-`redis://localhost:6379/0`. After changing the Redis URL, restart both Puma and
-Sidekiq.
-
-For a durable deployment, run Sidekiq under systemd or the same process manager
-used for Puma. The `nohup` command is useful for a quick manual start, but it
-will not reliably survive deploys or server restarts.
-
-`bin/setup --generate-systemd` generates Puma and Sidekiq unit files under
-`config/deploy/generated/` and prints the commands to install and enable them.
-`bin/setup --generate-deploy-configs` does the same as part of the full deploy
-config generation. The generated Sidekiq service is named
-`sidekiq-ai_lms.service` by default, matching the database root.
-
-After a deploy or Redis/job configuration change, restart the worker with:
-
-```bash
-sudo systemctl restart sidekiq-ai_lms.service
-sudo systemctl status sidekiq-ai_lms.service --no-pager -l
-```
-
-To check the systemd-managed Sidekiq process later:
-
-```bash
-sudo systemctl is-active sidekiq-ai_lms.service
-sudo systemctl status sidekiq-ai_lms.service --no-pager -l
-sudo journalctl -u sidekiq-ai_lms.service -n 100 --no-pager
-```
-
-If Puma also needs to pick up the same change, restart both services:
-
-```bash
 sudo systemctl restart puma-ai_lms.service sidekiq-ai_lms.service
 ```
 
@@ -488,28 +516,11 @@ Throttle names, limits, and periods are defined centrally in
 
 ### First-time server setup
 
-Before the first deploy the target host needs:
-
-- Ruby 3.4.2 (rbenv/rvm), PostgreSQL, libvips, ImageMagick, and build
-  essentials (`build-essential`, `libpq-dev`, `libyaml-dev`).
-- A PostgreSQL role and database for production:
-  ```bash
-  sudo -u postgres createuser -P ai_lms
-  sudo -u postgres createdb -O ai_lms ai_lms_production
-  ```
-- Rails credentials: commit `config/credentials.yml.enc` and provide
-  `RAILS_MASTER_KEY` in the service environment, or drop `config/master.key`
-  on the server out of band.
-- Environment variables in the systemd unit or an `EnvironmentFile`:
-  `RAILS_ENV=production`, `RAILS_MASTER_KEY`, `DATABASE_URL` (or
-  `AI_LMS_DATABASE_PASSWORD`), `APP_HOST=https://<your-host>` for Devise
-  email links, `MAILER_SENDER=no-reply@<your-host>`,
-  `MAIL_DELIVERY_METHOD=sendmail`, `PUMA_BIND=unix:///run/ai_lms/puma.sock`,
-  and optionally `CALLBACK_HOST=https://<your-host>` for the ChatBar Task API
-  callback URL.
-- A Puma systemd unit (`puma-ai_lms.service`) with `RuntimeDirectory=ai_lms`
-  and a reverse proxy (Nginx/Caddy) terminating TLS and forwarding to the
-  Puma UNIX socket.
+The target only needs Debian, root SSH access, DNS pointing at it, and ports
+80/443 open. `bin/deploy` installs the remaining runtime and creates the
+database and Redis services. Keep `config/credentials/production.key` on the
+deploying machine; it is transferred securely on the first deployment and is
+never committed. See [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Configuration
 

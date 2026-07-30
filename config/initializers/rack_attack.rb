@@ -22,7 +22,13 @@ class Rack::Attack
   }.transform_values(&:freeze).freeze
 
   def self.redis_url
-    SiteSetting.first&.redis_url.presence || ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
+    configured_url = if ActiveRecord::Base.connection.data_source_exists?("site_settings")
+      ::SiteSetting.first&.redis_url.presence
+    end
+
+    configured_url || ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
+  rescue ActiveRecord::NoDatabaseError
+    ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
   rescue StandardError => e
     Rails.logger.warn("[Rack::Attack] Could not read redis_url from SiteSetting: #{e.message}")
     ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
@@ -31,10 +37,15 @@ class Rack::Attack
 
   # Rack::Attack is automatically Rails middleware, but has no effect without
   # rules. Production counters must be shared by every web process.
-  self.cache.store = if Rails.env.production?
-    ActiveSupport::Cache::RedisCacheStore.new(url: redis_url, namespace: REDIS_NAMESPACE)
+  if Rails.env.production?
+    Rails.application.config.after_initialize do
+      Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
+        url: Rack::Attack.send(:redis_url),
+        namespace: REDIS_NAMESPACE
+      )
+    end
   else
-    Rails.cache
+    self.cache.store = Rails.cache
   end
 
   def self.normalized_email(request)

@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bin/sync-source [--dry-run] USER@HOST /ABSOLUTE/REMOTE/PATH
+
+Examples:
+  bin/sync-source bl@203.0.113.10 /home/bl/ai_lms
+  bin/sync-source --dry-run bl@example.com /srv/ai_lms
+  SSH_PORT=2222 bin/sync-source bl@example.com /srv/ai_lms
+
+This mirrors source files only. It does not install dependencies, migrate the
+database, compile assets, or restart services.
+USAGE
+}
+
+dry_run=false
+if [[ ${1:-} == --dry-run ]]; then
+  dry_run=true
+  shift
+fi
+
+[[ $# -eq 2 ]] || { usage >&2; exit 2; }
+
+target=$1
+destination=$2
+ssh_port=${SSH_PORT:-22}
+
+[[ $target =~ ^[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+$ ]] || {
+  echo "Target must have the form USER@HOST." >&2
+  exit 2
+}
+[[ $destination =~ ^/[A-Za-z0-9._/-]+$ && $destination != / ]] || {
+  echo "Destination must be a safe absolute path other than /." >&2
+  exit 2
+}
+[[ ! $destination =~ (^|/)\.\.?(/|$) ]] || {
+  echo "Destination cannot contain . or .. path components." >&2
+  exit 2
+}
+case "${destination%/}" in
+  /bin|/boot|/dev|/etc|/home|/lib|/lib64|/media|/mnt|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var)
+    echo "Destination is too broad; provide the application directory itself." >&2
+    exit 2
+    ;;
+esac
+[[ $ssh_port =~ ^[0-9]+$ && $ssh_port -ge 1 && $ssh_port -le 65535 ]] || {
+  echo "SSH_PORT must be between 1 and 65535." >&2
+  exit 2
+}
+
+command -v rsync >/dev/null 2>&1 || {
+  echo "rsync is required on both the local and remote machines." >&2
+  exit 1
+}
+
+project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+ssh_command="ssh -p $ssh_port -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
+
+rsync_options=(
+  --archive
+  --compress
+  --delete-delay
+  --itemize-changes
+  --human-readable
+  --protect-args
+  --filter="protect /log/***"
+  --filter="protect /tmp/***"
+  --filter="protect /storage/***"
+  --filter="protect /public/assets/***"
+  "--exclude=/.git/"
+  "--exclude=/.bundle/"
+  "--exclude=/.env"
+  "--exclude=/.env.*"
+  "--exclude=/.ruby-lsp/"
+  "--exclude=/config/master.key"
+  "--exclude=/config/credentials/production.key"
+  "--exclude=/config/database_password"
+  "--exclude=/config/deploy/generated/"
+  "--exclude=/log/"
+  "--exclude=/tmp/"
+  "--exclude=/storage/"
+  "--exclude=/public/assets/"
+  "--exclude=/vendor/bundle/"
+  "--exclude=/node_modules/"
+  "--exclude=/ai-lms-clone-*.tar.gz"
+  "--exclude=*.dump"
+  "--exclude=*.sql"
+  "--exclude=*.sql.gz"
+  "--exclude=*.backup"
+)
+
+if $dry_run; then
+  rsync_options+=(--dry-run)
+  echo "Dry run: no remote files will change."
+fi
+
+echo "Syncing source to $target:$destination/ ..."
+rsync "${rsync_options[@]}" \
+  --rsh="$ssh_command" \
+  "$project_root/" "$target:$destination/"
+
+if $dry_run; then
+  echo "Dry run complete."
+else
+  echo "Source sync complete. No remote commands were run."
+fi

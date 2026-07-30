@@ -40,9 +40,7 @@
 
 /config/credentials/production.key
 /config/deploy/generated/
-
-# Local deploy script (keep outside the repo)
-/bin/deploy
+/ai-lms-clone-*.tar.gz
 
 # Copilot/agent local guidance
 AGENTS.md
