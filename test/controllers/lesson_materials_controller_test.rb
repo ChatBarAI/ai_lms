@@ -22,6 +22,56 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "guest can view a published Google document with restrictive headers" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Imported document",
+      kind: :google_doc,
+      raw_html_content: "<!doctype html><html><body><p>Hello</p></body></html>"
+    )
+
+    get document_course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_includes response.headers["Content-Security-Policy"], "script-src 'none'"
+    assert_includes response.headers["Content-Security-Policy"], "frame-ancestors 'self'"
+    assert_nil response.headers["X-Frame-Options"]
+    assert_includes response.body, "<p>Hello</p>"
+  end
+
+  test "guest can view published isolated raw HTML through the document endpoint" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Isolated document",
+      kind: :raw_html_iframe,
+      raw_html_content: "<style>.card { color: red; }</style><p class=\"card\">Hello</p>"
+    )
+
+    get document_course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_includes response.headers["Content-Security-Policy"], "script-src 'none'"
+    assert_includes response.body, ".card { color: red; }"
+    assert_includes response.body, '<p class="card">Hello</p>'
+  end
+
+  test "guest can view a published web-page snapshot through the document endpoint" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Web snapshot",
+      kind: :web_page,
+      url: "https://example.com/article",
+      raw_html_content: "<!doctype html><html><body><p>Snapshot</p></body></html>"
+    )
+
+    get document_course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_includes response.headers["Content-Security-Policy"], "connect-src 'none'"
+    assert_includes response.body, "<p>Snapshot</p>"
+  end
+
   test "guest is redirected to sign-in when creating" do
     post course_lesson_lesson_materials_path(@course, @lesson),
          params: { lesson_material: { title: "X", kind: "html", body: "x" } }
@@ -133,6 +183,42 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
                                         body: "<p>hi</p>", required: "1" } }
     end
     assert_redirected_to edit_course_lesson_path(@course, @lesson)
+  end
+
+  test "instructor sees an import error for an invalid Google Docs ZIP" do
+    sign_in users(:instructor)
+    invalid_zip = Rack::Test::UploadedFile.new(
+      Rails.root.join("test/fixtures/files/poster.png"),
+      "application/zip",
+      false,
+      original_filename: "lesson.zip"
+    )
+
+    assert_no_difference("LessonMaterial.count") do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Imported", kind: "google_doc", google_doc_zip: invalid_zip } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "not a valid Google Docs ZIP"
+  end
+
+  test "Google document HTML cannot be supplied without the importer" do
+    sign_in users(:instructor)
+
+    assert_no_difference("LessonMaterial.count") do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: {
+             lesson_material: {
+               title: "Injected",
+               kind: "google_doc",
+               raw_html_content: "<script>alert('no')</script>"
+             }
+           }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "must be imported from a Google Docs Web Page ZIP"
   end
 
   test "instructor creates an image upload material" do

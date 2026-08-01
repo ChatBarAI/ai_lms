@@ -1,8 +1,20 @@
 import { Controller } from "@hotwired/stimulus"
 
-export default class extends Controller {
-  static targets = ["pdf", "html", "rawhtml", "audioupload", "audiourl", "imageupload", "videoupload", "videourl"]
+const TARGET_BY_KIND = Object.freeze({
+  pdf: "pdf",
+  html: "html",
+  raw_html: "rawhtml",
+  raw_html_iframe: "rawhtml",
+  google_doc: "googledoc",
+  web_page: "webpage",
+  audio_upload: "audioupload",
+  audio_url: "audiourl",
+  image_upload: "imageupload",
+  video_upload: "videoupload",
+  video_url: "videourl"
+})
 
+export default class extends Controller {
   connect() {
     const select = this.element.querySelector('select[name$="[kind]"]')
     this.apply(select ? select.value : "")
@@ -13,13 +25,15 @@ export default class extends Controller {
   }
 
   apply(value) {
-    if (this.hasPdfTarget)        this.pdfTarget.classList.toggle("hidden", value !== "pdf")
-    if (this.hasHtmlTarget)       this.htmlTarget.classList.toggle("hidden", value !== "html")
-    if (this.hasRawhtmlTarget)    this.rawhtmlTarget.classList.toggle("hidden", value !== "raw_html")
-    if (this.hasAudiouploadTarget) this.audiouploadTarget.classList.toggle("hidden", value !== "audio_upload")
-    if (this.hasAudiourlTarget)   this.audiourlTarget.classList.toggle("hidden", value !== "audio_url")
-    if (this.hasImageuploadTarget) this.imageuploadTarget.classList.toggle("hidden", value !== "image_upload")
-    if (this.hasVideouploadTarget) this.videouploadTarget.classList.toggle("hidden", value !== "video_upload")
-    if (this.hasVideourlTarget)   this.videourlTarget.classList.toggle("hidden", value !== "video_url")
+    const activeTarget = TARGET_BY_KIND[value]
+
+    this.element.querySelectorAll("[data-material-kind-target]").forEach((panel) => {
+      const hidden = panel.dataset.materialKindTarget !== activeTarget
+      panel.classList.toggle("hidden", hidden)
+
+      panel.querySelectorAll("input, textarea, select").forEach((field) => {
+        field.disabled = hidden
+      })
+    })
   }
 }

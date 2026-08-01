@@ -7,14 +7,11 @@ class LessonMaterial < ApplicationRecord
   has_one_attached :audio_file
   has_one_attached :image_file
   has_one_attached :video_file
+  has_many_attached :imported_assets
 
-  enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5, video_upload: 6, video_url: 7 }
+  attr_accessor :google_doc_zip
 
-  SANITIZER     = Rails::HTML::SafeListSanitizer.new
-  ALLOWED_TAGS  = %w[p br strong em u s h1 h2 h3 h4 h5 h6 ul ol li
-                     blockquote code pre a img figure figcaption
-                     table thead tbody tr th td div span].freeze
-  ALLOWED_ATTRS = %w[href src alt title class id target rel width height].freeze
+  enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5, video_upload: 6, video_url: 7, google_doc: 8, raw_html_iframe: 9, web_page: 10 }
 
   AUDIO_CONTENT_TYPES = %w[
     audio/mpeg audio/vnd.wave audio/x-wav audio/ogg audio/aac
@@ -43,6 +40,21 @@ class LessonMaterial < ApplicationRecord
     "raw_html" => {
       field: :raw_html_content,
       message: "can't be blank",
+      valid: ->(material) { material.raw_html_content.present? }
+    },
+    "raw_html_iframe" => {
+      field: :raw_html_content,
+      message: "can't be blank",
+      valid: ->(material) { material.raw_html_content.present? }
+    },
+    "google_doc" => {
+      field: :google_doc_zip,
+      message: "must be imported from a Google Docs Web Page ZIP",
+      valid: ->(material) { material.raw_html_content.present? }
+    },
+    "web_page" => {
+      field: :raw_html_content,
+      message: "must be imported from a public web page URL",
       valid: ->(material) { material.raw_html_content.present? }
     },
     "audio_upload" => {
@@ -76,6 +88,9 @@ class LessonMaterial < ApplicationRecord
     "pdf" => "PDF",
     "html" => "Rich text",
     "raw_html" => "Raw HTML",
+    "raw_html_iframe" => "Raw HTML (isolated iframe)",
+    "google_doc" => "Google Docs import",
+    "web_page" => "Web page import",
     "audio_upload" => "Audio (upload)",
     "audio_url" => "Audio (URL)",
     "image_upload" => "Image (upload)",
@@ -84,6 +99,7 @@ class LessonMaterial < ApplicationRecord
   }.freeze
 
   validates :title, presence: true
+  validates :url, presence: true, if: :web_page?
   validates :position, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :content_matches_kind
   validates :document, content_type: "application/pdf",
@@ -142,11 +158,7 @@ class LessonMaterial < ApplicationRecord
   end
 
   def sanitize_raw_html
-    return unless raw_html?
-    self.raw_html_content = SANITIZER.sanitize(
-      raw_html_content.to_s,
-      tags: ALLOWED_TAGS,
-      attributes: ALLOWED_ATTRS
-    )
+    self.raw_html_content = SafeHtmlPolicy.sanitize_fragment(raw_html_content) if raw_html?
+    self.raw_html_content = SafeHtmlPolicy.sanitize_isolated_document(raw_html_content) if raw_html_iframe?
   end
 end

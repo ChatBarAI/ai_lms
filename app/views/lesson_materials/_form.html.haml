@@ -19,7 +19,7 @@
       %div
         = f.label :kind, class: "block text-sm font-medium mb-1"
         = f.select :kind,
-          [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML", "raw_html"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"]],
+          [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML — inline", "raw_html"], ["Raw HTML — isolated iframe", "raw_html_iframe"], ["Google Docs import", "google_doc"], ["Web page import — URL", "web_page"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"]],
             {},
             class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
             data: { action: "change->material-kind#toggle" }
@@ -49,10 +49,23 @@
           %button.px-3.py-1.text-sm.rounded.bg-indigo-600.text-white.hover:bg-indigo-700{ type: "button", data: { action: "trix-insert-html#insert" } } Insert
           %button.px-3.py-1.text-sm.rounded.border.border-gray-300.hover:bg-gray-50{ type: "button", data: { action: "trix-insert-html#cancel" } } Cancel
 
-    %div{ data: { material_kind_target: "rawhtml" }, class: ("hidden" if material.kind != "raw_html") }
+    %div{ data: { material_kind_target: "rawhtml" }, class: ("hidden" unless %w[raw_html raw_html_iframe].include?(material.kind)) }
       = f.label :raw_html_content, "Raw HTML", class: "block text-sm font-medium mb-1"
       = f.text_area :raw_html_content, rows: 16, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm", placeholder: "<p>Paste or write HTML here…</p>"
-      %p.text-xs.text-gray-500.mt-1 HTML is sanitised on save. Allowed tags: headings, paragraphs, lists, tables, links, images, code blocks.
+      %p.text-xs.text-gray-500.mt-1 Inline mode retains safe element styles but removes stylesheet blocks. Isolated iframe mode also retains sanitised &lt;style&gt; blocks. Scripts, forms, nested iframes, event handlers, CSS URLs, and remote fonts are removed in both modes.
+
+    %div{ data: { material_kind_target: "googledoc" }, class: ("hidden" if material.kind != "google_doc") }
+      = f.label :google_doc_zip, "Google Docs Web Page ZIP", class: "block text-sm font-medium mb-1"
+      = f.file_field :google_doc_zip, accept: ".zip,application/zip", class: "block w-full border border-gray-300 rounded px-3 py-2 bg-white"
+      %p.text-xs.text-gray-500.mt-1
+        In Google Docs, choose File → Download → Web Page (.html, zipped), then upload that ZIP here. Maximum 25 MB.
+      - if material.persisted? && material.google_doc?
+        %p.text-xs.text-amber-700.mt-1 Leave this blank to keep the currently imported document, or choose a new ZIP to replace it.
+
+    %div{ data: { material_kind_target: "webpage" }, class: ("hidden" if material.kind != "web_page") }
+      = f.label :url, "Public web page URL", class: "block text-sm font-medium mb-1"
+      = f.url_field :url, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "https://example.com/page"
+      %p.text-xs.text-gray-500.mt-1 The LMS imports a static snapshot of public HTTPS HTML plus same-origin styles and images. Saving an existing web-page material refreshes its snapshot.
 
     %div{ data: { material_kind_target: "audioupload" }, class: ("hidden" if material.kind != "audio_upload") }
       = upload_field f, :audio_file,

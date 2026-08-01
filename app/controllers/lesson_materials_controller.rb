@@ -1,8 +1,29 @@
 class LessonMaterialsController < ApplicationController
-  before_action :authenticate_user!, except: [ :index, :show ]
+  DOCUMENT_CONTENT_SECURITY_POLICY = [
+    "default-src 'none'",
+    "img-src 'self' data:",
+    "style-src 'unsafe-inline'",
+    "font-src 'none'",
+    "script-src 'none'",
+    "connect-src 'none'",
+    "frame-src 'none'",
+    "form-action 'none'",
+    "base-uri 'none'",
+    "frame-ancestors 'self'"
+  ].join("; ").freeze
+
+  DOCUMENT_RESPONSE_HEADERS = {
+    "Content-Security-Policy" => DOCUMENT_CONTENT_SECURITY_POLICY,
+    "Content-Disposition" => "inline",
+    "Cache-Control" => "private, no-store",
+    "Referrer-Policy" => "no-referrer",
+    "X-Content-Type-Options" => "nosniff"
+  }.freeze
+
+  before_action :authenticate_user!, except: [ :index, :show, :document ]
   before_action :set_course_and_lesson
   load_and_authorize_resource through: :lesson
-  skip_authorize_resource only: [ :acknowledge, :reorder ]
+  skip_authorize_resource only: [ :acknowledge, :reorder, :document ]
 
   def index
     @lesson_materials = @lesson.lesson_materials
@@ -16,7 +37,7 @@ class LessonMaterialsController < ApplicationController
 
   def create
     @lesson_material.lesson = @lesson
-    if @lesson_material.save
+    if persist_material
       redirect_to edit_course_lesson_path(@course, @lesson), notice: "Material added."
     else
       render :new, status: :unprocessable_entity
@@ -27,7 +48,9 @@ class LessonMaterialsController < ApplicationController
   end
 
   def update
-    if @lesson_material.update(lesson_material_params)
+    @original_material_kind = @lesson_material.kind
+    @lesson_material.assign_attributes(lesson_material_params)
+    if persist_material
       redirect_to edit_course_lesson_path(@course, @lesson), notice: "Material updated."
     else
       render :edit, status: :unprocessable_entity
@@ -64,6 +87,22 @@ class LessonMaterialsController < ApplicationController
                 notice: "Marked as complete."
   end
 
+  def document
+    authorize! :read, @lesson_material
+    unless @lesson_material.google_doc? || @lesson_material.raw_html_iframe? || @lesson_material.web_page?
+      raise ActiveRecord::RecordNotFound
+    end
+
+    DOCUMENT_RESPONSE_HEADERS.each do |name, value|
+      response.headers[name] = value
+    end
+    response.headers.delete("X-Frame-Options")
+
+    render html: @lesson_material.raw_html_content.to_s.html_safe,
+           layout: false,
+           content_type: "text/html"
+  end
+
   private
 
   def set_course_and_lesson
@@ -72,6 +111,40 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    params.require(:lesson_material).permit(:title, :kind, :position, :required, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file)
+    params.require(:lesson_material).permit(:title, :kind, :position, :required, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip)
+  end
+
+  def persist_material
+    if @lesson_material.web_page? && @lesson_material.url.present?
+      WebPageImportService.new(material: @lesson_material).call
+      return true
+    end
+
+    if @lesson_material.google_doc?
+      if @lesson_material.google_doc_zip.present?
+        GoogleDocImportService.new(
+          material: @lesson_material,
+          upload: @lesson_material.google_doc_zip
+        ).call
+        return true
+      end
+
+      if @original_material_kind == "google_doc"
+        @lesson_material.restore_attributes([ :raw_html_content ])
+      else
+        # Imported document HTML can only be populated by the ZIP importer.
+        @lesson_material.raw_html_content = nil
+      end
+    end
+
+    @lesson_material.save
+  rescue GoogleDocImportService::ImportError => error
+    @lesson_material.errors.add(:google_doc_zip, error.message)
+    false
+  rescue WebPageImportService::ImportError => error
+    @lesson_material.errors.add(:url, error.message)
+    false
+  rescue ActiveRecord::RecordInvalid
+    false
   end
 end

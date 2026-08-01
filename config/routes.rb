@@ -73,6 +73,7 @@ Rails.application.routes.draw do
         end
         member do
           post :acknowledge
+          get :document
         end
       end
     end
