@@ -262,6 +262,24 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Title", @material.reload.title
   end
 
+  test "instructor can configure a material to open by default" do
+    sign_in users(:instructor)
+    patch course_lesson_lesson_material_path(@course, @lesson, @material),
+          params: { lesson_material: { open_by_default: "1" } }
+
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert @material.reload.open_by_default?
+  end
+
+  test "lesson material uses its configured default display state" do
+    get course_lesson_path(@course, @lesson)
+    assert_select "#material-#{@material.id}[data-expanded='false']"
+
+    @material.update!(open_by_default: true)
+    get course_lesson_path(@course, @lesson)
+    assert_select "#material-#{@material.id}[data-expanded='true']"
+  end
+
   test "instructor can destroy own material" do
     sign_in users(:instructor)
     assert_difference("LessonMaterial.count", -1) do

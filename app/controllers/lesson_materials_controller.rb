@@ -111,7 +111,7 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    params.require(:lesson_material).permit(:title, :kind, :position, :required, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip)
+    params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip)
   end
 
   def persist_material

@@ -26,9 +26,13 @@
       %div
         = f.label :position, class: "block text-sm font-medium mb-1"
         = f.number_field :position, class: "w-full border border-gray-300 rounded px-3 py-2"
-      %div.pt-1
-        = toggle_switch_field f, :required,
-            label: "Required before #{terms[:quiz_l]}"
+      .flex.flex-col.gap-3.pt-1
+        %div
+          = toggle_switch_field f, :required,
+              label: "Required before #{terms[:quiz_l]}"
+        %div{ title: "Display this material open by default when the lesson is shown." }
+          = toggle_switch_field f, :open_by_default,
+              label: "Open by default"
 
     %div{ data: { material_kind_target: "pdf" }, class: ("hidden" if material.kind != "pdf") }
       = upload_field f, :document,
