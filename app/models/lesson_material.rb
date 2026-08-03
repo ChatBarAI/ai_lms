@@ -1,6 +1,21 @@
 class LessonMaterial < ApplicationRecord
+  AI_DESIGN_STARTER_HTML = <<~HTML.freeze
+    <!doctype html>
+    <html lang="en">
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+      <body></body>
+    </html>
+  HTML
+
   belongs_to :lesson
+  belongs_to :source_material, class_name: "LessonMaterial", optional: true
+  belongs_to :copied_by, class_name: "User", optional: true
+  has_many :material_copies, class_name: "LessonMaterial",
+                             foreign_key: :source_material_id, dependent: :nullify,
+                             inverse_of: :source_material
   has_many :acknowledgements, class_name: "LessonMaterialAcknowledgement", dependent: :destroy
+  has_many :material_design_revisions, dependent: :destroy
+  has_many :material_design_assets, dependent: :destroy
 
   has_rich_text :body
   has_one_attached :document
@@ -134,6 +149,18 @@ class LessonMaterial < ApplicationRecord
 
   def video?
     video_upload? || video_url?
+  end
+
+  def ai_designable?
+    html? || raw_html? || raw_html_iframe? || google_doc? || web_page?
+  end
+
+  def blank_ai_design_source?
+    return false unless raw_html_iframe? && raw_html_content.present?
+
+    document = Nokogiri::HTML5.parse(raw_html_content)
+    document.at_css("body")&.inner_html.to_s.strip.blank? &&
+      document.css("style").all? { |style| style.text.strip.blank? }
   end
 
   def public_to_guests?

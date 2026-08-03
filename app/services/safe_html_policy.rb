@@ -4,7 +4,7 @@ module SafeHtmlPolicy
   ALLOWED_TAGS = %w[
     p br strong b em i u s h1 h2 h3 h4 h5 h6 ul ol li blockquote code pre
     a img figure figcaption table colgroup col thead tbody tfoot tr th td
-    div span hr sup sub
+    div span hr sup sub header main section footer nav article aside address details summary
   ].freeze
   ALLOWED_ATTRIBUTES = %w[
     href src alt title class id style dir lang target rel name width height
@@ -71,6 +71,21 @@ module SafeHtmlPolicy
         <body#{safe_body_attributes(source_body)}>#{body.to_html}</body>
       </html>
     HTML
+  end
+
+  def sanitize_ai_document(html, asset_urls: [])
+    document = Nokogiri::HTML5.parse(sanitize_isolated_document(html))
+    allowed = asset_urls.to_set
+
+    document.css("img").each do |image|
+      source = image["src"].to_s
+      image.remove unless allowed.include?(source)
+    end
+    document.css("a[href]").each do |link|
+      href = link["href"].to_s
+      link.remove_attribute("href") unless href.start_with?("#")
+    end
+    document.to_html
   end
 
   def sanitize_stylesheet(css)

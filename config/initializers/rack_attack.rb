@@ -18,7 +18,9 @@ class Rack::Attack
     "question-callback/ip" => { limit: 60, period: 5.minutes },
     "question-callback/token" => { limit: 15, period: 5.minutes },
     "expensive-actions/user" => { limit: 10, period: 15.minutes },
-    "expensive-actions/ip" => { limit: 20, period: 15.minutes }
+    "expensive-actions/ip" => { limit: 20, period: 15.minutes },
+    "ai-design/user" => { limit: 3, period: 15.minutes },
+    "ai-design/ip" => { limit: 6, period: 15.minutes }
   }.transform_values(&:freeze).freeze
 
   def self.redis_url
@@ -122,6 +124,14 @@ class Rack::Attack
   end
   throttle("expensive-actions/ip", **THROTTLE_LIMITS.fetch("expensive-actions/ip")) do |request|
     request.ip if request.post? && request.path.match?(expensive_path)
+  end
+
+  ai_design_path = %r{\A/courses/[^/]+/lessons/[^/]+/lesson_materials/[^/]+/designs\z}
+  throttle("ai-design/user", **THROTTLE_LIMITS.fetch("ai-design/user")) do |request|
+    signed_in_user_id(request) if request.post? && request.path.match?(ai_design_path)
+  end
+  throttle("ai-design/ip", **THROTTLE_LIMITS.fetch("ai-design/ip")) do |request|
+    request.ip if request.post? && request.path.match?(ai_design_path)
   end
 
   self.throttled_responder = lambda do |request|

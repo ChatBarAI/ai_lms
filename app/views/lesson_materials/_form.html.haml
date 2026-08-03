@@ -2,8 +2,12 @@
   = javascript_import_module_tag "actiontext_editor"
 
 - url = material.persisted? ? course_lesson_lesson_material_path(course, lesson, material) : course_lesson_lesson_materials_path(course, lesson)
+- kind_options = [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML — inline", "raw_html"], ["Raw HTML — isolated iframe", "raw_html_iframe"], ["Google Docs import", "google_doc"], ["Web page import — URL", "web_page"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"]]
+- unless material.persisted?
+  - kind_options.unshift(["Create from copy", "copy"])
+  - kind_options.unshift(["AI-designed page", "ai_designed"])
 
-= form_with model: material, url: url, multipart: true, local: true, data: { turbo: false }, class: "space-y-4 bg-white mt-3" do |f|
+= form_with model: material, url: url, multipart: true, local: true, data: { turbo: false, controller: "material-kind", action: "submit->material-kind#validateCopy" }, class: "space-y-4 bg-white mt-3" do |f|
   - if material.errors.any?
     .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
       %ul.list-disc.pl-5
@@ -14,12 +18,12 @@
     = f.label :title, class: "block text-sm font-medium mb-1"
     = f.text_field :title, class: "w-full border border-gray-300 rounded px-3 py-2"
 
-  .space-y-4{ data: { controller: "material-kind" } }
+  .space-y-4
     .grid.grid-cols-1.sm:grid-cols-3.gap-4
       %div
         = f.label :kind, class: "block text-sm font-medium mb-1"
         = f.select :kind,
-          [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML — inline", "raw_html"], ["Raw HTML — isolated iframe", "raw_html_iframe"], ["Google Docs import", "google_doc"], ["Web page import — URL", "web_page"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"]],
+          kind_options,
             {},
             class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
             data: { action: "change->material-kind#toggle" }
@@ -102,6 +106,45 @@
       = f.url_field :url, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "https://example.com/video.mp4"
       %p.text-xs.text-gray-500.mt-1 Direct link to an mp4, webm, or ogg video file.
 
+    - unless material.persisted?
+      .fixed.inset-0.z-50.hidden{ id: "copy-material-dialog", data: { controller: "dialog", dialog_open_value: "false", material_kind_target: "copy" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "copy-material-dialog-title", "aria-hidden": "true" }
+        .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+        .absolute.bg-white.rounded-xl.shadow-2xl.border.border-violet-200{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,36rem);max-height:90vh", tabindex: "-1", data: { dialog_target: "panel" } }
+          .flex.items-center.justify-between.border-b.border-gray-200.px-5.py-4
+            %div
+              %h2.font-semibold.text-gray-900{ id: "copy-material-dialog-title", title: "Choose material from one of your courses." } Create from copy
+            %button.text-gray-500.hover:text-gray-700.text-2xl.leading-none.cursor-pointer{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" } ×
+          .space-y-4.p-5.overflow-y-auto{ style: "max-height:calc(90vh - 5rem)", data: { controller: "material-copy-selector", material_copy_selector_catalog_value: copy_source_catalog.to_json } }
+            %div
+              - if copy_source_catalog.any?
+                .space-y-4
+                  %div
+                    = label_tag :source_course_id, "Course", class: "block text-sm font-medium mb-1"
+                    = select_tag :source_course_id,
+                      options_for_select(copy_source_catalog.map { |entry| [entry[:title], entry[:id]] }),
+                      prompt: "Choose a course…",
+                      class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
+                      data: { material_copy_selector_target: "course", action: "change->material-copy-selector#courseChanged" }
+                  .hidden{ data: { material_copy_selector_target: "lessonGroup" } }
+                    = label_tag :source_lesson_id, "Lesson", class: "block text-sm font-medium mb-1"
+                    = select_tag :source_lesson_id, "", prompt: "Choose a course first…", disabled: true, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500", data: { material_copy_selector_target: "lesson", action: "change->material-copy-selector#lessonChanged" }
+                  .hidden{ data: { material_copy_selector_target: "materialGroup" } }
+                    = label_tag :source_material_id, "Material", class: "block text-sm font-medium mb-1"
+                    = select_tag :source_material_id, "", prompt: "Choose a lesson first…", disabled: true, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500", data: { material_copy_selector_target: "material", action: "change->material-copy-selector#materialChanged" }
+                %p.text-xs.text-gray-500.mt-3 The copy receives its own files and can be edited or deleted independently.
+              - else
+                %p.rounded.border.border-amber-200.bg-amber-50.p-3.text-sm.text-amber-800 There are no materials in your courses to copy yet.
+            .space-y-3
+              %div
+                = check_box_tag :copy_settings, "1", true, id: "copy_settings"
+                = label_tag :copy_settings, "Copy required and open-by-default settings", class: "ml-1 text-sm"
+              %div
+                = check_box_tag :open_in_designer, "1", true, id: "open_in_designer"
+                = label_tag :open_in_designer, "Open HTML-compatible copies in the AI designer", class: "ml-1 text-sm"
+            .flex.justify-end.gap-2.pt-2
+              %button.px-4.py-2.rounded-lg.bg-gray-100.text-gray-700.text-sm.font-medium.hover:bg-gray-200.cursor-pointer{ type: "button", data: { action: "click->dialog#close" } } Cancel
+              = submit_tag "Create copy", disabled: true, class: "px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer", data: { material_copy_selector_target: "submit" }
+
   .flex.w-full.gap-2
-    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center", data: { material_kind_submit: true, default_label: (material.persisted? ? "Update material" : "Create material") }
     = link_to "Cancel", edit_course_lesson_path(course, lesson), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

@@ -1,0 +1,36 @@
+= form_with model: asset, url: course_lesson_lesson_material_material_design_assets_path(course, lesson, lesson_material), multipart: true, class: "space-y-4" do |f|
+  - if local_assigns[:return_to].present?
+    = hidden_field_tag :return_to, return_to
+  - if local_assigns[:parent_revision_id].present?
+    = hidden_field_tag :parent_revision_id, parent_revision_id
+  %fieldset
+    %legend.block.text-sm.font-medium.text-gray-700.mb-2 How should the AI use this image?
+    .space-y-2
+      %label.flex.items-start.gap-2.rounded.border.border-gray-200.p-3.cursor-pointer
+        = f.radio_button :role, "content", checked: asset.role.blank? || asset.content?, class: "mt-1"
+        %span
+          %span.block.text-sm.font-medium Page content
+          %span.block.text-xs.text-gray-500 Make this image available for placement in the generated page.
+      %label.flex.items-start.gap-2.rounded.border.border-gray-200.p-3.cursor-pointer
+        = f.radio_button :role, "design_reference", class: "mt-1"
+        %span
+          %span.block.text-sm.font-medium Design reference
+          %span.block.text-xs.text-gray-500 Reproduce its layout, colors, typography, spacing, and visible text. The screenshot itself will not appear in the page.
+  %div
+    = f.label :name, "Asset name", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_field :name, placeholder: "Asset name", class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+  %div
+    = f.label :description, "Image description", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_area :description, placeholder: "Optional description for content-image selection", rows: 2, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :alt_text, "Accessible alt text", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_field :alt_text, placeholder: "Describe the image for learners", class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div{ data: { controller: "file-preview", file_preview_type_value: "image" } }
+    = f.label :file, "Image file", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.file_field :file, accept: MaterialDesignAsset::CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", action: "change->file-preview#update" }
+    .hidden.mt-3.rounded-lg.border.border-gray-200.bg-gray-50.p-2{ data: { file_preview_target: "previewContainer" } }
+      %img.mx-auto.max-h-48.max-w-full.rounded.object-contain{ alt: "Selected image preview", data: { file_preview_target: "preview" } }
+      %p.mt-2.truncate.text-center.text-xs.text-gray-600{ data: { file_preview_target: "filename" } }
+  .flex.items-center.justify-end.gap-2.pt-2
+    %button.px-4.py-2.rounded-lg.bg-gray-100.text-gray-700.text-sm.font-medium.hover:bg-gray-200.cursor-pointer{ type: "button", data: { action: "click->dialog#close" } } Cancel
+    = f.submit "Upload asset", class: "px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 cursor-pointer"
