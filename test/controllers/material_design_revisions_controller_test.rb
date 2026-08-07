@@ -136,10 +136,24 @@ class MaterialDesignRevisionsControllerTest < ActionDispatch::IntegrationTest
       assert_select ".design-assets-panel-count", text: "2"
     end
     assert_select ".design-request-grid .design-model-field", count: 1
-    assert_select "[data-controller='file-preview']" do
-      assert_select "input[type='file'][data-action='change->file-preview#update']", count: 1
+    assert_select "[data-controller~='file-preview']" do
+      assert_select "input[type='file'][data-action~='change->file-preview#update']", count: 1
       assert_select "[data-file-preview-target='previewContainer'].hidden img[data-file-preview-target='preview']", count: 1
       assert_select "[data-file-preview-target='filename']", count: 1
+    end
+    assert_select 'form[data-controller~="screen-capture"]' do
+      assert_select 'button[data-action="screen-capture#selectBrowse"][aria-pressed="false"]', text: /Browse/
+      assert_select 'button[data-action="screen-capture#selectCapture"][aria-pressed="false"]', text: /Capture/
+      assert_select '[data-screen-capture-target="browsePanel"].hidden'
+      assert_select '[data-screen-capture-target="capturePanel"].hidden'
+      assert_select 'dialog[data-screen-capture-target="cropDialog"] canvas[data-screen-capture-target="cropCanvas"]'
+      assert_select 'button[data-action="screen-capture#start"]', text: "Choose screen or window"
+      assert_select 'select[data-screen-capture-target="format"] option[value="image/webp"]'
+      assert_select 'select[data-screen-capture-target="format"] option[value="image/jpeg"]'
+      assert_select 'input[data-screen-capture-target="quality"][type="range"]'
+      assert_select 'button[data-action="screen-capture#capture"][disabled]'
+      assert_select 'button[data-action="screen-capture#useCrop"][disabled]', text: "Use selected area"
+      assert_select 'input[type="submit"][data-screen-capture-target="submitButton"][disabled]'
     end
     assert_includes response.body, "dark:bg-indigo-950/50"
     assert_includes response.body, "dark:bg-gray-800"
