@@ -525,6 +525,7 @@ DEPENDENCIES
   redcarpet (~> 3.6)
   redis (>= 4.0.1)
   rubocop-rails-omakase
+  rubyzip
   selenium-webdriver
   sidekiq (~> 7.0)
   sprockets-rails

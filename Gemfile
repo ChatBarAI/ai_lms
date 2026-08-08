@@ -82,6 +82,9 @@ gem "rack-attack"
 # HTTP client (for chatbar API integration)
 gem "httparty"
 
+# Read Google Docs "Web Page (.html, zipped)" imports in production.
+gem "rubyzip", require: false
+
 # Kinde SSO authentication
 gem "kinde_sdk"
 
