@@ -174,6 +174,22 @@ class MaterialDesignRevisionsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "No source document. This revision will start from zero."
   end
 
+  test "rich text material is rendered as the source preview" do
+    sign_in users(:instructor)
+    material = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Trix material", kind: :html,
+      body: "<h2>Ruby blocks</h2><p>Blocks can receive arguments.</p>"
+    )
+
+    get source_preview_course_lesson_lesson_material_material_design_revisions_path(
+      material.lesson.course, material.lesson, material
+    )
+
+    assert_response :success
+    assert_select "h2", text: "Ruby blocks"
+    assert_select "p", text: "Blocks can receive arguments."
+  end
+
   test "owner deletes a revision without changing the material" do
     sign_in users(:instructor)
     material = LessonMaterial.create!(

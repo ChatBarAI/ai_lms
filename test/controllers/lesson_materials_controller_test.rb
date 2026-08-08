@@ -174,6 +174,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "form[data-turbo=?]", "false"
+    assert_select "form[data-action*='submit->material-kind']", count: 0
   end
 
   test "new material form offers the AI designer as a kind instead of a separate action" do

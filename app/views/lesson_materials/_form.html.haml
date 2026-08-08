@@ -7,7 +7,7 @@
   - kind_options.unshift(["Create from copy", "copy"])
   - kind_options.unshift(["AI-designed page", "ai_designed"])
 
-= form_with model: material, url: url, multipart: true, local: true, data: { turbo: false, controller: "material-kind", action: "submit->material-kind#validateCopy" }, class: "space-y-4 bg-white mt-3" do |f|
+= form_with model: material, url: url, multipart: true, local: true, data: { turbo: false, controller: "material-kind" }, class: "space-y-4 bg-white mt-3" do |f|
   - if material.errors.any?
     .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
       %ul.list-disc.pl-5

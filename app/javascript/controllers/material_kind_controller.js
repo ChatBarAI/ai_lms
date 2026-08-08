@@ -25,15 +25,6 @@ export default class extends Controller {
     this.apply(event.target.value)
   }
 
-  validateCopy(event) {
-    const kind = this.element.querySelector('select[name$="[kind]"]')?.value
-    const source = this.element.querySelector('select[name="source_material_id"]')
-    if (kind !== "copy" || source?.value) return
-
-    event.preventDefault()
-    this.openCopyDialog()
-  }
-
   apply(value) {
     const activeTarget = TARGET_BY_KIND[value]
     const submit = this.element.querySelector("[data-material-kind-submit]")

@@ -127,7 +127,7 @@ class MaterialDesignRevisionsController < ApplicationController
     return revision.parent_revision.sanitized_html if revision.parent_revision.present?
     return if @lesson_material.blank_ai_design_source?
 
-    @lesson_material.raw_html_content.presence || @lesson_material.body&.to_html
+    @lesson_material.raw_html_content.presence || @lesson_material.body.to_s.presence
   end
 
   def source_preview_html(source_html)
