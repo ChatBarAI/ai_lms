@@ -89,7 +89,7 @@ gem "rubyzip", require: false
 gem "kinde_sdk"
 
 # Active Storage
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0"
 gem "active_storage_validations"
 
 # Stdlib gems being removed from default Ruby
