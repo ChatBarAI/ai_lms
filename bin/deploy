@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bin/deploy [--dirty] [--change-domain] HOST CANONICAL_DOMAIN [ALIAS_DOMAIN...]
+
+Examples:
+  bin/deploy root@203.0.113.10 learn.example.com
+  bin/deploy root@203.0.113.10 learn.example.com training.example.com
+  bin/deploy --dirty root@203.0.113.10 learn.example.com
+  bin/deploy --dirty --change-domain root@203.0.113.10 new.example.com
+  SSH_PORT=2222 bin/deploy root@server.example.com learn.example.com
+
+By default, the deploy contains exactly the committed HEAD. Use --dirty while
+developing the deployment mechanism to include tracked modifications and
+non-ignored new files. Set RAILS_PRODUCTION_KEY_FILE to override the default
+config/credentials/production.key path.
+USAGE
+}
+
+dirty=false
+change_domain=false
+while [[ ${1:-} == --* ]]; do
+  case "$1" in
+    --dirty) dirty=true ;;
+    --change-domain) change_domain=true ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+  shift
+done
+
+[[ $# -ge 2 ]] || { usage >&2; exit 2; }
+
+host=$1
+domain=$2
+shift 2
+aliases=("$@")
+deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+ssh_port=${SSH_PORT:-22}
+key_file=${RAILS_PRODUCTION_KEY_FILE:-config/credentials/production.key}
+
+[[ $host =~ ^root@[A-Za-z0-9.-]+$ ]] || {
+  echo "HOST must have the form root@HOSTNAME_OR_IP." >&2
+  exit 2
+}
+[[ $deploy_root =~ ^/[A-Za-z0-9._/-]+$ &&
+   $deploy_root != / &&
+   ! $deploy_root =~ (^|/)\.\.?(/|$) ]] || {
+  echo "DEPLOY_ROOT must be a safe absolute application directory." >&2
+  exit 2
+}
+case "${deploy_root%/}" in
+  /bin|/boot|/dev|/etc|/home|/lib|/lib64|/media|/mnt|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var)
+    echo "DEPLOY_ROOT is too broad; provide the application directory itself." >&2
+    exit 2
+    ;;
+esac
+[[ $ssh_port =~ ^[0-9]+$ && $ssh_port -ge 1 && $ssh_port -le 65535 ]] || {
+  echo "SSH_PORT must be between 1 and 65535." >&2
+  exit 2
+}
+[[ $domain =~ ^[A-Za-z0-9.-]+$ ]] || {
+  echo "Invalid domain: $domain" >&2
+  exit 2
+}
+for alias_domain in "${aliases[@]}"; do
+  [[ $alias_domain =~ ^[A-Za-z0-9.-]+$ ]] || {
+    echo "Invalid alias domain: $alias_domain" >&2
+    exit 2
+  }
+done
+
+requested_domains=
+if [[ ${#aliases[@]} -gt 0 ]]; then
+  requested_domains=$domain
+  for alias_domain in "${aliases[@]}"; do
+    requested_domains+=", $alias_domain"
+  done
+fi
+
+if ! $dirty && { ! git diff --quiet || ! git diff --cached --quiet; }; then
+  echo "Tracked files have uncommitted changes; commit them before deploying." >&2
+  echo "For deployment-script development only, use: bin/deploy --dirty HOST DOMAIN" >&2
+  exit 1
+fi
+
+commit=$(git rev-parse --verify HEAD)
+if $dirty; then
+  release="${commit}-dirty-$(date -u +%Y%m%d%H%M%S)"
+else
+  release=$commit
+fi
+archive=$(mktemp "/tmp/ai_lms-${release}.XXXXXX.tar.gz")
+remote_stage=
+remote_archive=
+remote_key=
+
+ssh_control_dir=$(mktemp -d)
+ssh_control_path="$ssh_control_dir/control"
+ssh_args=(
+  -p "$ssh_port"
+  -o ControlMaster=auto
+  -o ControlPersist=60
+  -o "ControlPath=$ssh_control_path"
+)
+scp_args=(
+  -P "$ssh_port"
+  -o ControlMaster=auto
+  -o ControlPersist=60
+  -o "ControlPath=$ssh_control_path"
+)
+
+cleanup() {
+  rm -f "$archive"
+  if [[ $remote_stage =~ ^/tmp/ai_lms-deploy\.[A-Za-z0-9]+$ ]]; then
+    ssh "${ssh_args[@]}" "$host" \
+      "rm -f '$remote_stage/source.tar.gz' '$remote_stage/production.key'; rmdir '$remote_stage' 2>/dev/null || true" \
+      >/dev/null 2>&1 || true
+  fi
+  rm -rf -- "$ssh_control_dir"
+}
+trap cleanup EXIT
+
+if $dirty; then
+  echo "WARNING: deploying an unreproducible working-tree snapshot." >&2
+  git ls-files --cached --others --exclude-standard -z |
+    while IFS= read -r -d '' path; do
+      [[ -e $path || -L $path ]] && printf '%s\0' "$path"
+    done |
+    tar --create --gzip --file="$archive" --no-recursion --null --files-from=-
+else
+  git archive --format=tar.gz --output="$archive" HEAD
+fi
+
+remote_stage=$(ssh "${ssh_args[@]}" "$host" 'umask 077; mktemp -d /tmp/ai_lms-deploy.XXXXXXXX')
+[[ $remote_stage =~ ^/tmp/ai_lms-deploy\.[A-Za-z0-9]+$ ]] || {
+  echo "Server returned an unsafe staging path." >&2
+  exit 1
+}
+remote_archive="$remote_stage/source.tar.gz"
+remote_key="$remote_stage/production.key"
+
+echo "Uploading commit $release..."
+scp "${scp_args[@]}" "$archive" "$host:$remote_archive"
+
+if [[ -f $key_file ]]; then
+  scp "${scp_args[@]}" "$key_file" "$host:$remote_key"
+else
+  echo "Rails production key not found at $key_file." >&2
+  echo "It is required on the first deploy; set RAILS_PRODUCTION_KEY_FILE." >&2
+  exit 1
+fi
+
+printf -v remote_command \
+  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q; rm -f %q' \
+  "$deploy_root" "$release" "$remote_archive" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$remote_archive"
+
+ssh "${ssh_args[@]}" "$host" "$remote_command"

@@ -20,6 +20,57 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
   test "guest can view a published material" do
     get course_lesson_lesson_material_path(@course, @lesson, @material)
     assert_response :success
+    assert_select "#material-#{@material.id}[data-expanded='true']"
+  end
+
+  test "guest can view a published Google document with restrictive headers" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Imported document",
+      kind: :google_doc,
+      raw_html_content: "<!doctype html><html><body><p>Hello</p></body></html>"
+    )
+
+    get document_course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_includes response.headers["Content-Security-Policy"], "script-src 'none'"
+    assert_includes response.headers["Content-Security-Policy"], "frame-ancestors 'self'"
+    assert_nil response.headers["X-Frame-Options"]
+    assert_includes response.body, "<p>Hello</p>"
+  end
+
+  test "guest can view published isolated raw HTML through the document endpoint" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Isolated document",
+      kind: :raw_html_iframe,
+      raw_html_content: "<style>.card { color: red; }</style><p class=\"card\">Hello</p>"
+    )
+
+    get document_course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_includes response.headers["Content-Security-Policy"], "script-src 'none'"
+    assert_includes response.body, ".card { color: red; }"
+    assert_includes response.body, '<p class="card">Hello</p>'
+  end
+
+  test "guest can view a published web-page snapshot through the document endpoint" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Web snapshot",
+      kind: :web_page,
+      url: "https://example.com/article",
+      raw_html_content: "<!doctype html><html><body><p>Snapshot</p></body></html>"
+    )
+
+    get document_course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_includes response.headers["Content-Security-Policy"], "connect-src 'none'"
+    assert_includes response.body, "<p>Snapshot</p>"
   end
 
   test "guest is redirected to sign-in when creating" do
@@ -123,6 +174,29 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "form[data-turbo=?]", "false"
+    assert_select "form[data-action*='submit->material-kind']", count: 0
+  end
+
+  test "new material form offers the AI designer as a kind instead of a separate action" do
+    sign_in users(:instructor)
+    get new_course_lesson_lesson_material_path(@course, @lesson)
+
+    assert_select 'select[name="lesson_material[kind]"] option[value="ai_designed"]', text: "AI-designed page"
+    assert_select 'input[type="submit"][name="start_ai_design"]', count: 0
+  end
+
+  test "new material form offers copying as a kind and opens its source in a dialog" do
+    sign_in users(:instructor)
+    get new_course_lesson_lesson_material_path(@course, @lesson)
+
+    assert_select 'select[name="lesson_material[kind]"] option[value="copy"]', text: "Create from copy"
+    assert_select "form[action='#{course_lesson_lesson_materials_path(@course, @lesson)}']"
+    assert_select "#copy-material-dialog[role='dialog'][aria-hidden='true']" do
+      assert_select "select[name='source_course_id'] option[value='#{@course.id}']", text: @course.title
+      assert_select ".hidden[data-material-copy-selector-target='lessonGroup'] select[name='source_lesson_id'][disabled]"
+      assert_select ".hidden[data-material-copy-selector-target='materialGroup'] select[name='source_material_id'][disabled]"
+      assert_select "[data-material-copy-selector-catalog-value*='Pre-read']"
+    end
   end
 
   test "instructor creates an html material" do
@@ -133,6 +207,114 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
                                         body: "<p>hi</p>", required: "1" } }
     end
     assert_redirected_to edit_course_lesson_path(@course, @lesson)
+  end
+
+  test "instructor can start a new material directly with the AI designer" do
+    sign_in users(:instructor)
+
+    assert_difference("LessonMaterial.count", 1) do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: {
+             lesson_material: { title: "", kind: "ai_designed" }
+           }
+    end
+
+    material = LessonMaterial.order(:created_at).last
+    assert_equal "Untitled material", material.title
+    assert material.raw_html_iframe?
+    assert material.blank_ai_design_source?
+    assert_redirected_to new_course_lesson_lesson_material_material_design_revision_path(
+      @course, @lesson, material
+    )
+  end
+
+  test "instructor can copy an owned material and open it in the AI designer" do
+    sign_in users(:instructor)
+
+    assert_difference("LessonMaterial.count", 1) do
+      post copy_course_lesson_lesson_materials_path(@course, @lesson), params: {
+        source_material_id: @material.id,
+        copy_settings: "1",
+        open_in_designer: "1"
+      }
+    end
+
+    copy = LessonMaterial.order(:created_at).last
+    assert_equal @material, copy.source_material
+    assert_equal users(:instructor), copy.copied_by
+    assert_redirected_to new_course_lesson_lesson_material_material_design_revision_path(
+      @course, @lesson, copy
+    )
+  end
+
+  test "instructor can create from copy through the new material form" do
+    sign_in users(:instructor)
+
+    assert_difference("LessonMaterial.count", 1) do
+      post course_lesson_lesson_materials_path(@course, @lesson), params: {
+        lesson_material: { title: "", kind: "copy" },
+        source_material_id: @material.id,
+        copy_settings: "1",
+        open_in_designer: "1"
+      }
+    end
+
+    copy = LessonMaterial.order(:created_at).last
+    assert_equal @material, copy.source_material
+    assert_redirected_to new_course_lesson_lesson_material_material_design_revision_path(
+      @course, @lesson, copy
+    )
+  end
+
+  test "instructor cannot copy another instructor's material" do
+    source = LessonMaterial.create!(
+      lesson: lessons(:physics_lesson), title: "Private source", kind: :html, body: "No"
+    )
+    sign_in users(:instructor)
+
+    assert_no_difference("LessonMaterial.count") do
+      post copy_course_lesson_lesson_materials_path(@course, @lesson), params: {
+        source_material_id: source.id
+      }
+    end
+
+    assert_redirected_to root_path
+  end
+
+  test "instructor sees an import error for an invalid Google Docs ZIP" do
+    sign_in users(:instructor)
+    invalid_zip = Rack::Test::UploadedFile.new(
+      Rails.root.join("test/fixtures/files/poster.png"),
+      "application/zip",
+      false,
+      original_filename: "lesson.zip"
+    )
+
+    assert_no_difference("LessonMaterial.count") do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Imported", kind: "google_doc", google_doc_zip: invalid_zip } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "not a valid Google Docs ZIP"
+  end
+
+  test "Google document HTML cannot be supplied without the importer" do
+    sign_in users(:instructor)
+
+    assert_no_difference("LessonMaterial.count") do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: {
+             lesson_material: {
+               title: "Injected",
+               kind: "google_doc",
+               raw_html_content: "<script>alert('no')</script>"
+             }
+           }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "must be imported from a Google Docs Web Page ZIP"
   end
 
   test "instructor creates an image upload material" do
@@ -166,6 +348,8 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:instructor)
     get edit_course_lesson_lesson_material_path(@course, @lesson, @material)
     assert_response :success
+    assert_select "a[href='#{course_lesson_lesson_material_path(@course, @lesson, @material)}'][target='_blank']", text: "View material"
+    assert_select "a.ai-design-action[href='#{course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @material)}']", text: "Design"
   end
 
   test "instructor can update own material" do
@@ -176,12 +360,32 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Title", @material.reload.title
   end
 
+  test "instructor can configure a material to open by default" do
+    sign_in users(:instructor)
+    patch course_lesson_lesson_material_path(@course, @lesson, @material),
+          params: { lesson_material: { open_by_default: "1" } }
+
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert @material.reload.open_by_default?
+  end
+
+  test "lesson material uses its configured default display state" do
+    get course_lesson_path(@course, @lesson)
+    assert_select "#material-#{@material.id}[data-expanded='false']"
+
+    @material.update!(open_by_default: true)
+    get course_lesson_path(@course, @lesson)
+    assert_select "#material-#{@material.id}[data-expanded='true']"
+  end
+
   test "instructor can destroy own material" do
     sign_in users(:instructor)
     assert_difference("LessonMaterial.count", -1) do
       delete course_lesson_lesson_material_path(@course, @lesson, @material)
     end
-    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_redirected_to edit_course_lesson_path(@course, @lesson, open_materials: 1)
+    follow_redirect!
+    assert_select "#lesson-materials-editor[data-expanded='true']"
   end
 
   test "instructor can reorder materials" do
@@ -249,7 +453,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_difference("LessonMaterial.count", -1) do
       delete course_lesson_lesson_material_path(@course, @lesson, @material)
     end
-    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_redirected_to edit_course_lesson_path(@course, @lesson, open_materials: 1)
   end
 
   # ---------------------------------------------------------------------------

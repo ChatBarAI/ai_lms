@@ -23,7 +23,21 @@
     if (!emailField) return;
     const checkUrl = emailField.dataset.ssoCheckUrl;
     const notice = document.getElementById('sso-redirect-notice');
+    const googleSsoLink = document.querySelector('[data-google-sso-url]');
     let debounce;
+
+    function updateGoogleLoginHint() {
+      if (!googleSsoLink) return;
+
+      const url = new URL(googleSsoLink.dataset.googleSsoUrl, window.location.origin);
+      const email = emailField.value.trim();
+      if (email.includes('@')) url.searchParams.set('login_hint', email);
+      googleSsoLink.href = url.pathname + url.search;
+    }
+
+    emailField.addEventListener('input', updateGoogleLoginHint);
+    if (googleSsoLink) googleSsoLink.addEventListener('click', updateGoogleLoginHint);
+    updateGoogleLoginHint();
 
     emailField.addEventListener('blur', function () {
       clearTimeout(debounce);

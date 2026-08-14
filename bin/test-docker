@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bin/test-docker [TEST_PATH_OR_RAILS_TEST_OPTION...]
+
+Examples:
+  bin/test-docker
+  bin/test-docker test/models/lesson_test.rb
+  bin/test-docker test/models/lesson_test.rb:42
+
+Builds a test image from the current working tree, starts an isolated temporary
+PostgreSQL container, runs Rails tests, and removes the temporary resources.
+It does not use or modify the host PostgreSQL database or production volumes.
+USAGE
+}
+
+if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+command -v docker >/dev/null 2>&1 || {
+  echo "Docker is required." >&2
+  exit 1
+}
+docker info >/dev/null 2>&1 || {
+  echo "The Docker daemon is not available to the current user." >&2
+  exit 1
+}
+
+project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+run_id="$$-$RANDOM"
+network="ai-lms-test-$run_id"
+database_container="ai-lms-test-db-$run_id"
+image="ai-lms-test:local"
+database_password="docker-test-only"
+
+cleanup() {
+  docker rm --force "$database_container" >/dev/null 2>&1 || true
+  docker network rm "$network" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+echo "Building the Rails test image..."
+docker build \
+  --file "$project_root/Dockerfile.test" \
+  --tag "$image" \
+  "$project_root"
+
+docker network create "$network" >/dev/null
+docker run --detach \
+  --name "$database_container" \
+  --network "$network" \
+  --network-alias db \
+  --env POSTGRES_DB=ai_lms_test \
+  --env POSTGRES_USER=ai_lms \
+  --env "POSTGRES_PASSWORD=$database_password" \
+  postgres:16-bookworm >/dev/null
+
+echo "Waiting for PostgreSQL..."
+for _ in $(seq 1 30); do
+  if docker exec "$database_container" \
+    pg_isready --username ai_lms --dbname ai_lms_test >/dev/null 2>&1; then
+    break
+  fi
+
+  if [[ $(docker inspect --format '{{.State.Running}}' "$database_container") != true ]]; then
+    docker logs "$database_container" >&2
+    echo "The PostgreSQL test container stopped unexpectedly." >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+if ! docker exec "$database_container" \
+  pg_isready --username ai_lms --dbname ai_lms_test >/dev/null 2>&1; then
+  docker logs "$database_container" >&2
+  echo "PostgreSQL did not become ready." >&2
+  exit 1
+fi
+
+echo "Running Rails tests..."
+rails_container_options=(
+  --rm
+  --network "$network"
+  --env RAILS_ENV=test
+  --env "DATABASE_URL=postgresql://ai_lms:$database_password@db:5432/ai_lms_test"
+)
+
+# The default encrypted credentials are included in the build context, but
+# .dockerignore deliberately excludes their key. Mount the local development
+# key read-only for tests without ever storing it in the image.
+if [[ -f "$project_root/config/master.key" ]]; then
+  rails_container_options+=(
+    --volume "$project_root/config/master.key:/rails/config/master.key:ro"
+  )
+fi
+
+docker run "${rails_container_options[@]}" \
+  "$image" \
+  ./bin/rails test "$@"

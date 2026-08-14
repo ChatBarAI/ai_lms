@@ -1,0 +1,121 @@
+name: ai_lms
+
+x-app: &app
+  image: "${APP_IMAGE:?APP_IMAGE must identify the release image}"
+  build:
+    context: .
+  env_file:
+    - "${DEPLOY_ROOT:-/opt/ai_lms}/shared/.env"
+  environment:
+    DATABASE_URL: "postgresql://ai_lms:${POSTGRES_PASSWORD}@db:5432/ai_lms_production"
+    REDIS_URL: "redis://redis:6379/0"
+  volumes:
+    - storage:/rails/storage
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: ai_lms_production
+      POSTGRES_USER: ai_lms
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_lms -d ai_lms_production"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-bookworm
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    <<: *app
+    command: ["./bin/rails", "server", "-b", "0.0.0.0"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:3000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  worker:
+    <<: *app
+    command: ["bundle", "exec", "sidekiq"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+
+  proxy:
+    image: caddy:2
+    environment:
+      APP_DOMAINS: "${APP_DOMAINS:?APP_DOMAINS is required}"
+      ACME_EMAIL: "${ACME_EMAIL:?ACME_EMAIL is required}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  postgres:
+    name: ai_lms_postgres
+  redis:
+    name: ai_lms_redis
+  storage:
+    name: ai_lms_storage
+  caddy_data:
+    name: ai_lms_caddy_data
+  caddy_config:
+    name: ai_lms_caddy_config

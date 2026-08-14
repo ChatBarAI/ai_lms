@@ -8,7 +8,11 @@
 # Site Settings page, then restart the server and Sidekiq worker.
 resolve_redis_url = lambda do
   url = begin
-    SiteSetting.first&.redis_url.presence
+    if ActiveRecord::Base.connection.data_source_exists?("site_settings")
+      ::SiteSetting.first&.redis_url.presence
+    end
+  rescue ActiveRecord::NoDatabaseError
+    nil
   rescue => e
     Rails.logger.warn("[Sidekiq] Could not read redis_url from SiteSetting: #{e.message}")
     nil

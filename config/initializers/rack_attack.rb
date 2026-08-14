@@ -18,11 +18,19 @@ class Rack::Attack
     "question-callback/ip" => { limit: 60, period: 5.minutes },
     "question-callback/token" => { limit: 15, period: 5.minutes },
     "expensive-actions/user" => { limit: 10, period: 15.minutes },
-    "expensive-actions/ip" => { limit: 20, period: 15.minutes }
+    "expensive-actions/ip" => { limit: 20, period: 15.minutes },
+    "ai-design/user" => { limit: 3, period: 15.minutes },
+    "ai-design/ip" => { limit: 6, period: 15.minutes }
   }.transform_values(&:freeze).freeze
 
   def self.redis_url
-    SiteSetting.first&.redis_url.presence || ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
+    configured_url = if ActiveRecord::Base.connection.data_source_exists?("site_settings")
+      ::SiteSetting.first&.redis_url.presence
+    end
+
+    configured_url || ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
+  rescue ActiveRecord::NoDatabaseError
+    ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
   rescue StandardError => e
     Rails.logger.warn("[Rack::Attack] Could not read redis_url from SiteSetting: #{e.message}")
     ENV["REDIS_URL"].presence || "redis://localhost:6379/0"
@@ -31,10 +39,15 @@ class Rack::Attack
 
   # Rack::Attack is automatically Rails middleware, but has no effect without
   # rules. Production counters must be shared by every web process.
-  self.cache.store = if Rails.env.production?
-    ActiveSupport::Cache::RedisCacheStore.new(url: redis_url, namespace: REDIS_NAMESPACE)
+  if Rails.env.production?
+    Rails.application.config.after_initialize do
+      Rack::Attack.cache.store = ActiveSupport::Cache::RedisCacheStore.new(
+        url: Rack::Attack.send(:redis_url),
+        namespace: REDIS_NAMESPACE
+      )
+    end
   else
-    Rails.cache
+    self.cache.store = Rails.cache
   end
 
   def self.normalized_email(request)
@@ -111,6 +124,14 @@ class Rack::Attack
   end
   throttle("expensive-actions/ip", **THROTTLE_LIMITS.fetch("expensive-actions/ip")) do |request|
     request.ip if request.post? && request.path.match?(expensive_path)
+  end
+
+  ai_design_path = %r{\A/courses/[^/]+/lessons/[^/]+/lesson_materials/[^/]+/designs\z}
+  throttle("ai-design/user", **THROTTLE_LIMITS.fetch("ai-design/user")) do |request|
+    signed_in_user_id(request) if request.post? && request.path.match?(ai_design_path)
+  end
+  throttle("ai-design/ip", **THROTTLE_LIMITS.fetch("ai-design/ip")) do |request|
+    request.ip if request.post? && request.path.match?(ai_design_path)
   end
 
   self.throttled_responder = lambda do |request|

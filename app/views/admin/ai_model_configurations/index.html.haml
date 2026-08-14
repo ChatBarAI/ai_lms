@@ -1,0 +1,22 @@
+- content_for :title, "AI models"
+.flex.items-center.justify-between.mb-6
+  %div
+    %h1.text-2xl.font-bold AI model configurations
+    %p.text-sm.text-gray-500 Encrypted provider credentials used by the material HTML designer.
+  = link_to "New configuration", new_admin_ai_model_configuration_path, class: "px-3 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+
+.space-y-3
+  - @configurations.each do |configuration|
+    .bg-white.border.border-gray-200.rounded-lg.p-4.flex.items-center.justify-between
+      %div
+        .flex.items-center.gap-2
+          %h2.font-semibold= configuration.name
+          %span.text-xs.rounded-full.px-2.py-0.5{ class: configuration.enabled? ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600" }= configuration.enabled? ? "Enabled" : "Disabled"
+        %p.text-sm.text-gray-600= "#{configuration.provider} · #{configuration.model}"
+        %p.text-xs.text-gray-500= "#{number_with_delimiter(configuration.context_window_tokens)} token context · #{number_with_precision(configuration.input_cost_cents_per_million_tokens, strip_insignificant_zeros: true)}¢ input / #{number_with_precision(configuration.output_cost_cents_per_million_tokens, strip_insignificant_zeros: true)}¢ output per 1M tokens"
+        %p.text-xs.text-gray-500= configuration.api_key_configured? ? "API key configured" : "API key missing"
+      .flex.gap-2
+        = link_to "Edit", edit_admin_ai_model_configuration_path(configuration), class: "px-3 py-1.5 rounded border border-gray-300 text-sm"
+        = button_to "Delete", admin_ai_model_configuration_path(configuration), method: :delete, data: { turbo_confirm: "Delete this AI configuration?" }, class: "px-3 py-1.5 rounded bg-red-100 text-red-800 text-sm"
+  - if @configurations.empty?
+    .bg-white.border.border-gray-200.rounded-lg.p-6.text-gray-500 No AI model configurations yet.

@@ -70,9 +70,25 @@ Rails.application.routes.draw do
       resources :lesson_materials do
         collection do
           post :reorder
+          post :copy
         end
         member do
           post :acknowledge
+          get :document
+        end
+        resources :material_design_revisions, path: "designs", only: [ :index, :new, :create, :show, :destroy ] do
+          collection do
+            get :source_preview
+          end
+          member do
+            get :preview
+            post :accept
+          end
+        end
+        resources :material_design_assets, path: "design-assets", only: [ :create, :update, :destroy ] do
+          collection do
+            delete "imported/:id", action: :destroy_imported, as: :imported
+          end
         end
       end
     end
@@ -83,6 +99,8 @@ Rails.application.routes.draw do
   get "/certificates/:token", to: "verifications#show", as: :verify_certificate
 
   resources :progresses, only: [ :update ]
+  get "material-design-assets/:id/file", to: "material_design_assets#file", as: :material_design_asset_file
+  get "material-design-imported-assets/:id/file", to: "material_design_assets#imported_file", as: :material_design_imported_asset_file
 
   resources :tags, only: [ :show ]
   namespace :admin do
@@ -113,6 +131,7 @@ Rails.application.routes.draw do
       end
     end
     resources :tags
+    resources :ai_model_configurations, except: :show
     resource  :site_setting, only: [ :edit, :update ]
     resources :certificates, only: [ :index, :destroy ]
   end

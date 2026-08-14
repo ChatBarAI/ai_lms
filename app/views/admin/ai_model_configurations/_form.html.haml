@@ -1,0 +1,49 @@
+= form_with model: configuration, url: (configuration.persisted? ? admin_ai_model_configuration_path(configuration) : admin_ai_model_configurations_path), class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6", data: { controller: "ai-model-configuration", "ai-model-configuration-providers-value": AiModelConfiguration::PROVIDERS.to_json } do |f|
+  - if configuration.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
+      %ul.list-disc.pl-5
+        - configuration.errors.full_messages.each do |message|
+          %li= message
+
+  .grid.grid-cols-1.md:grid-cols-2.gap-4
+    %div
+      = f.label :name, class: "block text-sm font-medium mb-1"
+      = f.text_field :name, class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+    %div
+      = f.label :provider, class: "block text-sm font-medium mb-1"
+      = f.select :provider, AiModelConfiguration::PROVIDERS.map { |value, details| [details.fetch(:label), value] }, {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white", data: { "ai-model-configuration-target": "provider", action: "change->ai-model-configuration#providerChanged" }
+    %div
+      = f.label :model, class: "block text-sm font-medium mb-1"
+      = f.text_field :model, list: "ai-model-options", class: "w-full border border-gray-300 rounded px-3 py-2", required: true, data: { "ai-model-configuration-target": "model" }
+      %datalist#ai-model-options{ data: { "ai-model-configuration-target": "models" } }
+      %p.text-xs.text-gray-500.mt-1 Choose a suggestion or enter any model ID supported by the provider.
+    %div
+      = f.label :base_url, "API base URL", class: "block text-sm font-medium mb-1"
+      = f.url_field :base_url, class: "w-full border border-gray-300 rounded px-3 py-2", required: true, data: { "ai-model-configuration-target": "baseUrl" }
+    .md:col-span-2.grid.grid-cols-1.md:grid-cols-3.gap-4
+      %div
+        = f.label :context_window_tokens, "Context window (tokens)", class: "block text-sm font-medium mb-1", title: "Maximum combined input and output tokens supported by this model."
+        = f.number_field :context_window_tokens, min: 16001, step: 1, class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+      %div
+        = f.label :input_cost_cents_per_million_tokens, "Input cost (cents per 1M tokens)", class: "block text-sm font-medium mb-1", title: "Used only for estimates; check the provider's current input-token pricing."
+        = f.number_field :input_cost_cents_per_million_tokens, min: 0, step: 0.000001, class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+      %div
+        = f.label :output_cost_cents_per_million_tokens, "Output cost (cents per 1M tokens)", class: "block text-sm font-medium mb-1", title: "Used only for estimates; check the provider's current output-token pricing."
+        = f.number_field :output_cost_cents_per_million_tokens, min: 0, step: 0.000001, class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+    %div.md:col-span-2
+      = f.label :api_key, class: "block text-sm font-medium mb-1"
+      = f.password_field :api_key, value: nil, autocomplete: "new-password", class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: (configuration.api_key_configured? ? "Key configured — leave blank to keep it" : "API key")
+      %p.text-xs.text-gray-500.mt-1 Stored using Rails application-level encryption and never displayed again.
+    %div.md:col-span-2
+      = f.label :description, class: "block text-sm font-medium mb-1"
+      = f.text_area :description, rows: 2, class: "w-full border border-gray-300 rounded px-3 py-2"
+    %div.md:col-span-2
+      = f.label :system_prompt, "Custom system prompt", class: "block text-sm font-medium mb-1"
+      = f.text_area :system_prompt, rows: 10, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm", placeholder: AiModelConfiguration::DEFAULT_SYSTEM_PROMPT
+      %p.text-xs.text-gray-500.mt-1 Leave blank to use the secure built-in HTML design prompt.
+  = toggle_switch_field f, :enabled,
+      label: "Available for AI design",
+      title: "Allow instructors and administrators to select this AI model when generating or revising lesson material designs."
+  .flex.gap-2
+    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+    = link_to "Cancel", admin_ai_model_configurations_path, class: "px-4 py-2 rounded border border-gray-300"

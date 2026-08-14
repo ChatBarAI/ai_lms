@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  deploy/restore --force CLONE_BUNDLE
+
+This completely replaces the target database and Active Storage files.
+
+Environment:
+  DEPLOY_MODE=auto|docker|native
+  DEPLOY_ROOT=/opt/ai_lms
+  STORAGE_PATH=/path/to/storage       # native only
+  NATIVE_WRITES_STOPPED=1             # required for native restore
+  PRESERVE_INSTANCE_SETTINGS=1        # retain source app_url and redis_url
+USAGE
+}
+
+[[ ${1:-} == --force && $# -eq 2 ]] || { usage >&2; exit 2; }
+
+bundle=$(readlink -f "$2")
+[[ -f $bundle ]] || { echo "Clone bundle not found: $2" >&2; exit 1; }
+
+app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+mode=${DEPLOY_MODE:-auto}
+deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+env_file="$deploy_root/shared/.env"
+work_dir=$(mktemp -d)
+docker_stopped=false
+restore_succeeded=false
+
+cleanup() {
+  if $docker_stopped && $restore_succeeded; then
+    "${compose[@]}" up -d web worker proxy >/dev/null
+  fi
+  rm -rf -- "$work_dir"
+}
+trap cleanup EXIT
+
+mapfile -t bundle_entries < <(tar -tzf "$bundle")
+if printf '%s\n' "${bundle_entries[@]}" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+  echo "Unsafe path found in clone bundle." >&2
+  exit 1
+fi
+expected_entries=$'database.dump\nmetadata\nstorage.tar.gz'
+actual_entries=$(printf '%s\n' "${bundle_entries[@]}" | sort)
+[[ $actual_entries == "$expected_entries" ]] || {
+  echo "Clone bundle contains unexpected files." >&2
+  exit 1
+}
+tar -xzf "$bundle" -C "$work_dir"
+
+[[ $(sed -n 's/^format=//p' "$work_dir/metadata") == ai_lms_clone_v1 ]] ||
+  { echo "Unsupported or invalid clone bundle." >&2; exit 1; }
+[[ -s "$work_dir/database.dump" && -s "$work_dir/storage.tar.gz" ]] ||
+  { echo "Clone bundle is incomplete." >&2; exit 1; }
+
+if tar -tzf "$work_dir/storage.tar.gz" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+  echo "Unsafe path found in Active Storage archive." >&2
+  exit 1
+fi
+if tar -tvzf "$work_dir/storage.tar.gz" |
+    awk 'substr($1, 1, 1) != "-" && substr($1, 1, 1) != "d" { unsafe = 1 } END { exit !unsafe }'; then
+  echo "Active Storage archive contains links or special files." >&2
+  exit 1
+fi
+
+docker_available() {
+  command -v docker >/dev/null 2>&1 &&
+    [[ -f $env_file && -f "$app_root/compose.yaml" ]]
+}
+
+if [[ $mode == auto ]]; then
+  if docker_available; then
+    mode=docker
+  else
+    mode=native
+  fi
+fi
+
+case "$mode" in
+  docker)
+    docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
+    export APP_IMAGE="ai_lms:$(basename "$app_root")"
+    compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
+
+    echo "Stopping the target application..."
+    "${compose[@]}" stop web worker proxy
+    docker_stopped=true
+    "${compose[@]}" up -d db redis
+
+    echo "Replacing PostgreSQL data..."
+    "${compose[@]}" exec -T db \
+      pg_restore --clean --if-exists --no-owner --no-privileges \
+      --exit-on-error -U ai_lms -d ai_lms_production < "$work_dir/database.dump"
+
+    echo "Replacing Active Storage files..."
+    docker run --rm \
+      -v ai_lms_storage:/target \
+      alpine:3.22 sh -c 'find /target -mindepth 1 -delete'
+    docker run --rm \
+      -v ai_lms_storage:/target \
+      -v "$work_dir:/backup:ro" \
+      alpine:3.22 sh -c 'tar -xzf /backup/storage.tar.gz -C /target && chown -R 1000:1000 /target && chmod -R u=rwX,go=rX /target'
+
+    "${compose[@]}" run --rm web ./bin/rails db:migrate
+    if [[ ${PRESERVE_INSTANCE_SETTINGS:-0} != 1 ]]; then
+      "${compose[@]}" run --rm web ./bin/rails runner \
+        'SiteSetting.update_all(redis_url: nil, app_url: nil)'
+    fi
+    restore_succeeded=true
+    ;;
+  native)
+    requested_storage_path=$(readlink -m "${STORAGE_PATH:-"$app_root/storage"}")
+    [[ $requested_storage_path =~ ^/[A-Za-z0-9._/-]+$ && $requested_storage_path != / ]] ||
+      { echo "STORAGE_PATH must be a safe absolute directory other than /." >&2; exit 1; }
+    command -v pg_restore >/dev/null 2>&1 || { echo "pg_restore is required." >&2; exit 1; }
+    [[ ${NATIVE_WRITES_STOPPED:-0} == 1 ]] || {
+      echo "Stop Puma and Sidekiq, then run with NATIVE_WRITES_STOPPED=1." >&2
+      exit 1
+    }
+
+    echo "Replacing PostgreSQL data..."
+    (
+      cd "$app_root"
+      RAILS_ENV=production bin/rails runner \
+        deploy/database_transfer.rb restore "$work_dir/database.dump"
+    )
+
+    echo "Replacing Active Storage files..."
+    mkdir -p "$requested_storage_path"
+    storage_path=$(readlink -f "$requested_storage_path")
+    [[ $storage_path != / ]] ||
+      { echo "STORAGE_PATH resolved to an unsafe directory." >&2; exit 1; }
+    find "$storage_path" -mindepth 1 -delete
+    tar --no-same-owner --no-same-permissions \
+      -xzf "$work_dir/storage.tar.gz" -C "$storage_path"
+    (
+      cd "$app_root"
+      RAILS_ENV=production bin/rails db:migrate
+    )
+    if [[ ${PRESERVE_INSTANCE_SETTINGS:-0} != 1 ]]; then
+      (
+        cd "$app_root"
+        RAILS_ENV=production bin/rails runner \
+          'SiteSetting.update_all(redis_url: nil, app_url: nil)'
+      )
+    fi
+    restore_succeeded=true
+    ;;
+  *)
+    echo "DEPLOY_MODE must be auto, docker, or native." >&2
+    exit 2
+    ;;
+esac
+
+echo "Clone restored successfully."
+if [[ $mode == native ]]; then
+  echo "Restart the native Puma and Sidekiq services now."
+fi

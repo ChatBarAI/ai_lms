@@ -1,0 +1,14 @@
+- dialog_id = "#{id}-dialog"
+- title_id = "#{id}-title"
+%div{ data: { controller: "status-modal", status_modal_dialog_id_value: dialog_id } }
+  %button.block.w-full.cursor-zoom-in.rounded.focus:outline-none.focus:ring-2.focus:ring-violet-500.focus:ring-offset-2{ class: "dark:focus:ring-offset-gray-800", type: "button", data: { action: "click->status-modal#open" }, "aria-haspopup": "dialog", "aria-controls": dialog_id, "aria-label": "Open larger image: #{name}" }
+    = image_tag url, class: "w-full h-24 object-cover rounded", alt: alt_text
+
+  .fixed.inset-0.z-50.hidden{ id: dialog_id, data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": title_id, "aria-hidden": "true" }
+    .absolute.inset-0{ style: "background:rgba(17,24,39,0.75);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+    .absolute.bg-white.rounded-xl.shadow-2xl.border.border-gray-200{ class: "dark:bg-gray-800 dark:border-gray-700", style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(94vw,72rem);max-height:92vh", tabindex: "-1", data: { dialog_target: "panel" } }
+      .flex.items-center.justify-between.gap-4.border-b.border-gray-200.px-4.py-3{ class: "dark:border-gray-700" }
+        %h2.font-semibold.text-gray-900.truncate{ id: title_id }= name
+        %button.shrink-0.text-gray-500.hover:text-gray-700.text-2xl.leading-none.cursor-pointer{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close image preview" } ×
+      .flex.items-center.justify-center.overflow-auto.p-4{ style: "max-height:calc(92vh - 3.5rem)" }
+        = image_tag url, class: "max-w-full h-auto object-contain", style: "max-height:calc(92vh - 5.5rem)", alt: alt_text

@@ -60,12 +60,14 @@
             - if @lesson.poster_image.attached?
               = button_to "Remove", destroy_poster_course_lesson_path(@course, @lesson), method: :delete, data: { turbo_confirm: "Remove the poster image?" }, class: "px-4 py-2 rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 cursor-pointer text-sm"
 
-.bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
+.bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{ id: "lesson-materials-editor", data: { controller: "collapsible", expanded: (params[:open_materials] == "1").to_s } }
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
     .flex.items-center.gap-2
       = "Materials"
       %span.inline-flex.items-center.px-1.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-500= @lesson.lesson_materials.size
-    = collapsible_icon_badge
+    .flex.items-center.gap-2
+      = link_to "+ Add material", new_course_lesson_lesson_material_path(@course, @lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+      = collapsible_icon_badge
   %div{data: { collapsible_target: "content" }}
     %p.text-sm.text-gray-500.mt-3.mb-3= "Optional PDFs, rich text, raw HTML, image uploads, or audio that students complete before the #{terms[:quiz_l]}. Drag to reorder."
     - if @lesson.lesson_materials.any?
@@ -79,9 +81,6 @@
               %p.text-xs.text-gray-500= "#{m.kind_label}#{' · required' if m.required?}"
             = link_to "Edit", edit_course_lesson_lesson_material_path(@course, @lesson, m), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
             = button_to "Delete", course_lesson_lesson_material_path(@course, @lesson, m), method: :delete, data: { turbo_confirm: "Delete material?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer"
-    - else
-      %p.text-sm.text-gray-500.italic.mb-3 No materials yet.
-    = link_to "+ Add material", new_course_lesson_lesson_material_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
 
 .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}

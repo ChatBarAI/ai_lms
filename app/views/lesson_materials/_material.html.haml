@@ -1,5 +1,5 @@
 - acknowledged = local_assigns.fetch(:acknowledged, material.acknowledged_by?(enrollment))
-- collapsed = local_assigns.fetch(:collapsed, true)
+- collapsed = local_assigns.fetch(:collapsed, !material.open_by_default?)
 %section.bg-white.border.border-gray-200.rounded-lg.p-4.mb-4{ id: "material-#{material.id}", data: { controller: "collapsible", expanded: (collapsed ? "false" : "true") } }
   .flex.items-center.justify-between.gap-3
     .flex-1.cursor-pointer{ data: { action: "click->collapsible#toggle keydown.enter->collapsible#toggle keydown.space->collapsible#toggle:prevent" }, role: "button", tabindex: "0", "aria-label": "Toggle #{material.title}" }
@@ -30,6 +30,43 @@
       .prose.max-w-none= material.body
     - when "raw_html"
       .prose.max-w-none= material.raw_html_content.html_safe
+    - when "raw_html_iframe"
+      %iframe.w-full.border.border-gray-200.rounded{
+        src: document_course_lesson_lesson_material_path(course, lesson, material),
+        title: material.title,
+        data: { controller: "material-frame", "material-frame-min-height-value": 480 },
+        loading: "lazy",
+        referrerpolicy: "no-referrer",
+        sandbox: "allow-same-origin allow-popups allow-popups-to-escape-sandbox",
+        style: "height: 70vh; min-height: 480px;"
+      }
+      .flex.justify-end.mt-2
+        = link_to "Open in new tab", document_course_lesson_lesson_material_path(course, lesson, material), target: "_blank", rel: "noopener", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    - when "google_doc"
+      %iframe.w-full.border.border-gray-200.rounded{
+        src: document_course_lesson_lesson_material_path(course, lesson, material),
+        title: material.title,
+        data: { controller: "material-frame", "material-frame-min-height-value": 480 },
+        loading: "lazy",
+        referrerpolicy: "no-referrer",
+        sandbox: "allow-same-origin allow-popups allow-popups-to-escape-sandbox",
+        style: "height: 70vh; min-height: 480px;"
+      }
+      .flex.justify-end.mt-2
+        = link_to "Open in new tab", document_course_lesson_lesson_material_path(course, lesson, material), target: "_blank", rel: "noopener", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    - when "web_page"
+      %iframe.w-full.border.border-gray-200.rounded{
+        src: document_course_lesson_lesson_material_path(course, lesson, material),
+        title: material.title,
+        data: { controller: "material-frame", "material-frame-min-height-value": 480 },
+        loading: "lazy",
+        referrerpolicy: "no-referrer",
+        sandbox: "allow-same-origin allow-popups allow-popups-to-escape-sandbox",
+        style: "height: 70vh; min-height: 480px;"
+      }
+      .flex.justify-between.mt-2
+        = link_to "Source page", material.url, target: "_blank", rel: "noopener noreferrer", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-indigo-700 hover:underline"
+        = link_to "Open snapshot in new tab", document_course_lesson_lesson_material_path(course, lesson, material), target: "_blank", rel: "noopener", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
     - when "audio_upload"
       - if material.audio_file.attached?
         %audio.w-full.rounded{ controls: true, preload: "metadata" }

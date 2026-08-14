@@ -13,14 +13,15 @@ WORKDIR /rails
 
 # Install base packages
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips postgresql-client && \
+    apt-get install --no-install-recommends -y ca-certificates curl libjemalloc2 libvips postgresql-client && \
+    update-ca-certificates && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
 ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development"
+    BUNDLE_WITHOUT="development:test"
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
@@ -58,6 +59,7 @@ COPY --from=build /rails /rails
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    mkdir -p db log storage tmp/pids && \
     chown -R rails:rails db log storage tmp
 USER 1000:1000
 
