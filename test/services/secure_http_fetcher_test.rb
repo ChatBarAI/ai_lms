@@ -8,6 +8,12 @@ class SecureHttpFetcherTest < ActiveSupport::TestCase
     end
   end
 
+  FailingTlsHttp = Struct.new(:ipaddr, :use_ssl, :open_timeout, :read_timeout) do
+    def request(_request)
+      raise OpenSSL::SSL::SSLError, "certificate verify failed"
+    end
+  end
+
   test "accepts a public HTTPS URL" do
     fetcher = SecureHttpFetcher.new(resolver: ->(_host) { [ "93.184.216.34" ] })
 
@@ -44,5 +50,18 @@ class SecureHttpFetcherTest < ActiveSupport::TestCase
 
       assert_equal "downloaded body", result
     end
+  end
+
+  test "converts TLS failures into a safe fetch error" do
+    fetcher = SecureHttpFetcher.new
+    fake_http = FailingTlsHttp.new
+
+    error = assert_raises(SecureHttpFetcher::Error) do
+      Net::HTTP.stub(:new, fake_http) do
+        fetcher.send(:perform_request, URI("https://example.com/page"), "93.184.216.34")
+      end
+    end
+
+    assert_equal "The website's HTTPS certificate could not be verified.", error.message
   end
 end

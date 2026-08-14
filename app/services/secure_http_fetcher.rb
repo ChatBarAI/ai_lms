@@ -1,5 +1,6 @@
 require "ipaddr"
 require "net/http"
+require "openssl"
 require "resolv"
 require "uri"
 
@@ -75,6 +76,11 @@ class SecureHttpFetcher
     result = nil
     http.request(request) { |response| result = yield response }
     result
+  rescue OpenSSL::SSL::SSLError => error
+    Rails.logger.warn(
+      "[SecureHttpFetcher] TLS failure for #{uri.host}: #{error.class}: #{error.message}"
+    )
+    raise Error, "The website's HTTPS certificate could not be verified."
   rescue SocketError, SystemCallError, Timeout::Error, Net::OpenTimeout, Net::ReadTimeout => error
     raise Error, "Network error: #{error.class}: #{error.message}"
   end
