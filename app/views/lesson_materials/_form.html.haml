@@ -45,8 +45,8 @@
           preview_type: :file,
           current_attachment: material.document
 
-    %div{ data: { material_kind_target: "html", controller: "trix-insert-html" } }
-      = f.label :body, "Rich text content", class: "block text-sm font-medium mb-1"
+    %div{ data: { controller: "trix-insert-html" } }
+      = f.label :body, "Material Description", class: "block text-sm font-medium mb-1"
       = f.rich_text_area :body, class: "resizable-rich-text-editor block w-full border border-gray-300 rounded"
       .flex.justify-end.mt-2
         %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800.hover:bg-gray-200.border.border-gray-200{ type: "button", data: { action: "trix-insert-html#toggle" } } &lt;&gt; Insert HTML
