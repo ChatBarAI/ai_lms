@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+output=${1:-"$app_root/ai-lms-clone-$timestamp.tar.gz"}
+output=$(readlink -m "$output")
+mode=${DEPLOY_MODE:-auto}
+deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+env_file="$deploy_root/shared/.env"
+work_dir=$(mktemp -d)
+docker_stopped=false
+
+cleanup() {
+  if $docker_stopped; then
+    "${compose[@]}" up -d web worker proxy >/dev/null
+  fi
+  rm -rf -- "$work_dir"
+}
+trap cleanup EXIT
+
+docker_available() {
+  command -v docker >/dev/null 2>&1 &&
+    [[ -f $env_file && -f "$app_root/compose.yaml" ]]
+}
+
+if [[ $mode == auto ]]; then
+  if docker_available; then
+    export APP_IMAGE="ai_lms:$(basename "$app_root")"
+    compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
+    if [[ -n $("${compose[@]}" ps -q db 2>/dev/null) ]]; then
+      mode=docker
+    else
+      mode=native
+    fi
+  else
+    mode=native
+  fi
+fi
+
+case "$mode" in
+  docker)
+    docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
+    export APP_IMAGE="ai_lms:$(basename "$app_root")"
+    compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
+
+    echo "Pausing Docker web and worker services for a consistent snapshot..."
+    "${compose[@]}" stop web worker
+    docker_stopped=true
+
+    "${compose[@]}" exec -T db \
+      pg_dump --format=custom --no-owner --no-privileges \
+      -U ai_lms -d ai_lms_production > "$work_dir/database.dump"
+
+    docker run --rm \
+      -v ai_lms_storage:/source:ro \
+      -v "$work_dir:/backup" \
+      alpine:3.22 tar -czf /backup/storage.tar.gz -C /source .
+    ;;
+  native)
+    storage_path=$(readlink -f "${STORAGE_PATH:-"$app_root/storage"}")
+    [[ $storage_path =~ ^/[A-Za-z0-9._/-]+$ && $storage_path != / ]] ||
+      { echo "STORAGE_PATH must be a safe absolute directory other than /." >&2; exit 1; }
+    [[ -d $storage_path ]] || { echo "Storage directory not found: $storage_path" >&2; exit 1; }
+    command -v pg_dump >/dev/null 2>&1 || { echo "pg_dump is required." >&2; exit 1; }
+
+    if [[ ${NATIVE_WRITES_STOPPED:-0} != 1 ]]; then
+      echo "Refusing a potentially inconsistent native snapshot." >&2
+      echo "Stop Puma and Sidekiq, then run with NATIVE_WRITES_STOPPED=1." >&2
+      exit 1
+    fi
+
+    (
+      cd "$app_root"
+      RAILS_ENV=production bin/rails runner \
+        deploy/database_transfer.rb dump "$work_dir/database.dump"
+    )
+    tar -czf "$work_dir/storage.tar.gz" -C "$storage_path" .
+    ;;
+  *)
+    echo "DEPLOY_MODE must be auto, docker, or native." >&2
+    exit 2
+    ;;
+esac
+
+{
+  printf 'format=ai_lms_clone_v1\n'
+  printf 'created_at=%s\n' "$timestamp"
+  printf 'source_mode=%s\n' "$mode"
+} > "$work_dir/metadata"
+
+mkdir -p "$(dirname "$output")"
+tar -czf "$output" -C "$work_dir" metadata database.dump storage.tar.gz
+chmod 600 "$output"
+echo "Clone bundle written to $output"

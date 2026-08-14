@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+release_dir=${1:?release directory is required}
+deploy_root=${2:-/opt/ai_lms}
+app_domain=${3:?application domain is required}
+requested_domains=${4:-}
+allow_domain_change=${5:-false}
+rails_key_file=${6:-}
+domain_changed=false
+
+if [[ $EUID -ne 0 ]]; then
+  echo "deploy/server must run as root" >&2
+  exit 1
+fi
+
+[[ $release_dir =~ ^/[A-Za-z0-9._/-]+$ &&
+   $deploy_root =~ ^/[A-Za-z0-9._/-]+$ &&
+   $deploy_root != / &&
+   ! $release_dir =~ (^|/)\.\.?(/|$) &&
+   ! $deploy_root =~ (^|/)\.\.?(/|$) &&
+   $release_dir == "$deploy_root/releases/"* ]] || {
+  echo "Unsafe deployment or release path." >&2
+  exit 1
+}
+case "${deploy_root%/}" in
+  /bin|/boot|/dev|/etc|/home|/lib|/lib64|/media|/mnt|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var)
+    echo "Deployment root is too broad." >&2
+    exit 1
+    ;;
+esac
+
+if [[ -n $rails_key_file && -e $rails_key_file ]]; then
+  chmod 600 "$rails_key_file"
+  trap 'rm -f -- "$rails_key_file"' EXIT
+fi
+
+install_docker() {
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get install -y ca-certificates curl gnupg openssl
+
+  # Install from Docker's signed Debian repository. Verify the long-lived
+  # signing-key fingerprint before trusting repository metadata.
+  docker_key=$(mktemp)
+  curl -fsSL https://download.docker.com/linux/debian/gpg -o "$docker_key"
+  docker_fingerprint=$(gpg --batch --show-keys --with-colons "$docker_key" |
+    awk -F: '$1 == "fpr" { print $10; exit }')
+  if [[ $docker_fingerprint != 9DC858229FC7DD38854AE2D88D81803C0EBFCD88 ]]; then
+    rm -f "$docker_key"
+    echo "Docker repository signing-key fingerprint did not match." >&2
+    exit 1
+  fi
+
+  install -m 0755 -d /etc/apt/keyrings
+  install -m 0644 "$docker_key" /etc/apt/keyrings/docker.asc
+  rm -f "$docker_key"
+
+  # shellcheck disable=SC1091
+  source /etc/os-release
+  [[ ${ID:-} == debian && ${VERSION_CODENAME:-} =~ ^[a-z0-9]+$ ]] || {
+    echo "The automatic Docker bootstrap supports Debian only." >&2
+    exit 1
+  }
+  {
+    printf 'Types: deb\n'
+    printf 'URIs: https://download.docker.com/linux/debian\n'
+    printf 'Suites: %s\n' "$VERSION_CODENAME"
+    printf 'Components: stable\n'
+    printf 'Signed-By: /etc/apt/keyrings/docker.asc\n'
+  } > /etc/apt/sources.list.d/docker.sources
+
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin
+  systemctl enable --now docker
+}
+
+if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+  install_docker
+fi
+
+shared_dir="$deploy_root/shared"
+env_file="$shared_dir/.env"
+mkdir -p "$shared_dir" "$deploy_root/releases"
+chmod 700 "$shared_dir"
+
+if [[ ! -f $env_file ]]; then
+  if [[ -z $rails_key_file || ! -s $rails_key_file ]]; then
+    echo "A Rails production key is required for the first deployment." >&2
+    exit 1
+  fi
+
+  postgres_password=$(openssl rand -hex 32)
+  rails_master_key=$(tr -d '\r\n' < "$rails_key_file")
+  acme_email="admin@$app_domain"
+
+  {
+    printf 'RAILS_ENV=production\n'
+    printf 'RAILS_SERVE_STATIC_FILES=true\n'
+    printf 'RAILS_LOG_TO_STDOUT=true\n'
+    printf 'RAILS_MASTER_KEY=%s\n' "$rails_master_key"
+    printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
+    printf 'APP_DOMAIN=%s\n' "$app_domain"
+    printf 'APP_DOMAINS=%s\n' "${requested_domains:-$app_domain}"
+    printf 'APP_HOST=https://%s\n' "$app_domain"
+    printf 'CALLBACK_HOST=https://%s\n' "$app_domain"
+    printf 'ACME_EMAIL=%s\n' "$acme_email"
+    printf 'MAILER_SENDER=no-reply@%s\n' "$app_domain"
+    printf 'MAIL_DELIVERY_METHOD=smtp\n'
+  } > "$env_file"
+  chmod 600 "$env_file"
+else
+  configured_domain=$(sed -n 's/^APP_DOMAIN=//p' "$env_file")
+  if [[ $configured_domain != "$app_domain" ]]; then
+    if [[ $allow_domain_change != true ]]; then
+      echo "Domain mismatch: shared environment uses '$configured_domain', requested '$app_domain'." >&2
+      echo "Use bin/deploy --change-domain to change the canonical hostname explicitly." >&2
+      exit 1
+    fi
+
+    previous_domains=$(sed -n 's/^APP_DOMAINS=//p' "$env_file")
+    previous_domains=${previous_domains:-$configured_domain}
+    sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$app_domain|" "$env_file"
+    sed -i "s|^APP_HOST=.*|APP_HOST=https://$app_domain|" "$env_file"
+    sed -i "s|^CALLBACK_HOST=.*|CALLBACK_HOST=https://$app_domain|" "$env_file"
+
+    if grep -qx "ACME_EMAIL=admin@$configured_domain" "$env_file"; then
+      sed -i "s|^ACME_EMAIL=.*|ACME_EMAIL=admin@$app_domain|" "$env_file"
+    fi
+    if grep -qx "MAILER_SENDER=no-reply@$configured_domain" "$env_file"; then
+      sed -i "s|^MAILER_SENDER=.*|MAILER_SENDER=no-reply@$app_domain|" "$env_file"
+    fi
+
+    if [[ -z $requested_domains ]]; then
+      requested_domains="$app_domain, $previous_domains"
+    fi
+    domain_changed=true
+  fi
+
+  if [[ -n $requested_domains ]]; then
+    if grep -q '^APP_DOMAINS=' "$env_file"; then
+      sed -i "s/^APP_DOMAINS=.*/APP_DOMAINS=$requested_domains/" "$env_file"
+    else
+      printf 'APP_DOMAINS=%s\n' "$requested_domains" >> "$env_file"
+    fi
+  elif ! grep -q '^APP_DOMAINS=' "$env_file"; then
+    printf 'APP_DOMAINS=%s\n' "$app_domain" >> "$env_file"
+  fi
+fi
+
+rm -f "$rails_key_file"
+trap - EXIT
+
+release_name=$(basename "$release_dir")
+export DEPLOY_ROOT="$deploy_root"
+export APP_IMAGE="ai_lms:$release_name"
+compose=(docker compose --env-file "$env_file")
+
+cd "$release_dir"
+"${compose[@]}" build web
+"${compose[@]}" up -d db redis
+"${compose[@]}" run --rm web ./bin/rails db:prepare
+if $domain_changed; then
+  "${compose[@]}" run --rm web ./bin/rails runner \
+    'SiteSetting.update_all(app_url: ENV.fetch("APP_HOST"))'
+fi
+"${compose[@]}" up -d --remove-orphans
+
+web_id=$("${compose[@]}" ps -q web)
+for _ in $(seq 1 30); do
+  health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$web_id")
+  [[ $health == healthy ]] && break
+  [[ $health == unhealthy || $health == exited || $health == dead ]] && {
+    "${compose[@]}" logs --tail=100 web
+    exit 1
+  }
+  sleep 2
+done
+
+health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$web_id")
+if [[ $health != healthy ]]; then
+  "${compose[@]}" logs --tail=100 web
+  echo "Web container did not become healthy." >&2
+  exit 1
+fi
+
+proxy_id=$("${compose[@]}" ps -q proxy)
+for _ in $(seq 1 15); do
+  health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$proxy_id")
+  [[ $health == healthy ]] && break
+  [[ $health == unhealthy || $health == exited || $health == dead || $health == restarting ]] && {
+    "${compose[@]}" logs --tail=100 proxy
+    exit 1
+  }
+  sleep 2
+done
+
+health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$proxy_id")
+if [[ $health != healthy ]]; then
+  "${compose[@]}" logs --tail=100 proxy
+  echo "Caddy proxy container did not become healthy." >&2
+  exit 1
+fi
+
+ln -sfn "$release_dir" "$deploy_root/current"
+
+# Keep the current release and the four previous releases.
+mapfile -t old_releases < <(find "$deploy_root/releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' |
+  sort -rn | tail -n +6 | cut -d' ' -f2-)
+for old_release in "${old_releases[@]}"; do
+  [[ $old_release == "$release_dir" ]] || rm -rf -- "$old_release"
+done
+
+docker image prune -f >/dev/null
+"${compose[@]}" ps
+echo "Deployed $release_name to https://$app_domain"

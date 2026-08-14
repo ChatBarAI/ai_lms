@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -50,6 +50,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "ai_model_configurations", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.string "provider", default: "openai", null: false
+    t.string "model", default: "gpt-5.6-sol", null: false
+    t.text "api_key"
+    t.string "base_url", default: "https://api.openai.com/v1", null: false
+    t.text "system_prompt"
+    t.boolean "enabled", default: true, null: false
+    t.integer "context_window_tokens", default: 128000, null: false
+    t.decimal "input_cost_cents_per_million_tokens", precision: 12, scale: 6, default: "0.0", null: false
+    t.decimal "output_cost_cents_per_million_tokens", precision: 12, scale: 6, default: "0.0", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_ai_model_configurations_on_created_by_id"
   end
 
   create_table "certificates", force: :cascade do |t|
@@ -127,8 +145,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "url"
+    t.boolean "open_by_default", default: false, null: false
+    t.bigint "source_material_id"
+    t.bigint "copied_by_id"
+    t.index ["copied_by_id"], name: "index_lesson_materials_on_copied_by_id"
     t.index ["lesson_id", "position"], name: "index_lesson_materials_on_lesson_id_and_position"
     t.index ["lesson_id"], name: "index_lesson_materials_on_lesson_id"
+    t.index ["source_material_id"], name: "index_lesson_materials_on_source_material_id"
   end
 
   create_table "lessons", force: :cascade do |t|
@@ -160,6 +183,45 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
     t.index ["cbai_token"], name: "index_lessons_on_cbai_token"
     t.index ["course_id", "position"], name: "index_lessons_on_course_id_and_position"
     t.index ["course_id"], name: "index_lessons_on_course_id"
+  end
+
+  create_table "material_design_assets", force: :cascade do |t|
+    t.bigint "lesson_material_id", null: false
+    t.bigint "created_by_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.string "alt_text"
+    t.string "role", default: "content", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_material_design_assets_on_created_by_id"
+    t.index ["lesson_material_id"], name: "index_material_design_assets_on_lesson_material_id"
+    t.index ["role"], name: "index_material_design_assets_on_role"
+  end
+
+  create_table "material_design_revisions", force: :cascade do |t|
+    t.bigint "lesson_material_id", null: false
+    t.bigint "ai_model_configuration_id", null: false
+    t.bigint "created_by_id", null: false
+    t.bigint "parent_revision_id"
+    t.string "status", default: "queued", null: false
+    t.text "request", null: false
+    t.text "source_html"
+    t.text "generated_html"
+    t.text "sanitized_html"
+    t.text "error_message"
+    t.string "provider_request_id"
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.datetime "accepted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_configuration_id"], name: "index_material_design_revisions_on_ai_model_configuration_id"
+    t.index ["created_by_id"], name: "index_material_design_revisions_on_created_by_id"
+    t.index ["lesson_material_id", "created_at"], name: "idx_on_lesson_material_id_created_at_651b1cbdce"
+    t.index ["lesson_material_id"], name: "index_material_design_revisions_on_lesson_material_id"
+    t.index ["lesson_material_id"], name: "index_one_active_design_revision_per_material", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'generating'::character varying])::text[]))"
+    t.index ["parent_revision_id"], name: "index_material_design_revisions_on_parent_revision_id"
   end
 
   create_table "organizations", force: :cascade do |t|
@@ -396,6 +458,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_model_configurations", "users", column: "created_by_id"
   add_foreign_key "certificates", "courses"
   add_foreign_key "certificates", "users"
   add_foreign_key "course_prerequisites", "courses"
@@ -406,8 +469,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_20_000000) do
   add_foreign_key "enrollments", "users"
   add_foreign_key "lesson_material_acknowledgements", "enrollments"
   add_foreign_key "lesson_material_acknowledgements", "lesson_materials"
+  add_foreign_key "lesson_materials", "lesson_materials", column: "source_material_id", on_delete: :nullify
   add_foreign_key "lesson_materials", "lessons"
+  add_foreign_key "lesson_materials", "users", column: "copied_by_id", on_delete: :nullify
   add_foreign_key "lessons", "courses"
+  add_foreign_key "material_design_assets", "lesson_materials"
+  add_foreign_key "material_design_assets", "users", column: "created_by_id"
+  add_foreign_key "material_design_revisions", "ai_model_configurations"
+  add_foreign_key "material_design_revisions", "lesson_materials"
+  add_foreign_key "material_design_revisions", "material_design_revisions", column: "parent_revision_id"
+  add_foreign_key "material_design_revisions", "users", column: "created_by_id"
   add_foreign_key "progresses", "enrollments"
   add_foreign_key "progresses", "lessons"
   add_foreign_key "question_answers", "enrollments"

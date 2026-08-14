@@ -1,0 +1,67 @@
+- content_for :title, "Generate AI design"
+.flex.items-start.justify-between.gap-4.mb-5
+  %div
+    %h1.text-2xl.font-bold Generate design revision
+    .flex.items-center.gap-2.mt-1
+      %p.text-sm.text-gray-500= @revision.parent_revision.present? ? "Revise the selected AI output." : "Uses the current material HTML when available, or starts from zero."
+      - if @revision.parent_revision&.accepted?
+        %span.inline-flex.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800 Accepted version
+  = link_to "← Back to designs", course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @lesson_material), class: "inline-flex shrink-0 items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
+
+= form_with model: @revision, url: course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @lesson_material), class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6" do |f|
+  - if @revision.errors.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm= @revision.errors.full_messages.to_sentence
+  = f.hidden_field :parent_revision_id
+  .design-request-grid{ data: { controller: "design-assets-panel" } }
+    .space-y-4.min-w-0
+      %div.design-model-field
+        = f.label :ai_model_configuration_id, "AI model", class: "block text-sm font-medium mb-1"
+        = f.collection_select :ai_model_configuration_id, AiModelConfiguration.enabled, :id, :name, {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white", required: true
+      %div
+        = f.label :request, "Design request", class: "block text-sm font-medium mb-1"
+        = f.text_area :request, rows: 8, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "Create a clear, modern lesson page…", required: true
+    %aside.design-assets-panel.bg-gray-50.border.border-gray-200.rounded-lg{ class: "dark:bg-gray-800 dark:border-gray-700", data: { design_assets_panel_target: "panel" } }
+      .design-assets-panel-inner
+        .design-assets-panel-header.flex.items-center.justify-between.gap-2.border-b.border-gray-200.p-3{ class: "dark:border-gray-700" }
+          %h2.design-assets-panel-title.text-sm.font-semibold.text-gray-900 Images
+          .design-assets-panel-actions.flex.items-center.gap-2
+            .design-assets-panel-add-image{ data: { controller: "status-modal", status_modal_dialog_id_value: "add-design-asset-dialog" } }
+              %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-violet-100.text-violet-800.hover:bg-violet-200.transition-colors.cursor-pointer{ type: "button", data: { action: "click->status-modal#open" }, "aria-haspopup": "dialog", "aria-controls": "add-design-asset-dialog" }
+                Add image
+            %button.design-assets-panel-toggle.relative.inline-flex.shrink-0.items-center.justify-center.rounded.p-1.text-gray-500.hover:bg-gray-200.hover:text-gray-800.cursor-pointer{ class: "dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100", type: "button", data: { action: "design-assets-panel#toggle", design_assets_panel_target: "toggle" }, title: "Hide images", "aria-label": "Hide images", "aria-expanded": "true" }
+              %span.design-assets-panel-toggle-icon{ "aria-hidden": "true" }
+              %span.design-assets-panel-count= @imported_assets.size + @assets.size
+        .design-assets-panel-content.min-h-0.flex-1.overflow-y-auto.p-3{ data: { design_assets_panel_target: "content" } }
+          .space-y-2
+            - @imported_assets.each_with_index do |asset, index|
+              .bg-indigo-50.border.border-indigo-200.rounded.p-2{ class: "dark:bg-indigo-950/50 dark:border-indigo-800" }
+                = render "image_preview", url: asset.url, name: asset.name, alt_text: asset.alt_text.presence || asset.name, id: "imported-image-preview-#{index}"
+                .flex.items-center.justify-between.gap-1.mt-1
+                  %p.text-xs.font-medium.truncate{ class: "dark:text-gray-100" }= asset.name
+                  = link_to "×", imported_course_lesson_lesson_material_material_design_assets_path(@course, @lesson, @lesson_material, id: asset.token.delete_prefix("asset://imported/"), return_to: "new_design", parent_revision_id: @revision.parent_revision_id), data: { turbo_method: :delete, turbo_confirm: "Remove this image? It will no longer be available to the source material or generated designs." }, class: "shrink-0 rounded px-1.5 text-base leading-5 text-red-600 hover:bg-red-100", aria: { label: "Remove #{asset.name}" }
+            - @assets.each do |asset|
+              .bg-white.border.border-gray-200.rounded.p-2{ class: "dark:bg-gray-800 dark:border-gray-700" }
+                = render "image_preview", url: material_design_asset_file_path(asset.signed_id(purpose: :material_design_asset), v: asset.file.blob_id), name: asset.name, alt_text: asset.alt_text.presence || asset.name, id: "design-asset-image-preview-#{asset.id}"
+                .flex.items-center.justify-between.gap-1.mt-1
+                  %p.text-xs.font-medium.truncate{ class: "dark:text-gray-100" }= asset.name
+                  %span.shrink-0.rounded-full.bg-gray-100.px-1.5.py-0.5.text-gray-600{ class: "text-[10px] dark:bg-gray-700 dark:text-gray-300" }= asset.design_reference? ? "Reference" : "Content"
+                  = link_to "×", course_lesson_lesson_material_material_design_asset_path(@course, @lesson, @lesson_material, asset, return_to: "new_design", parent_revision_id: @revision.parent_revision_id), data: { turbo_method: :delete, turbo_confirm: "Remove this image? Existing revisions will retain their HTML, but the image will not be available." }, class: "shrink-0 rounded px-1.5 text-base leading-5 text-red-600 hover:bg-red-100", aria: { label: "Remove #{asset.name}" }
+            - if @imported_assets.empty? && @assets.empty?
+              %p.text-xs.text-gray-500 No images loaded yet.
+  = f.button "Generate revision", type: :submit, class: "ai-design-action inline-flex w-full items-center justify-center gap-1 px-4 py-2 rounded bg-violet-600 text-white hover:bg-violet-700 cursor-pointer"
+  %div
+    .flex.items-center.gap-2.mb-1
+      %p.block.text-sm.font-medium Source document
+      - if @revision.parent_revision&.accepted?
+        %span.inline-flex.rounded-full.bg-green-100.px-2.py-0.5.text-xs.font-medium.text-green-800 Accepted version
+    %p.text-xs.text-gray-500.mb-2 This is the HTML that will be supplied to the AI together with your design request.
+    %iframe.w-full.bg-white.border.border-gray-200.rounded{ src: source_preview_course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @lesson_material, parent_revision_id: @revision.parent_revision_id), title: "Source document preview", sandbox: "allow-same-origin", style: "height: 55vh; min-height: 420px;" }
+
+.fixed.inset-0.z-50.hidden{ id: "add-design-asset-dialog", data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "add-design-asset-dialog-title", "aria-hidden": "true" }
+  .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+  .absolute.flex.max-h-dvh.flex-col.bg-white.rounded-xl.shadow-2xl.border.border-indigo-200{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,32rem);max-height:92vh", tabindex: "-1", data: { dialog_target: "panel" } }
+    .flex.items-center.justify-between.gap-4.border-b.border-gray-200.px-6.py-4
+      %h2.font-semibold.text-gray-900{ id: "add-design-asset-dialog-title" } Load image
+      %button.text-gray-500.hover:text-gray-700.text-2xl.leading-none.cursor-pointer{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" } ×
+    .overflow-y-auto.px-6.py-5
+      = render "asset_form", asset: @asset, course: @course, lesson: @lesson, lesson_material: @lesson_material, return_to: "new_design", parent_revision_id: @revision.parent_revision_id

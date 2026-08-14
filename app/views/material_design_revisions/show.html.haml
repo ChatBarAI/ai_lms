@@ -1,0 +1,27 @@
+- content_for :title, "AI design revision"
+.flex.items-start.justify-between.gap-4.mb-5
+  %div
+    %h1.text-2xl.font-bold Design revision
+    %p.text-sm.text-gray-600.mt-1= @revision.request
+    %p.text-xs.text-gray-500.mt-1= "#{@revision.ai_model_configuration.name} · #{@revision.status.titleize}"
+    - if @revision.input_tokens.present? || @revision.output_tokens.present?
+      %p.text-xs.text-gray-500.mt-1
+        = "#{number_with_delimiter(@revision.input_tokens.to_i)} input + #{number_with_delimiter(@revision.output_tokens.to_i)} output tokens"
+        = " · Estimated API cost: #{number_with_precision(@revision.estimated_cost_cents, precision: 4, strip_insignificant_zeros: true)}¢"
+  .flex.items-center.gap-2.shrink-0
+    = link_to "← Back to designs", course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @lesson_material), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
+    - if @revision.ready? || @revision.accepted?
+      = link_to "Revise", new_course_lesson_lesson_material_material_design_revision_path(@course, @lesson, @lesson_material, parent_revision_id: @revision.id), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800 hover:bg-violet-200 transition-colors"
+    - if @revision.ready?
+      = button_to "Accept revision", accept_course_lesson_lesson_material_material_design_revision_path(@course, @lesson, @lesson_material, @revision), method: :post, data: { turbo_confirm: "Replace the material HTML with this revision?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer transition-colors"
+
+- if @revision.failed?
+  .bg-red-50.border.border-red-200.text-red-800.rounded.p-4= @revision.error_message
+- elsif @revision.queued? || @revision.generating?
+  .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4
+    Generation is #{@revision.status}. Refresh this page in a moment.
+- else
+  %iframe.w-full.bg-white.border.border-gray-200.rounded{ src: preview_course_lesson_lesson_material_material_design_revision_path(@course, @lesson, @lesson_material, @revision), title: "AI design preview", sandbox: "allow-same-origin", style: "height: 75vh; min-height: 600px;" }
+  %details.mt-4.bg-white.border.border-gray-200.rounded.p-4
+    %summary.cursor-pointer.font-medium Sanitised HTML
+    %pre.mt-3.text-xs.whitespace-pre-wrap.overflow-auto= @revision.sanitized_html

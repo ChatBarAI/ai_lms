@@ -1,0 +1,70 @@
+= form_with model: asset, url: course_lesson_lesson_material_material_design_assets_path(course, lesson, lesson_material), multipart: true, class: "space-y-4", data: { controller: "screen-capture file-preview", file_preview_type_value: "image" } do |f|
+  - if local_assigns[:return_to].present?
+    = hidden_field_tag :return_to, return_to
+  - if local_assigns[:parent_revision_id].present?
+    = hidden_field_tag :parent_revision_id, parent_revision_id
+  %fieldset
+    .flex.flex-wrap.items-center.gap-x-5.gap-y-2
+      %label.inline-flex.items-center.gap-2.cursor-pointer{ title: "Make this image available for placement in the generated page." }
+        = f.radio_button :role, "content", checked: asset.role.blank? || asset.content?
+        %span.text-sm.font-medium.text-gray-700 Page content
+      %label.inline-flex.items-center.gap-2.cursor-pointer{ title: "Reproduce its layout, colors, typography, spacing, and visible text. The screenshot itself will not appear in the page." }
+        = f.radio_button :role, "design_reference"
+        %span.text-sm.font-medium.text-gray-700 Design reference
+  %div
+    = f.label :name, "Asset name", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_field :name, placeholder: "Asset name", class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+  %div
+    = f.label :description, "Image description", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_area :description, placeholder: "Optional description for content-image selection", rows: 2, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :alt_text, "Accessible alt text", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_field :alt_text, placeholder: "Describe the image for learners", class: "w-full border border-gray-300 rounded px-3 py-2"
+  %fieldset
+    %legend.block.text-sm.font-medium.text-gray-700.mb-2 Image source
+    .grid.grid-cols-2.gap-3
+      %button.flex.items-center.justify-center.gap-2.rounded-lg.border.border-gray-300.bg-white.px-4.py-3.text-sm.font-medium.text-gray-700.hover:border-indigo-400.hover:bg-indigo-50{ type: "button", aria: { pressed: "false" }, data: { action: "screen-capture#selectBrowse", screen_capture_target: "modeButton", screen_capture_mode: "browse" } }
+        Browse
+      %button.flex.items-center.justify-center.gap-2.rounded-lg.border.border-gray-300.bg-white.px-4.py-3.text-sm.font-medium.text-gray-700.hover:border-indigo-400.hover:bg-indigo-50{ type: "button", aria: { pressed: "false" }, data: { action: "screen-capture#selectCapture", screen_capture_target: "modeButton", screen_capture_mode: "capture" } }
+        Capture
+  .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { screen_capture_target: "browsePanel" } }
+    = f.label :file, "Choose an image", class: "block text-sm font-medium text-gray-700 mb-2"
+    = f.file_field :file, accept: MaterialDesignAsset::CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", action: "change->file-preview#update change->screen-capture#fileChanged" }
+  .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { screen_capture_target: "capturePanel" } }
+    %h3.text-sm.font-semibold.text-gray-900 Capture a screen, window, or tab
+    .mt-3.flex.flex-wrap.items-end.gap-3
+      .min-w-0.flex-1
+        %label.block.text-xs.font-medium.text-gray-700{ for: "snapshot-format" } Compressed format
+        %select#snapshot-format.mt-1.w-full.rounded.border.border-gray-300.bg-white.px-2.py-2.text-sm{ data: { screen_capture_target: "format" } }
+          %option{ value: "image/webp" } WebP — smallest, good quality
+          %option{ value: "image/jpeg" } JPEG — widest compatibility
+      %button.inline-flex.shrink-0.items-center.rounded.bg-indigo-600.px-3.py-2.text-sm.font-medium.text-white.hover:bg-indigo-700{ type: "button", data: { action: "screen-capture#start" } } Choose screen or window
+    .mt-3
+      .flex.items-center.justify-between
+        %label.block.text-xs.font-medium.text-gray-700{ for: "snapshot-quality" } Image quality
+        %span.text-xs.text-gray-500{ data: { screen_capture_target: "qualityValue" } }
+      %input#snapshot-quality.mt-2.w-full{ type: "range", min: "40", max: "100", step: "5", value: "85", data: { screen_capture_target: "quality", action: "input->screen-capture#updateQuality" } }
+    %video.hidden.mt-3.max-h-72.w-full.rounded.border.border-gray-300.bg-black.object-contain{ autoplay: true, muted: true, playsinline: true, data: { screen_capture_target: "video" } }
+    .mt-3.flex.flex-wrap.items-center.gap-2
+      %button.rounded.bg-emerald-600.px-3.py-2.text-sm.font-medium.text-white.hover:bg-emerald-700.disabled:cursor-not-allowed.disabled:opacity-50{ type: "button", disabled: true, data: { screen_capture_target: "captureButton", action: "screen-capture#capture" } } Capture snapshot
+      %button.hidden.rounded.border.border-gray-300.bg-white.px-3.py-2.text-sm.font-medium.text-gray-700.hover:bg-gray-100{ type: "button", data: { screen_capture_target: "stopButton", action: "screen-capture#stop" } } Stop sharing
+    %p.mt-2.text-xs.text-gray-500{ role: "status", aria: { live: "polite" }, data: { screen_capture_target: "status" } }
+    %dialog.m-0.h-dvh.w-screen.max-w-none.max-h-none.border-0.bg-slate-950.p-0.text-white{ class: "backdrop:bg-black/70", aria: { label: "Crop captured image" }, data: { screen_capture_target: "cropDialog", action: "cancel->screen-capture#cancelCrop" } }
+      .flex.h-full.min-h-0.flex-col
+        .flex.shrink-0.flex-wrap.items-center.justify-between.gap-3.border-b.border-slate-700.bg-slate-900.px-4.py-3
+          %div
+            %h2.text-base.font-semibold Crop captured image
+            %p.text-xs.text-slate-300 Drag over the image to select the area to keep.
+          .flex.flex-wrap.items-center.gap-2
+            %button.rounded.border.border-slate-500.bg-slate-800.px-3.py-2.text-sm.font-medium.text-white.hover:bg-slate-700{ type: "button", data: { action: "screen-capture#cancelCrop" } } Cancel
+            %button.rounded.border.border-slate-500.bg-slate-800.px-3.py-2.text-sm.font-medium.text-white.hover:bg-slate-700{ type: "button", data: { action: "screen-capture#selectFullImage" } } Select full image
+            %button.rounded.bg-indigo-600.px-3.py-2.text-sm.font-medium.text-white.hover:bg-indigo-500.disabled:cursor-not-allowed.disabled:opacity-50{ type: "button", disabled: true, data: { screen_capture_target: "useCropButton", action: "screen-capture#useCrop" } } Use selected area
+        .flex.min-h-0.flex-1.items-center.justify-center.overflow-hidden.p-4
+          %canvas.block.max-h-full.max-w-full.cursor-crosshair.touch-none.rounded.border.border-slate-600.bg-black.shadow-2xl{ data: { screen_capture_target: "cropCanvas", action: "pointerdown->screen-capture#beginCrop pointermove->screen-capture#resizeCrop pointerup->screen-capture#endCrop pointercancel->screen-capture#endCrop" } }
+  .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { file_preview_target: "previewContainer" } }
+    %p.mb-2.text-xs.font-medium.text-gray-700 Selected image
+    %img.mx-auto.max-h-64.max-w-full.rounded.object-contain{ alt: "Selected image preview", data: { file_preview_target: "preview" } }
+    %p.mt-2.truncate.text-center.text-xs.text-gray-600{ data: { file_preview_target: "filename" } }
+  .flex.items-center.justify-end.gap-2.pt-2
+    %button.px-4.py-2.rounded-lg.bg-gray-100.text-gray-700.text-sm.font-medium.hover:bg-gray-200.cursor-pointer{ type: "button", data: { action: "click->dialog#close" } } Cancel
+    = f.submit "Upload asset", disabled: true, class: "px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50", data: { screen_capture_target: "submitButton" }

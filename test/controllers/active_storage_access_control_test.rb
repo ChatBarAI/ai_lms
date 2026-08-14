@@ -81,6 +81,36 @@ class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "lesson owner can access a material design asset" do
+    asset = MaterialDesignAsset.create!(
+      lesson_material: LessonMaterial.create!(
+        lesson: lessons(:intro), title: "Design source", kind: :raw_html_iframe,
+        raw_html_content: "<html><body>Source</body></html>"
+      ),
+      created_by: users(:instructor), name: "Design image", file: image_upload("poster.png")
+    )
+    sign_in users(:instructor)
+
+    get rails_blob_path(asset.file)
+
+    assert_response :success
+  end
+
+  test "signed in user cannot access a draft material design asset they cannot read" do
+    asset = MaterialDesignAsset.create!(
+      lesson_material: LessonMaterial.create!(
+        lesson: lessons(:draft_lesson), title: "Draft design source", kind: :raw_html_iframe,
+        raw_html_content: "<html><body>Draft source</body></html>"
+      ),
+      created_by: users(:instructor), name: "Draft design image", file: image_upload("poster.png")
+    )
+    sign_in users(:student)
+
+    get rails_blob_path(asset.file)
+
+    assert_response :forbidden
+  end
+
   test "anonymous user cannot access a trix image attached to a lesson body" do
     blob = attach_trix_image_to(lessons(:physics_lesson))
 

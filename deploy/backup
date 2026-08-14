@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+backup_dir=${1:-"$deploy_root/backups"}
+timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+env_file="$deploy_root/shared/.env"
+
+cd "$deploy_root/current"
+mkdir -p "$backup_dir"
+chmod 700 "$backup_dir"
+export DEPLOY_ROOT="$deploy_root"
+export APP_IMAGE="ai_lms:$(basename "$(readlink -f "$deploy_root/current")")"
+compose=(docker compose --env-file "$env_file")
+
+"${compose[@]}" exec -T db pg_dump -U ai_lms -d ai_lms_production |
+  gzip > "$backup_dir/database-$timestamp.sql.gz"
+
+docker run --rm \
+  -v ai_lms_storage:/source:ro \
+  -v "$backup_dir:/backup" \
+  alpine:3.22 tar -czf "/backup/storage-$timestamp.tar.gz" -C /source .
+
+echo "Backup written to $backup_dir (*-$timestamp.*)"

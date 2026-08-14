@@ -24,6 +24,17 @@
     transition: transform 0.2s ease-in-out;
 }
 
+/* Reusable sparkles icon for links and buttons that open an AI design workflow. */
+.ai-design-action::before {
+    content: "";
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: none;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 2.25 10.46 7.36a4.5 4.5 0 0 0 3.09 3.09L18.66 12l-5.11 1.55a4.5 4.5 0 0 0-3.09 3.09L9 21.75l-1.46-5.11a4.5 4.5 0 0 0-3.09-3.09L-.66 12l5.11-1.55a4.5 4.5 0 0 0 3.09-3.09L9 2.25Zm9-2.25.84 2.94a2.25 2.25 0 0 0 1.55 1.55l2.94.84-2.94.84a2.25 2.25 0 0 0-1.55 1.55L18 10.66l-.84-2.94a2.25 2.25 0 0 0-1.55-1.55l-2.94-.84 2.94-.84a2.25 2.25 0 0 0 1.55-1.55L18 0Zm-1.5 14.25.59 2.06a1.5 1.5 0 0 0 1.03 1.03l2.06.59-2.06.59a1.5 1.5 0 0 0-1.03 1.03l-.59 2.06-.59-2.06a1.5 1.5 0 0 0-1.03-1.03l-2.06-.59 2.06-.59a1.5 1.5 0 0 0 1.03-1.03l.59-2.06Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 2.25 10.46 7.36a4.5 4.5 0 0 0 3.09 3.09L18.66 12l-5.11 1.55a4.5 4.5 0 0 0-3.09 3.09L9 21.75l-1.46-5.11a4.5 4.5 0 0 0-3.09-3.09L-.66 12l5.11-1.55a4.5 4.5 0 0 0 3.09-3.09L9 2.25Zm9-2.25.84 2.94a2.25 2.25 0 0 0 1.55 1.55l2.94.84-2.94.84a2.25 2.25 0 0 0-1.55 1.55L18 10.66l-.84-2.94a2.25 2.25 0 0 0-1.55-1.55l-2.94-.84 2.94-.84a2.25 2.25 0 0 0 1.55-1.55L18 0Zm-1.5 14.25.59 2.06a1.5 1.5 0 0 0 1.03 1.03l2.06.59-2.06.59a1.5 1.5 0 0 0-1.03 1.03l-.59 2.06-.59-2.06a1.5 1.5 0 0 0-1.03-1.03l-2.06-.59 2.06-.59a1.5 1.5 0 0 0 1.03-1.03l.59-2.06Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 .collapsible-icon::before {
     content: "";
     display: block;
@@ -33,6 +44,126 @@
     border-bottom: 2px solid currentColor;
     transform: rotate(-45deg);
     margin-left: -0.125rem;
+}
+
+/* The open image panel matches the design controls' height; only its contents scroll. */
+.design-request-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: stretch;
+    position: relative;
+}
+
+.design-assets-panel {
+    min-width: 0;
+    position: relative;
+}
+
+.design-assets-panel-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.design-request-grid:has(.design-assets-panel.is-collapsed) {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.design-request-grid:has(.design-assets-panel.is-collapsed) .design-model-field {
+    padding-right: 3.25rem;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-title {
+    display: none;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-add-image {
+    display: none;
+}
+
+.design-assets-panel.is-collapsed {
+    position: absolute;
+    top: 1.5rem;
+    right: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-inner {
+    position: relative;
+    inset: auto;
+    height: 100%;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-header {
+    justify-content: center;
+    height: 100%;
+    padding: 0;
+    border: 0;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-actions {
+    width: 100%;
+    height: 100%;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-toggle {
+    width: 100%;
+    height: 100%;
+}
+
+.design-assets-panel-toggle-icon {
+    display: block;
+    width: 1.125rem;
+    height: 1.125rem;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6.4 4.93 12 10.53l5.6-5.6 1.47 1.47-5.6 5.6 5.6 5.6-1.47 1.47-5.6-5.6-5.6 5.6-1.47-1.47 5.6-5.6-5.6-5.6L6.4 4.93Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6.4 4.93 12 10.53l5.6-5.6 1.47 1.47-5.6 5.6 5.6 5.6-1.47 1.47-5.6-5.6-5.6 5.6-1.47-1.47 5.6-5.6-5.6-5.6L6.4 4.93Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-toggle-icon {
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 3h18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v14h18V5H3Zm3 11 3.5-4.5 2.5 3 3.5-4.5L20 17H4l2-1Zm1-8.5A1.5 1.5 0 1 1 10 7.5a1.5 1.5 0 0 1-3 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 3h18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v14h18V5H3Zm3 11 3.5-4.5 2.5 3 3.5-4.5L20 17H4l2-1Zm1-8.5A1.5 1.5 0 1 1 10 7.5a1.5 1.5 0 0 1-3 0Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.design-assets-panel-count {
+    display: none;
+}
+
+.design-assets-panel.is-collapsed .design-assets-panel-count {
+    position: absolute;
+    top: 0.125rem;
+    right: 0.125rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.2rem;
+    border-radius: 9999px;
+    color: white;
+    background: #7c3aed;
+    font-size: 0.625rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+@media (max-width: 767px) {
+    .design-request-grid,
+    .design-request-grid:has(.design-assets-panel.is-collapsed) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .design-assets-panel {
+        height: 18rem;
+    }
+
+    .design-assets-panel.is-collapsed {
+        height: 2.25rem;
+    }
 }
 
 /* Wide-screen right-side inline AI tutor. Controllers fall back to a drawer below 960px. */

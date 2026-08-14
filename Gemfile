@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.2.3"
+gem "rails", "~> 7.2.3.1"
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem "sprockets-rails"
 # Use postgresql as the database for Active Record
@@ -82,6 +82,9 @@ gem "rack-attack"
 # HTTP client (for chatbar API integration)
 gem "httparty"
 
+# Read Google Docs "Web Page (.html, zipped)" imports in production.
+gem "rubyzip", require: false
+
 # Kinde SSO authentication
 gem "kinde_sdk"
 
@@ -102,6 +105,7 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
   gem "rails-controller-testing"
-  gem "minitest"
+  # Rails 7.2's parallel test runner uses Minitest APIs removed in Minitest 6.
+  gem "minitest", "< 6"
   gem "minitest-mock"
 end

@@ -4,7 +4,7 @@
 # course instead:
 #
 # - SiteSetting assets, such as logos and favicons, stay public.
-# - Course, Lesson, LessonMaterial, and their Trix/Action Text attachments are
+# - Course, Lesson, LessonMaterial, design assets, and their Trix/Action Text attachments are
 #   public only when the owning course is published, has public access enabled,
 #   and site-wide guest access is enabled.
 # - Unknown attachment owners are protected by default.
@@ -94,6 +94,8 @@ module ActiveStorageAccessControl
       false
     when Course, Lesson, LessonMaterial
       !record.public_to_guests?
+    when MaterialDesignAsset
+      !record.lesson_material.public_to_guests?
     when ActionText::RichText
       # Trix embeds are attached to ActionText::RichText, not directly to the
       # lesson/material model. Follow the rich text record back to its owner.
@@ -118,6 +120,8 @@ module ActiveStorageAccessControl
       record == current_user || active_storage_current_ability.can?(:read, record)
     when Course, Lesson, LessonMaterial
       active_storage_current_ability.can?(:read, record)
+    when MaterialDesignAsset
+      active_storage_current_ability.can?(:read, record.lesson_material)
     when ActionText::RichText
       active_storage_rich_text_record_readable_by_current_user?(record)
     else
