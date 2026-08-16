@@ -104,10 +104,11 @@
         %p.text-sm.text-gray-500.italic No video file attached.
     - when "video_url"
       - if material.url.present?
-        %video.w-full.rounded.bg-black{ controls: true, preload: "metadata" }
-          %source{ src: material.url }
+        - if (video = lesson_video_embed(material.url))
+          = video
+        - else
           %p.text-sm.p-2
-            Your browser does not support video playback.
-            = link_to "Open video", material.url, class: "text-indigo-600 hover:underline"
+            This video URL cannot be embedded.
+            = link_to "Open video", material.url, target: "_blank", rel: "noopener noreferrer", class: "text-indigo-600 hover:underline"
       - else
         %p.text-sm.text-gray-500.italic No video URL set.

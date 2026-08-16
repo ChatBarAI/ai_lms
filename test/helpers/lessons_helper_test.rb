@@ -17,6 +17,25 @@ class LessonsHelperTest < ActionView::TestCase
   test "embeds youtu.be short URLs as iframe" do
     html = lesson_video_embed("https://youtu.be/abc123")
     assert_includes html, "youtube.com/embed/abc123"
+    assert_includes html, 'referrerpolicy="strict-origin-when-cross-origin"'
+  end
+
+  test "embeds common youtube URL variants as iframe" do
+    urls = [
+      "https://www.youtube.com/embed/abc123?si=share-token",
+      "https://www.youtube.com/shorts/abc123?feature=share",
+      "https://www.youtube.com/live/abc123",
+      "https://music.youtube.com/watch?v=abc123",
+      "https://www.youtube-nocookie.com/embed/abc123"
+    ]
+
+    urls.each do |url|
+      assert_includes lesson_video_embed(url), "youtube.com/embed/abc123", url
+    end
+  end
+
+  test "does not embed an invalid youtube video ID" do
+    assert_nil lesson_video_embed("https://www.youtube.com/embed/not%2Fa%2Fvideo")
   end
 
   test "embeds vimeo URLs as iframe" do
@@ -28,6 +47,12 @@ class LessonsHelperTest < ActionView::TestCase
     html = lesson_video_embed("https://example.com/clip.mp4")
     assert_includes html, "<video"
     assert_includes html, "controls"
+  end
+
+  test "embeds direct video URLs that have query parameters" do
+    html = lesson_video_embed("https://example.com/clip.mp4?token=abc123")
+    assert_includes html, "<video"
+    assert_includes html, "clip.mp4?token=abc123"
   end
 
   test "adds poster to video tag when poster_url given" do

@@ -23,6 +23,21 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#material-#{@material.id}[data-expanded='true']"
   end
 
+  test "guest sees a youtube video URL material as an iframe" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "YouTube clip",
+      kind: :video_url,
+      url: "https://youtu.be/Hla6u6WpRE0?si=OEhPSA0s1EZog4ws"
+    )
+
+    get course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_select "iframe[src^='https://www.youtube.com/embed/Hla6u6WpRE0']", count: 1
+    assert_select "video", count: 0
+  end
+
   test "guest can view a published Google document with restrictive headers" do
     material = LessonMaterial.create!(
       lesson: @lesson,
