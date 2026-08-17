@@ -2,7 +2,15 @@ require "cgi"
 require "uri"
 
 class MaterialDesignAssetCatalog
-  Entry = Data.define(:token, :url, :name, :description, :alt_text, :source, :referenced_in_source)
+  Entry = Data.define(:token, :url, :name, :description, :alt_text, :media_type, :source, :referenced_in_source) do
+    def image?
+      media_type.to_s.start_with?("image/")
+    end
+
+    def video?
+      media_type.to_s.start_with?("video/")
+    end
+  end
 
   def initialize(material)
     @material = material
@@ -14,7 +22,7 @@ class MaterialDesignAssetCatalog
 
   def design_references
     @design_references ||= material.material_design_assets.design_reference
-      .includes(file_attachment: :blob).select { |asset| asset.file.attached? }
+      .includes(file_attachment: :blob).select(&:image?)
   end
 
   def tokenize_html(html)
@@ -22,12 +30,12 @@ class MaterialDesignAssetCatalog
     entries_by_url = entries.index_by(&:url)
     entries_by_path = entries.index_by { |entry| URI.parse(entry.url).path }
     imported_by_filename = entries.select { |entry| entry.source == :imported }.index_by(&:name)
-    document.css("img[src]").each do |image|
-      source = image["src"].to_s
+    document.css("img[src], video[src], video source[src]").each do |media|
+      source = media["src"].to_s
       source_path = URI.parse(source).path
       filename = CGI.unescape(File.basename(source_path))
       entry = entries_by_url[source] || entries_by_path[source_path] || imported_by_filename[filename]
-      image["src"] = entry.token if entry
+      media["src"] = entry.token if entry
     rescue URI::InvalidURIError
       next
     end
@@ -51,6 +59,7 @@ class MaterialDesignAssetCatalog
         name: asset.name,
         description: asset.description,
         alt_text: asset.alt_text,
+        media_type: asset.file.blob.content_type,
         source: :manual,
         referenced_in_source: source_references?(asset.prompt_token, url, URI.parse(url).path)
       )
@@ -72,6 +81,7 @@ class MaterialDesignAssetCatalog
         name: filename,
         description: "Image imported with the existing material (#{filename})",
         alt_text: imported_alt_text[filename],
+        media_type: attachment.blob.content_type,
         source: :imported,
         referenced_in_source: imported_filename_referenced?(filename) || source_references?(token, url)
       )

@@ -98,6 +98,8 @@ class MaterialDesignRevisionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='material-design-revisions-channel']" \
                   "[data-material-design-revisions-channel-lesson-material-id-value='#{material.id}']"
     assert_select "[data-material-design-revisions-channel-target='announcement'][aria-live='polite']"
+    assert_select "aside[data-controller~='design-asset-drop']" \
+                  "[data-action*='drop->design-asset-drop#drop']", count: 1
   end
 
   test "image thumbnails open accessible preview dialogs" do
@@ -131,15 +133,27 @@ class MaterialDesignRevisionsControllerTest < ActionDispatch::IntegrationTest
                   count: 1
     assert_select "button[aria-controls='imported-image-preview-0-dialog'][aria-haspopup='dialog']", count: 1
     assert_select "#imported-image-preview-0-dialog[role='dialog'][aria-hidden='true'] img", count: 1
-    assert_select "button.design-assets-panel-toggle[aria-label='Hide images'][aria-expanded='true']" do
+    assert_select "button.design-assets-panel-toggle[aria-label='Hide assets'][aria-expanded='true']" do
       assert_select ".design-assets-panel-toggle-icon[aria-hidden='true']", count: 1
       assert_select ".design-assets-panel-count", text: "2"
     end
+    assert_select "aside[data-controller~='design-asset-drop']" \
+                  "[data-action*='drop->design-asset-drop#drop']" \
+                  "[data-design-asset-drop-image-max-bytes-value='#{MaterialDesignAsset::IMAGE_MAX_SIZE}']" \
+                  "[data-design-asset-drop-video-max-bytes-value='#{MaterialDesignAsset::VIDEO_MAX_SIZE}']", count: 1 do
+      assert_select "[data-design-asset-drop-target='overlay'].hidden", text: /Drop to add asset/
+      assert_select "[data-design-asset-drop-target='status'][aria-live='polite'].hidden", count: 1
+    end
     assert_select ".design-request-grid .design-model-field", count: 1
-    assert_select "[data-controller~='file-preview']" do
+    assert_select "form[data-controller~='screen-capture'][data-controller~='file-preview']" do
       assert_select "input[type='file'][data-action~='change->file-preview#update']", count: 1
       assert_select "[data-file-preview-target='previewContainer'].hidden img[data-file-preview-target='preview']", count: 1
       assert_select "[data-file-preview-target='filename']", count: 1
+    end
+    assert_select "#add-video-asset-dialog" do
+      assert_select "form[data-controller~='file-preview']"
+      assert_select "input[type='file'][accept*='video/mp4']", count: 1
+      assert_select "input[type='hidden'][name='material_design_asset[role]'][value='content']", count: 1
     end
     assert_select 'form[data-controller~="screen-capture"]' do
       assert_select 'button[data-action="screen-capture#selectBrowse"][aria-pressed="false"]', text: /Browse/

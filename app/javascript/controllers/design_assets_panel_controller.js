@@ -7,7 +7,7 @@ export default class extends Controller {
     const collapsed = this.panelTarget.classList.toggle("is-collapsed")
     this.contentTarget.hidden = collapsed
     this.toggleTarget.setAttribute("aria-expanded", (!collapsed).toString())
-    this.toggleTarget.setAttribute("aria-label", collapsed ? "Show images" : "Hide images")
-    this.toggleTarget.setAttribute("title", collapsed ? "Show images" : "Hide images")
+    this.toggleTarget.setAttribute("aria-label", collapsed ? "Show assets" : "Hide assets")
+    this.toggleTarget.setAttribute("title", collapsed ? "Show assets" : "Hide assets")
   }
 }

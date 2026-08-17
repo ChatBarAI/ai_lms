@@ -2,6 +2,7 @@ class LessonMaterialsController < ApplicationController
   DOCUMENT_CONTENT_SECURITY_POLICY = [
     "default-src 'none'",
     "img-src 'self' data:",
+    "media-src 'self'",
     "style-src 'unsafe-inline'",
     "font-src 'none'",
     "script-src 'none'",

@@ -25,13 +25,27 @@
             = button_to "Delete", course_lesson_lesson_material_material_design_revision_path(@course, @lesson, @lesson_material, revision), method: :delete, form: { class: "w-full" }, data: { turbo_confirm: "Delete this design revision? The material currently shown to learners will not be changed." }, class: "w-full px-2.5 py-1.5 rounded bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium cursor-pointer"
       - if @revisions.empty?
         .bg-white.border.border-gray-200.rounded-lg.p-5.text-gray-500 No revisions yet.
-  %aside.bg-gray-50.border.border-gray-200.rounded-lg{ class: "dark:bg-gray-800 dark:border-gray-700" }
+  %aside.relative.bg-gray-50.border.border-gray-200.rounded-lg{
+    class: "dark:bg-gray-800 dark:border-gray-700",
+    data: {
+      controller: "design-asset-drop",
+      design_asset_drop_image_max_bytes_value: MaterialDesignAsset::IMAGE_MAX_SIZE,
+      design_asset_drop_video_max_bytes_value: MaterialDesignAsset::VIDEO_MAX_SIZE,
+      action: "dragenter->design-asset-drop#dragenter dragover->design-asset-drop#dragover dragleave->design-asset-drop#dragleave drop->design-asset-drop#drop"
+    }
+  }
+    = render "asset_drop_overlay"
     .flex.items-center.justify-between.gap-2.border-b.border-gray-200.p-3{ class: "dark:border-gray-700" }
-      %h2.text-sm.font-semibold.text-gray-900 Images
-      %div{ data: { controller: "status-modal", status_modal_dialog_id_value: "add-design-asset-dialog" } }
-        %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-violet-100.text-violet-800.hover:bg-violet-200.transition-colors.cursor-pointer{ type: "button", data: { action: "click->status-modal#open" }, "aria-haspopup": "dialog", "aria-controls": "add-design-asset-dialog" }
-          Add image
+      %h2.text-sm.font-semibold.text-gray-900 Assets
+      .flex.items-center.gap-2
+        %div{ data: { controller: "status-modal", status_modal_dialog_id_value: "add-design-asset-dialog" } }
+          %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-violet-100.text-violet-800.hover:bg-violet-200.transition-colors.cursor-pointer{ type: "button", data: { action: "click->status-modal#open" }, "aria-haspopup": "dialog", "aria-controls": "add-design-asset-dialog" }
+            Add image
+        %div{ data: { controller: "status-modal", status_modal_dialog_id_value: "add-video-asset-dialog" } }
+          %button.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-violet-100.text-violet-800.hover:bg-violet-200.transition-colors.cursor-pointer{ type: "button", data: { action: "click->status-modal#open" }, "aria-haspopup": "dialog", "aria-controls": "add-video-asset-dialog" }
+            Add video
     .p-3
+      %p.hidden.mb-3.rounded.border.border-red-200.bg-red-50.px-3.py-2.text-xs.text-red-700{ role: "status", "aria-live": "polite", data: { design_asset_drop_target: "status" } }
       .space-y-2
         - @imported_assets.each_with_index do |asset, index|
           .bg-indigo-50.border.border-indigo-200.rounded.p-2{ class: "dark:bg-indigo-950/50 dark:border-indigo-800" }
@@ -41,14 +55,20 @@
               = link_to "×", imported_course_lesson_lesson_material_material_design_assets_path(@course, @lesson, @lesson_material, id: asset.token.delete_prefix("asset://imported/")), data: { turbo_method: :delete, turbo_confirm: "Remove this image? It will no longer be available to the source material or generated designs." }, class: "shrink-0 rounded px-1.5 text-base leading-5 text-red-600 hover:bg-red-100", aria: { label: "Remove #{asset.name}" }
         - @assets.each do |asset|
           .bg-white.border.border-gray-200.rounded.p-2{ class: "dark:bg-gray-800 dark:border-gray-700" }
-            = render "image_preview", url: material_design_asset_file_path(asset.signed_id(purpose: :material_design_asset), v: asset.file.blob_id), name: asset.name, alt_text: asset.alt_text.presence || asset.name, id: "index-design-asset-image-preview-#{asset.id}"
+            - asset_url = material_design_asset_file_path(asset.signed_id(purpose: :material_design_asset), v: asset.file.blob_id)
+            - if asset.video?
+              = render "video_preview", url: asset_url, name: asset.name, label: asset.alt_text, media_type: asset.file.blob.content_type
+            - else
+              = render "image_preview", url: asset_url, name: asset.name, alt_text: asset.alt_text.presence || asset.name, id: "index-design-asset-image-preview-#{asset.id}"
             .flex.items-center.justify-between.gap-1.mt-1
               %p.text-xs.font-medium.truncate{ class: "dark:text-gray-100" }= asset.name
-              %span.shrink-0.rounded-full.bg-gray-100.px-1.5.py-0.5.text-gray-600{ class: "text-[10px] dark:bg-gray-700 dark:text-gray-300" }= asset.design_reference? ? "Reference" : "Content"
-              = link_to "×", course_lesson_lesson_material_material_design_asset_path(@course, @lesson, @lesson_material, asset), data: { turbo_method: :delete, turbo_confirm: "Remove this image? Existing revisions will retain their HTML, but the image will not be available." }, class: "shrink-0 rounded px-1.5 text-base leading-5 text-red-600 hover:bg-red-100", aria: { label: "Remove #{asset.name}" }
-            = button_to(asset.design_reference? ? "Use as page content" : "Use as design reference", course_lesson_lesson_material_material_design_asset_path(@course, @lesson, @lesson_material, asset), method: :patch, params: { material_design_asset: { role: asset.design_reference? ? "content" : "design_reference" } }, class: "mt-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline")
+              %span.shrink-0.rounded-full.bg-gray-100.px-1.5.py-0.5.text-gray-600{ class: "text-[10px] dark:bg-gray-700 dark:text-gray-300" }= asset.video? ? "Video" : (asset.design_reference? ? "Reference" : "Content")
+              = link_to "×", course_lesson_lesson_material_material_design_asset_path(@course, @lesson, @lesson_material, asset), data: { turbo_method: :delete, turbo_confirm: "Remove this asset? Existing revisions will retain their HTML, but the asset will not be available." }, class: "shrink-0 rounded px-1.5 text-base leading-5 text-red-600 hover:bg-red-100", aria: { label: "Remove #{asset.name}" }
+            - unless asset.video?
+              = button_to(asset.design_reference? ? "Use as page content" : "Use as design reference", course_lesson_lesson_material_material_design_asset_path(@course, @lesson, @lesson_material, asset), method: :patch, params: { material_design_asset: { role: asset.design_reference? ? "content" : "design_reference" } }, class: "mt-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline")
         - if @imported_assets.empty? && @assets.empty?
-          %p.text-xs.text-gray-500 No images loaded yet.
+          %p.text-xs.text-gray-500 No assets loaded yet.
+      %p.mt-3.text-center.text-xs.text-gray-500 Drag and drop one image or video here to complete its details.
 
 .fixed.inset-0.z-50.hidden{ id: "add-design-asset-dialog", data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "add-design-asset-dialog-title", "aria-hidden": "true" }
   .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
@@ -57,4 +77,13 @@
       %h2.font-semibold.text-gray-900{ id: "add-design-asset-dialog-title" } Load image
       %button.text-gray-500.hover:text-gray-700.text-2xl.leading-none.cursor-pointer{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" } ×
     .overflow-y-auto.px-6.py-5
-      = render "asset_form", asset: @asset, course: @course, lesson: @lesson, lesson_material: @lesson_material
+      = render "asset_form", asset: @image_asset, course: @course, lesson: @lesson, lesson_material: @lesson_material
+
+.fixed.inset-0.z-50.hidden{ id: "add-video-asset-dialog", data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "add-video-asset-dialog-title", "aria-hidden": "true" }
+  .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+  .absolute.flex.max-h-dvh.flex-col.bg-white.rounded-xl.shadow-2xl.border.border-indigo-200{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,32rem);max-height:92vh", tabindex: "-1", data: { dialog_target: "panel" } }
+    .flex.items-center.justify-between.gap-4.border-b.border-gray-200.px-6.py-4
+      %h2.font-semibold.text-gray-900{ id: "add-video-asset-dialog-title" } Load video
+      %button.text-gray-500.hover:text-gray-700.text-2xl.leading-none.cursor-pointer{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" } ×
+    .overflow-y-auto.px-6.py-5
+      = render "video_asset_form", asset: @video_asset, course: @course, lesson: @lesson, lesson_material: @lesson_material

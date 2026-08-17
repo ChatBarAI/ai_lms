@@ -186,6 +186,23 @@ class LessonMaterial < ApplicationRecord
 
   def sanitize_raw_html
     self.raw_html_content = SafeHtmlPolicy.sanitize_fragment(raw_html_content) if raw_html?
-    self.raw_html_content = SafeHtmlPolicy.sanitize_isolated_document(raw_html_content) if raw_html_iframe?
+    if raw_html_iframe?
+      self.raw_html_content = SafeHtmlPolicy.sanitize_isolated_document(
+        raw_html_content, video_urls: material_design_video_urls
+      )
+    end
+  end
+
+  def material_design_video_urls
+    return [] unless persisted?
+
+    routes = Rails.application.routes.url_helpers
+    material_design_assets.includes(file_attachment: :blob).filter_map do |asset|
+      next unless asset.video?
+
+      routes.material_design_asset_file_path(
+        asset.signed_id(purpose: :material_design_asset), v: asset.file.blob_id
+      )
+    end
   end
 end

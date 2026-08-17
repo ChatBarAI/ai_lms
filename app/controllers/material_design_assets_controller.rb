@@ -18,7 +18,8 @@ class MaterialDesignAssetsController < ApplicationController
     end
 
     if asset.save
-      redirect_to destination, notice: "Image uploaded as #{asset.role.humanize.downcase}."
+      label = asset.video? ? "Video" : "Image"
+      redirect_to destination, notice: "#{label} uploaded as #{asset.role.humanize.downcase}."
     else
       redirect_to destination, alert: asset.errors.full_messages.to_sentence
     end
@@ -32,7 +33,7 @@ class MaterialDesignAssetsController < ApplicationController
     if asset.save
       redirect_to course_lesson_lesson_material_material_design_revisions_path(
         @course, @lesson, @lesson_material
-      ), notice: "Image is now a #{asset.role.humanize.downcase}."
+      ), notice: "Asset is now a #{asset.role.humanize.downcase}."
     else
       redirect_to course_lesson_lesson_material_material_design_revisions_path(
         @course, @lesson, @lesson_material
@@ -43,7 +44,7 @@ class MaterialDesignAssetsController < ApplicationController
   def destroy
     authorize! :manage, @lesson_material
     @lesson_material.material_design_assets.find(params[:id]).destroy
-    redirect_to destination, notice: "Image removed.", status: :see_other
+    redirect_to destination, notice: "Asset removed.", status: :see_other
   end
 
   def destroy_imported

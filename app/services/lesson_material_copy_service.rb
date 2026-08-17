@@ -94,6 +94,9 @@ class LessonMaterialCopyService
   end
 
   def rewrite_raw_html!
+    # The preliminary save happens before design assets are copied, so its sanitizer cannot yet
+    # authorize asset-backed videos. Restore the source before rewriting every copied asset URL.
+    material.raw_html_content = source.raw_html_content
     return if material.raw_html_content.blank? || @html_replacements.empty?
 
     rewritten = material.raw_html_content.dup

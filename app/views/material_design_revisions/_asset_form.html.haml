@@ -29,7 +29,7 @@
         Capture
   .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { screen_capture_target: "browsePanel" } }
     = f.label :file, "Choose an image", class: "block text-sm font-medium text-gray-700 mb-2"
-    = f.file_field :file, accept: MaterialDesignAsset::CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", action: "change->file-preview#update change->screen-capture#fileChanged" }
+    = f.file_field :file, accept: MaterialDesignAsset::IMAGE_CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", action: "change->file-preview#update change->screen-capture#fileChanged" }
   .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { screen_capture_target: "capturePanel" } }
     %h3.text-sm.font-semibold.text-gray-900 Capture a screen, window, or tab
     .mt-3.flex.flex-wrap.items-end.gap-3

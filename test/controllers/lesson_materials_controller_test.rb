@@ -51,6 +51,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "text/html", response.media_type
     assert_includes response.headers["Content-Security-Policy"], "script-src 'none'"
+    assert_includes response.headers["Content-Security-Policy"], "media-src 'self'"
     assert_includes response.headers["Content-Security-Policy"], "frame-ancestors 'self'"
     assert_nil response.headers["X-Frame-Options"]
     assert_includes response.body, "<p>Hello</p>"
