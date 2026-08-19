@@ -182,6 +182,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:instructor)
     get new_course_lesson_lesson_material_path(@course, @lesson)
     assert_response :success
+    assert_select "button", text: /Insert HTML/, count: 1
   end
 
   test "material form submits without turbo so validation errors stay visible" do
@@ -366,6 +367,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href='#{course_lesson_lesson_material_path(@course, @lesson, @material)}'][target='_blank']", text: "View material"
     assert_select "a.ai-design-action[href='#{course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @material)}']", text: "Design"
+    assert_select "button", text: /Insert HTML/, count: 0
   end
 
   test "instructor can update own material" do
