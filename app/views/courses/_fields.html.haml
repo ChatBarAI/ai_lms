@@ -41,5 +41,16 @@
         remove_label: "Remove current cover image",
         hint: "Cover image (optional)"
 
+  .bg-gray-50.border.border-gray-200.rounded.p-4{ data: { controller: "course-pricing" } }
+    %p.text-sm.font-medium.text-gray-700.mb-1 Pricing
+    .mb-3
+      = toggle_switch_field f, :free_course,
+          label: "This course is free",
+          checkbox_options: { data: { course_pricing_target: "freeToggle", action: "change->course-pricing#sync" } }
+    .flex.items-center.gap-2
+      %span.text-sm.font-medium.text-gray-600 $
+      = f.number_field :price_in_dollars, value: course.price_cents.to_i > 0 ? ('%.2f' % (course.price_cents / 100.0)) : nil, min: 0, step: 0.01, placeholder: "0.00", class: "border border-gray-300 rounded px-3 py-2 w-40", data: { course_pricing_target: "priceInput" }
+    %p.text-xs.text-gray-400.mt-1 Changing the price does not affect existing purchases.
+
   %div
     = render "shared/tag_picker", f: f, record: course

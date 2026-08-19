@@ -83,6 +83,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.index ["user_id"], name: "index_certificates_on_user_id"
   end
 
+  create_table "course_purchases", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "course_id", null: false
+    t.integer "amount_cents", null: false
+    t.string "stripe_session_id"
+    t.string "stripe_payment_intent_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id"], name: "index_course_purchases_on_course_id"
+    t.index ["stripe_session_id"], name: "index_course_purchases_on_stripe_session_id", unique: true, where: "(stripe_session_id IS NOT NULL)"
+    t.index ["user_id", "course_id"], name: "index_course_purchases_on_user_id_and_course_id", unique: true
+    t.index ["user_id"], name: "index_course_purchases_on_user_id"
+  end
+
   create_table "courses", force: :cascade do |t|
     t.bigint "subject_id"
     t.bigint "owner_id", null: false
@@ -95,6 +109,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.jsonb "certificate_layout", default: {}, null: false
     t.string "locale", default: "en", null: false
     t.boolean "public_access_enabled", default: false, null: false
+    t.integer "price_cents"
     t.index ["owner_id"], name: "index_courses_on_owner_id"
     t.index ["slug"], name: "index_courses_on_slug", unique: true
     t.index ["subject_id"], name: "index_courses_on_subject_id"
@@ -383,6 +398,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.string "sendmail_arguments"
     t.boolean "smtp_ssl"
     t.boolean "smtp_tls"
+    t.boolean "stripe_enabled", default: true, null: false
   end
 
   create_table "subjects", force: :cascade do |t|
@@ -437,6 +453,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.bigint "organization_id"
     t.string "locale", default: "en", null: false
     t.string "course_locales", default: ["en", "de"], null: false, array: true
+    t.string "stripe_customer_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
@@ -449,6 +466,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
   add_foreign_key "ai_model_configurations", "users", column: "created_by_id"
   add_foreign_key "certificates", "courses"
   add_foreign_key "certificates", "users"
+  add_foreign_key "course_purchases", "courses"
+  add_foreign_key "course_purchases", "users"
   add_foreign_key "courses", "subjects"
   add_foreign_key "courses", "users", column: "owner_id"
   add_foreign_key "enrollments", "courses"

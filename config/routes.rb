@@ -94,6 +94,10 @@ Rails.application.routes.draw do
     end
     resources :enrollments, only: [ :create, :destroy ]
     resource  :certificate, only: [ :show ]
+    resource  :purchase, only: [ :create ], controller: "course_purchases" do
+      get :success, on: :member
+      get :cancel,  on: :member
+    end
   end
 
   get "/certificates/:token", to: "verifications#show", as: :verify_certificate

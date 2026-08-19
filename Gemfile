@@ -101,6 +101,9 @@ gem "psych", "5.2.2"
 # PDF certificate generation
 gem "prawn", "~> 2.5"
 
+# Payments
+gem "stripe", "~> 13.0"
+
 group :test do
   gem "capybara"
   gem "selenium-webdriver"

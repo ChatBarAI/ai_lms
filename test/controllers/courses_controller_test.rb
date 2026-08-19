@@ -112,4 +112,50 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     post unpublish_course_path(courses(:draft_course))
     assert_not courses(:draft_course).reload.published?
   end
+
+  test "owner can set a price on a course via price_in_dollars" do
+    sign_in users(:instructor)
+    patch course_path(courses(:algebra)), params: { course: { price_in_dollars: "19.99" } }
+    assert_redirected_to courses(:algebra)
+    assert_equal 1999, courses(:algebra).reload.price_cents
+  end
+
+  test "owner can clear the price by setting free_course to true" do
+    sign_in users(:instructor)
+    courses(:algebra).update!(price_cents: 1999)
+
+    patch course_path(courses(:algebra)), params: { course: { free_course: "1", price_in_dollars: "19.99" } }
+
+    assert_redirected_to courses(:algebra)
+    assert_nil courses(:algebra).reload.price_cents
+  end
+
+  test "free_course false preserves an existing price" do
+    sign_in users(:instructor)
+    courses(:algebra).update!(price_cents: 500)
+
+    patch course_path(courses(:algebra)), params: { course: { free_course: "0", price_in_dollars: "5.00" } }
+
+    assert_redirected_to courses(:algebra)
+    assert_equal 500, courses(:algebra).reload.price_cents
+  end
+
+  test "instructor can create a paid course" do
+    sign_in users(:instructor)
+    assert_difference -> { Course.count }, 1 do
+      post courses_path, params: {
+        course: {
+          title: "Paid Course",
+          subject_id: subjects(:math).id,
+          description: "Costs money",
+          locale: "en",
+          public_access_enabled: "1",
+          free_course: "0",
+          price_in_dollars: "49.99"
+        }
+      }
+    end
+    created = Course.order(:id).last
+    assert_equal 4999, created.price_cents
+  end
 end

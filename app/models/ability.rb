@@ -34,13 +34,21 @@ class Ability
     can :read, Subject
     can :read, Course, published_at: ..Time.current
 
-    # Authenticated users can read instructor-owned drafts they own.
-    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current }
+    # Free published lessons are readable by all signed-in users.
+    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current, price_cents: [ nil, 0 ] }
     can :read, Lesson, course: { owner_id: user.id }
-    can :read, Question, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current } }
+    can :read, Question, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current, price_cents: [ nil, 0 ] } }
     can :read, Question, lesson: { course: { owner_id: user.id } }
-    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current } }
+    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current, price_cents: [ nil, 0 ] } }
     can :read, LessonMaterial, lesson: { course: { owner_id: user.id } }
+
+    # Paid courses: grant lesson/material access only to purchasers.
+    purchased_course_ids = CoursePurchase.where(user_id: user.id).pluck(:course_id)
+    if purchased_course_ids.any?
+      can :read, Lesson, published_at: ..Time.current, course: { id: purchased_course_ids, published_at: ..Time.current }
+      can :read, Question, lesson: { published_at: ..Time.current, course: { id: purchased_course_ids, published_at: ..Time.current } }
+      can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { id: purchased_course_ids, published_at: ..Time.current } }
+    end
   end
 
   def allow_student_capabilities(user)
@@ -52,6 +60,8 @@ class Ability
     can :create, LessonMaterialAcknowledgement, enrollment: { user_id: user.id }
     can :read, LessonMaterialAcknowledgement, enrollment: { user_id: user.id }
     can :read, Certificate, user_id: user.id
+    can :read, CoursePurchase, user_id: user.id
+    can :create, CoursePurchase, user_id: user.id
   end
 
   def allow_instructor_capabilities(user)

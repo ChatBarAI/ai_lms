@@ -20,6 +20,17 @@ class SiteSettingTest < ActiveSupport::TestCase
     assert SiteSetting.current.allow_guest_access?
   end
 
+  test "stripe_enabled defaults to true" do
+    SiteSetting.delete_all
+    assert SiteSetting.current.stripe_enabled?
+  end
+
+  test "stripe_enabled can be set to false" do
+    s = SiteSetting.current
+    s.update!(stripe_enabled: false)
+    assert_not s.reload.stripe_enabled?
+  end
+
   test "logo rejects non-image content types" do
     s = SiteSetting.current
     s.logo.attach(io: StringIO.new("x"), filename: "x.txt", content_type: "text/plain")

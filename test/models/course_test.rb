@@ -69,4 +69,123 @@ class CourseTest < ActiveSupport::TestCase
     assert_not scheduled.published?
     assert_not_includes Course.published, scheduled
   end
+
+  test "paid? is false when price_cents is nil" do
+    courses(:algebra).update!(price_cents: nil)
+    assert_not courses(:algebra).paid?
+  end
+
+  test "paid? is false when price_cents is zero" do
+    courses(:algebra).update!(price_cents: 0)
+    assert_not courses(:algebra).paid?
+  end
+
+  test "paid? is true when price_cents is positive" do
+    courses(:algebra).update!(price_cents: 2999)
+    assert courses(:algebra).paid?
+  end
+
+  test "price returns decimal dollar amount" do
+    courses(:algebra).update!(price_cents: 1999)
+    assert_equal 19.99, courses(:algebra).price
+  end
+
+  test "price_in_dollars= converts dollars to cents" do
+    c = courses(:algebra)
+    c.price_in_dollars = "29.99"
+    c.save!
+    assert_equal 2999, c.price_cents
+  end
+
+  test "price_in_dollars= with zero sets price_cents to nil" do
+    c = courses(:algebra)
+    c.price_in_dollars = "0"
+    c.save!
+    assert_nil c.price_cents
+  end
+
+  test "price_in_dollars= with blank sets price_cents to nil" do
+    c = courses(:algebra)
+    c.update!(price_cents: 1000)
+    c.price_in_dollars = ""
+    c.save!
+    assert_nil c.price_cents
+  end
+
+  test "price_in_dollars returns nil when course is free" do
+    courses(:algebra).update!(price_cents: nil)
+    assert_nil courses(:algebra).price_in_dollars
+  end
+
+  test "price_in_dollars returns decimal when course is paid" do
+    courses(:algebra).update!(price_cents: 500)
+    assert_equal 5.0, courses(:algebra).price_in_dollars
+  end
+
+  test "free_course getter returns true when price_cents is nil" do
+    courses(:algebra).update!(price_cents: nil)
+    assert courses(:algebra).free_course
+  end
+
+  test "free_course getter returns false when course is paid" do
+    courses(:algebra).update!(price_cents: 1000)
+    assert_not courses(:algebra).free_course
+  end
+
+  test "free_course= true clears price_cents on save" do
+    c = courses(:algebra)
+    c.update!(price_cents: 1500)
+    c.free_course = true
+    c.save!
+    assert_nil c.reload.price_cents
+  end
+
+  test "free_course= false does not clear an existing price" do
+    c = courses(:algebra)
+    c.update!(price_cents: 1500)
+    c.free_course = false
+    c.save!
+    assert_equal 1500, c.reload.price_cents
+  end
+
+  test "free_course= accepts truthy string '1'" do
+    c = courses(:algebra)
+    c.update!(price_cents: 999)
+    c.free_course = "1"
+    c.save!
+    assert_nil c.reload.price_cents
+  end
+
+  test "purchased_by? returns true for free course regardless of user" do
+    courses(:algebra).update!(price_cents: nil)
+    assert courses(:algebra).purchased_by?(nil)
+    assert courses(:algebra).purchased_by?(users(:student))
+  end
+
+  test "purchased_by? returns false for nil user on paid course" do
+    courses(:algebra).update!(price_cents: 999)
+    assert_not courses(:algebra).purchased_by?(nil)
+  end
+
+  test "purchased_by? returns true for course owner" do
+    courses(:algebra).update!(price_cents: 999)
+    assert courses(:algebra).purchased_by?(users(:instructor))
+  end
+
+  test "purchased_by? returns true for admin on paid course" do
+    courses(:algebra).update!(price_cents: 999)
+    assert courses(:algebra).purchased_by?(users(:admin))
+  end
+
+  test "purchased_by? returns true after a purchase record exists" do
+    c = courses(:algebra)
+    c.update!(price_cents: 999)
+    CoursePurchase.create!(user: users(:student), course: c, amount_cents: 999)
+    assert c.purchased_by?(users(:student))
+  end
+
+  test "purchased_by? returns false with no purchase record" do
+    courses(:algebra).update!(price_cents: 999)
+    assert_not courses(:algebra).purchased_by?(users(:student))
+  end
 end

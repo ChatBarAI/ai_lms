@@ -16,6 +16,11 @@
           = f.number_field :pass_mark, min: 0, max: 100, class: "w-32 border border-gray-300 rounded px-3 py-2"
           %p.text-xs.text-gray-500.mt-1 Individual lessons can override this.
 
+        .space-y-1
+          = toggle_switch_field f, :stripe_enabled,
+              label: "Enable Stripe payments"
+          %p.text-xs.text-gray-500.ml-7 Turn off to disable all paid course purchases.
+
       .space-y-4
         %h3.text-sm.font-semibold.text-gray-700 Authentication policy (Kinde)
 

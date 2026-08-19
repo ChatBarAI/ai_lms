@@ -6,6 +6,11 @@ class EnrollmentsController < ApplicationController
     enrollment = Enrollment.find_or_initialize_by(user: current_user, course: course)
     enrollment.role ||= :student
     authorize! :create, enrollment
+
+    if course.paid? && !course.purchased_by?(current_user)
+      return redirect_to course_path(course), alert: "Please purchase this course to enrol."
+    end
+
     if enrollment.save
       redirect_to course_path(course), notice: t("enrollments.flash.enrolled")
     else
