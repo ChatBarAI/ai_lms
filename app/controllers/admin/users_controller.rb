@@ -62,10 +62,13 @@ class Admin::UsersController < Admin::BaseController
 
   def enroll
     course = Course.find(params[:course_id])
-    Enrollment.find_or_create_by!(user: @user, course: course)
+    enrollment = Enrollment.find_or_initialize_by(user: @user, course: course)
+    enrollment.role ||= :student
+    enrollment.skip_prerequisite_check = ActiveModel::Type::Boolean.new.cast(params[:force])
+    enrollment.save!
     redirect_to admin_user_path(@user), notice: "Enrolled in #{course.title}."
   rescue ActiveRecord::RecordInvalid => e
-    redirect_to admin_user_path(@user), alert: e.message
+    redirect_to admin_user_path(@user), alert: e.record.errors.full_messages.to_sentence.presence || e.message
   end
 
   def reset_password

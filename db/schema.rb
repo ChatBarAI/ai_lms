@@ -83,6 +83,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.index ["user_id"], name: "index_certificates_on_user_id"
   end
 
+  create_table "course_prerequisites", force: :cascade do |t|
+    t.bigint "course_id", null: false
+    t.bigint "prerequisite_course_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id", "prerequisite_course_id"], name: "index_course_prerequisites_uniqueness", unique: true
+    t.index ["course_id"], name: "index_course_prerequisites_on_course_id"
+    t.index ["prerequisite_course_id"], name: "index_course_prerequisites_on_prerequisite_course_id"
+    t.check_constraint "course_id <> prerequisite_course_id", name: "course_prerequisites_not_self"
+  end
+
   create_table "courses", force: :cascade do |t|
     t.bigint "subject_id"
     t.bigint "owner_id", null: false
@@ -449,6 +461,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
   add_foreign_key "ai_model_configurations", "users", column: "created_by_id"
   add_foreign_key "certificates", "courses"
   add_foreign_key "certificates", "users"
+  add_foreign_key "course_prerequisites", "courses"
+  add_foreign_key "course_prerequisites", "courses", column: "prerequisite_course_id"
   add_foreign_key "courses", "subjects"
   add_foreign_key "courses", "users", column: "owner_id"
   add_foreign_key "enrollments", "courses"
