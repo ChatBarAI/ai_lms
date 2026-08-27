@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_27_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_27_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -170,6 +170,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_27_000000) do
     t.string "custom_tutor_embed_url"
     t.string "custom_tutor_embed_type"
     t.text "custom_tutor_embed_script"
+    t.string "material_layout", default: "stacked", null: false
     t.index ["cbai_token"], name: "index_lessons_on_cbai_token"
     t.index ["course_id", "position"], name: "index_lessons_on_course_id_and_position"
     t.index ["course_id"], name: "index_lessons_on_course_id"

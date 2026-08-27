@@ -44,6 +44,20 @@ class LessonTest < ActiveSupport::TestCase
     assert_not_includes Lesson.published, scheduled
   end
 
+  test "material layout accepts the supported presentation options" do
+    lesson = lessons(:intro)
+
+    %w[stacked scroller].each do |layout|
+      lesson.material_layout = layout
+      assert lesson.valid?, "expected #{layout} to be valid"
+      assert_equal layout, lesson.material_layout_or_default
+    end
+
+    lesson.material_layout = "unknown"
+    assert_not lesson.valid?
+    assert_equal "stacked", lesson.material_layout_or_default
+  end
+
   test "body is ActionText rich text" do
     lesson = lessons(:intro)
     assert lesson.body.present?

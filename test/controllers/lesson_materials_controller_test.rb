@@ -545,6 +545,18 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
                                             anchor: "material-#{@material.id}")
   end
 
+  test "enrolled student can acknowledge a material as JSON" do
+    sign_in users(:student)
+
+    assert_difference("LessonMaterialAcknowledgement.count", 1) do
+      post acknowledge_course_lesson_lesson_material_path(@course, @lesson, @material),
+           as: :json
+    end
+
+    assert_response :success
+    assert_equal true, response.parsed_body["acknowledged"]
+  end
+
   # ---------------------------------------------------------------------------
   # Quiz gate
   # ---------------------------------------------------------------------------

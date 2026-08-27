@@ -6,6 +6,17 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show does not label incomplete quiz progress as completed" do
+    progress = progresses(:student_intro)
+    progress.update!(status: :not_started, completed_at: nil)
+    sign_in users(:student)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select "#lesson-status span.text-green-700", count: 0
+  end
+
   test "show private course lesson redirects anonymous user" do
     get course_lesson_path(courses(:other_owner_course), lessons(:physics_lesson))
     assert_redirected_to root_path
@@ -36,6 +47,28 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "none", lessons(:intro).reload.cbai_display_mode
     assert_equal "anam", lessons(:intro).reload.ai_tutor_provider
     assert_equal "Renamed", lessons(:intro).reload.title
+  end
+
+  test "owner can select the horizontal material scroller" do
+    sign_in users(:instructor)
+
+    patch course_lesson_path(courses(:algebra), lessons(:intro)),
+          params: { lesson: { material_layout: "scroller" } }
+
+    assert_redirected_to course_lesson_path(courses(:algebra), lessons(:intro))
+    assert_equal "scroller", lessons(:intro).reload.material_layout
+  end
+
+  test "show renders material scroller controls when selected" do
+    lesson = lessons(:intro)
+    lesson.update!(material_layout: "scroller")
+    lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this")
+
+    get course_lesson_path(courses(:algebra), lesson)
+
+    assert_response :success
+    assert_select "[data-controller='material-scroller']", count: 1
+    assert_select "button[data-action='material-scroller#next']", text: /Next/
   end
 
   test "instructor cannot configure a custom tutor script" do

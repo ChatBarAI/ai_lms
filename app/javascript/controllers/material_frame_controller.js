@@ -5,13 +5,11 @@ export default class extends Controller {
   static values = { minHeight: { type: Number, default: 480 } }
 
   connect() {
-    this.resize = this.resize.bind(this)
+    this.resize = this.scheduleResize.bind(this)
     this.element.addEventListener("load", this.resize)
     this.element.closest("[data-controller~='collapsible']")
       ?.addEventListener("collapsible:expanded", this.resize)
-
-    this.frameObserver = new ResizeObserver(this.resize)
-    this.frameObserver.observe(this.element)
+    window.addEventListener("resize", this.resize)
 
     if (this.element.contentDocument?.readyState === "complete") this.resize()
   }
@@ -20,14 +18,24 @@ export default class extends Controller {
     this.element.removeEventListener("load", this.resize)
     this.element.closest("[data-controller~='collapsible']")
       ?.removeEventListener("collapsible:expanded", this.resize)
-    this.frameObserver?.disconnect()
+    window.removeEventListener("resize", this.resize)
+    window.cancelAnimationFrame(this.resizeFrame)
     this.documentObserver?.disconnect()
   }
 
-  resize() {
+  scheduleResize() {
+    window.cancelAnimationFrame(this.resizeFrame)
+    this.resizeFrame = window.requestAnimationFrame(() => this.measureAndResize())
+  }
+
+  measureAndResize() {
     try {
       const document = this.element.contentDocument
       if (!document?.documentElement || this.element.offsetWidth === 0) return
+
+      // Measure against a stable viewport. Otherwise material CSS such as
+      // `min-height: 100vh` grows as the iframe grows and creates a feedback loop.
+      this.element.style.height = `${this.minHeightValue}px`
 
       const body = document.body
       const height = Math.max(
@@ -38,9 +46,7 @@ export default class extends Controller {
         body?.offsetHeight || 0
       )
 
-      if (this.element.style.height !== `${height}px`) {
-        this.element.style.height = `${height}px`
-      }
+      this.element.style.height = `${height}px`
 
       this.observeDocument(document)
     } catch (error) {

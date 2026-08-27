@@ -95,6 +95,13 @@ class Lesson < ApplicationRecord
     QUIZ_LAYOUTS.include?(quiz_layout) ? quiz_layout : "scrolling"
   end
 
+  MATERIAL_LAYOUTS = %w[stacked scroller].freeze
+  validates :material_layout, inclusion: { in: MATERIAL_LAYOUTS }
+
+  def material_layout_or_default
+    MATERIAL_LAYOUTS.include?(material_layout) ? material_layout : "stacked"
+  end
+
   def cbai_enabled?
     ai_tutor_provider_or_default == "chatbar" &&
       cbai_token.present? &&

@@ -124,14 +124,24 @@ class LessonMaterialsController < ApplicationController
   def acknowledge
     enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
     unless enrollment
-      redirect_to course_lesson_path(@course, @lesson), alert: "Enrol to mark materials as complete." and return
+      respond_to do |format|
+        format.html { redirect_to course_lesson_path(@course, @lesson), alert: "Enrol to mark materials as complete." }
+        format.json { render json: { error: "Enrol to mark materials as complete." }, status: :unprocessable_entity }
+      end
+      return
     end
 
-    ack = LessonMaterialAcknowledgement.new(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
+    ack = LessonMaterialAcknowledgement.find_or_initialize_by(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
     authorize! :create, ack
-    ack.save
-    redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
-                notice: "Marked as complete."
+    ack.save!
+
+    respond_to do |format|
+      format.html do
+        redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
+                    notice: "Marked as complete."
+      end
+      format.json { render json: { acknowledged: true } }
+    end
   end
 
   def document
