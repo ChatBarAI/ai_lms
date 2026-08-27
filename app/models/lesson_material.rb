@@ -26,7 +26,7 @@ class LessonMaterial < ApplicationRecord
 
   attr_accessor :google_doc_zip
 
-  enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5, video_upload: 6, video_url: 7, google_doc: 8, raw_html_iframe: 9, web_page: 10 }
+  enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5, video_upload: 6, video_url: 7, google_doc: 8, raw_html_iframe: 9, web_page: 10, chatbar: 11 }
 
   AUDIO_CONTENT_TYPES = %w[
     audio/mpeg audio/vnd.wave audio/x-wav audio/ogg audio/aac
@@ -96,6 +96,11 @@ class LessonMaterial < ApplicationRecord
       field: :url,
       message: "can't be blank",
       valid: ->(material) { material.url.present? }
+    },
+    "chatbar" => {
+      field: :chatbar_prompt,
+      message: "can't be blank",
+      valid: ->(material) { material.chatbar_prompt.present? }
     }
   }.freeze
 
@@ -110,12 +115,15 @@ class LessonMaterial < ApplicationRecord
     "audio_url" => "Audio (URL)",
     "image_upload" => "Image (upload)",
     "video_upload" => "Video (upload)",
-    "video_url" => "Video (URL)"
+    "video_url" => "Video (URL)",
+    "chatbar" => "ChatBar conversation"
   }.freeze
 
   validates :title, presence: true
   validates :url, presence: true, if: :web_page?
   validates :position, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :chatbar_token, presence: true, if: :chatbar?
+  validates :chatbar_prompt, length: { maximum: 1500 }, allow_blank: true
   validate :content_matches_kind
   validates :document, content_type: "application/pdf",
                        size: { less_than: 25.megabytes },

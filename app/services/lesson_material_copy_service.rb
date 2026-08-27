@@ -41,6 +41,8 @@ class LessonMaterialCopyService
       kind: source.kind,
       raw_html_content: source.raw_html_content,
       url: source.url,
+      chatbar_token: source.chatbar_token,
+      chatbar_prompt: source.chatbar_prompt,
       required: copy_settings ? source.required : true,
       open_by_default: copy_settings ? source.open_by_default : false,
       source_material: source,

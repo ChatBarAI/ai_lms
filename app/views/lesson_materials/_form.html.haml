@@ -2,7 +2,7 @@
   = javascript_import_module_tag "actiontext_editor"
 
 - url = material.persisted? ? course_lesson_lesson_material_path(course, lesson, material) : course_lesson_lesson_materials_path(course, lesson)
-- kind_options = [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML — inline", "raw_html"], ["Raw HTML — isolated iframe", "raw_html_iframe"], ["Google Docs import", "google_doc"], ["Web page import — URL", "web_page"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"]]
+- kind_options = [["PDF", "pdf"], ["Rich text (Trix editor)", "html"], ["Raw HTML — inline", "raw_html"], ["Raw HTML — isolated iframe", "raw_html_iframe"], ["Google Docs import", "google_doc"], ["Web page import — URL", "web_page"], ["Audio — upload file", "audio_upload"], ["Audio — external URL", "audio_url"], ["Image — upload file", "image_upload"], ["Video — upload file", "video_upload"], ["Video — external URL", "video_url"], ["ChatBar conversation", "chatbar"]]
 - unless material.persisted?
   - kind_options.unshift(["Create from copy", "copy"])
   - kind_options.unshift(["AI-designed page", "ai_designed"])
@@ -106,6 +106,14 @@
       = f.label :url, "Video URL", class: "block text-sm font-medium mb-1"
       = f.url_field :url, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "https://example.com/video.mp4"
       %p.text-xs.text-gray-500.mt-1 Direct link to an mp4, webm, or ogg video file.
+
+    %div{ data: { material_kind_target: "chatbar" }, class: ("hidden" if material.kind != "chatbar") }
+      - token_label_title = local_assigns[:chatbar_token_prefilled] ? "Prefilled with this lesson's ChatBar token. Replace it to use a different ChatBar for this material." : nil
+      = f.label :chatbar_token, "ChatBar instance token", class: "block text-sm font-medium mb-1", title: token_label_title
+      = f.text_field :chatbar_token, class: "w-full border border-gray-300 rounded px-3 py-2 mb-3 font-mono", autocomplete: "off", placeholder: "ChatBar instance token"
+      = f.label :chatbar_prompt, "Conversation starting prompt", class: "block text-sm font-medium mb-1"
+      = f.text_area :chatbar_prompt, rows: 6, maxlength: 1500, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "Ask the learner a question or begin a guided conversation about this lesson…"
+      %p.text-xs.text-gray-500.mt-1 This prompt is stored directly on the material and sent to the selected ChatBar when the learner starts the conversation. Maximum 1,500 characters.
 
     - unless material.persisted?
       .fixed.inset-0.z-50.hidden{ id: "copy-material-dialog", data: { controller: "dialog", dialog_open_value: "false", material_kind_target: "copy" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "copy-material-dialog-title", "aria-hidden": "true" }

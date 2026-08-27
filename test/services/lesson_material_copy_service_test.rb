@@ -96,6 +96,20 @@ class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
     assert_empty copy.material_design_revisions
   end
 
+  test "copies a ChatBar prompt as material data" do
+    source = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Discussion", kind: :chatbar,
+      chatbar_token: "discussion-chatbar",
+      chatbar_prompt: "Compare these two approaches"
+    )
+
+    copy = copy_material(source)
+
+    assert copy.chatbar?
+    assert_equal source.chatbar_token, copy.chatbar_token
+    assert_equal source.chatbar_prompt, copy.chatbar_prompt
+  end
+
   private
 
   def copy_material(source)

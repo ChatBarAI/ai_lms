@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 const SCRIPT_SRC = "https://scripts.chatbar-ai.com/cb-ai-search.min.js"
+const SESSION_EVENT = "cbai:session-activate"
 let scriptPromise = null
 
 function ensureCbaiScript() {
@@ -49,11 +50,16 @@ export default class extends Controller {
     this.onResize = () => {
       if (!this.overlayTarget.classList.contains("hidden")) this.applyPresentation()
     }
+    this.onSessionActivate = (event) => {
+      const open = this.hasOverlayTarget && !this.overlayTarget.classList.contains("hidden")
+      if (event.detail?.owner !== this.element && (open || this.isMounted())) this.close()
+    }
 
     document.addEventListener("keydown", this.onEscape)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
     window.addEventListener("pagehide", this.onPageHide)
     window.addEventListener("resize", this.onResize)
+    window.addEventListener(SESSION_EVENT, this.onSessionActivate)
 
     this.element._cbaiOpenWithEail = (eailText) => {
       if (this.isMounted()) this.destroyTutor()
@@ -67,6 +73,7 @@ export default class extends Controller {
     document.removeEventListener("turbo:before-visit", this.onBeforeVisit)
     window.removeEventListener("pagehide", this.onPageHide)
     window.removeEventListener("resize", this.onResize)
+    window.removeEventListener(SESSION_EVENT, this.onSessionActivate)
     this.unlockBody()
     this.destroyTutor()
     delete this.element._cbaiOpenWithEail
@@ -100,6 +107,7 @@ export default class extends Controller {
   open() {
     if (!this.hasOverlayTarget) return
 
+    window.dispatchEvent(new CustomEvent(SESSION_EVENT, { detail: { owner: this.element } }))
     this.overlayTarget.classList.remove("hidden")
     this.applyPresentation()
     this.mountTutor()
@@ -136,7 +144,11 @@ export default class extends Controller {
       }
     }
 
-    if (this.mountTarget.dataset.cbaiEail) opts.eail = this.mountTarget.dataset.cbaiEail
+    const eail = this.mountTarget.dataset.cbaiEail
+    if (eail) {
+      opts.eail = eail
+      delete this.mountTarget.dataset.cbaiEail
+    }
 
     window._bl_ai_search.init(token, this.mountTarget, opts)
   }

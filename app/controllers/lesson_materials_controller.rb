@@ -36,6 +36,8 @@ class LessonMaterialsController < ApplicationController
   end
 
   def new
+    @chatbar_token_prefilled = @lesson.cbai_token.present?
+    @lesson_material.chatbar_token ||= @lesson.cbai_token
     @copy_source_catalog = copy_source_catalog
   end
 
@@ -178,7 +180,7 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip)
+    params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip, :chatbar_token, :chatbar_prompt)
   end
 
   def starting_ai_design?

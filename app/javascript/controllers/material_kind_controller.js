@@ -12,6 +12,7 @@ const TARGET_BY_KIND = Object.freeze({
   image_upload: "imageupload",
   video_upload: "videoupload",
   video_url: "videourl",
+  chatbar: "chatbar",
   copy: "copy"
 })
 
