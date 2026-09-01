@@ -27,7 +27,7 @@
           %tr
             %td.px-4.py-2= link_to course.title, course_path(course), class: "text-indigo-700 hover:text-indigo-900 hover:underline font-medium"
             %td.px-4.py-2 #{enrollment.completion_percentage}%
-            %td.px-4.py-2 #{enrollment.lessons_completed_count} / #{course.lessons.count}
+            %td.px-4.py-2 #{enrollment.lessons_completed_count} / #{enrollment.lessons_required_count}
             %td.px-4.py-2= enrollment.average_score || "—"
             %td.px-4.py-2
               - if attempts.size > 1

@@ -127,6 +127,7 @@ class Lesson < ApplicationRecord
   end
 
   scope :published, -> { where(published_at: ..Time.current) }
+  scope :required_for_completion, -> { published }
   scope :pending_marking, -> {
     joins(questions: :question_answers)
       .where(questions: { kind: Question.kinds[:free_text] })

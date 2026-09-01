@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { lockBodyScroll, unlockBodyScroll } from "controllers/scroll_lock"
 
 const SCRIPT_SRC = "https://scripts.chatbar-ai.com/cb-ai-search.min.js"
 const SESSION_EVENT = "cbai:session-activate"
@@ -199,7 +200,11 @@ export default class extends Controller {
     this.overlayTarget.classList.toggle("ai-tutor-inline-overlay", inline)
     this.overlayTarget.setAttribute("aria-modal", inline ? "false" : "true")
     document.body.classList.toggle("ai-tutor-inline-active", inline)
-    document.body.classList.toggle("overflow-hidden", !inline)
+    if (inline) {
+      unlockBodyScroll(this)
+    } else {
+      lockBodyScroll(this)
+    }
   }
 
   get inlineAvailable() {
@@ -207,7 +212,7 @@ export default class extends Controller {
   }
 
   unlockBody() {
-    document.body.classList.remove("overflow-hidden")
+    unlockBodyScroll(this)
     document.body.classList.remove("ai-tutor-inline-active")
     if (this.hasOverlayTarget) this.overlayTarget.classList.remove("ai-tutor-inline-overlay")
   }

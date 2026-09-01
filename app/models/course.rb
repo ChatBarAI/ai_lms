@@ -112,6 +112,10 @@ class Course < ApplicationRecord
     Progress.where(enrollment_id: enrollments.select(:id))
   end
 
+  def lessons_required_for_completion
+    lessons.required_for_completion
+  end
+
   def enrollment_count
     enrollments.count
   end

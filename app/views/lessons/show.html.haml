@@ -1,7 +1,8 @@
 - content_for :title, @lesson.title
 
-.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show" } }
+.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show lesson-sidebar" } }
   .flex.flex-wrap.gap-2.items-center
+    = render "course_sidebar"
     = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
       ← Course
     - if can?(:update, @lesson)

@@ -193,3 +193,33 @@
         pointer-events: auto;
     }
 }
+
+/* On desktop, the lesson progress drawer becomes a non-modal left column. */
+@media (min-width: 1024px) {
+    body.lesson-sidebar-inline-active .site-nav,
+    body.lesson-sidebar-inline-active .site-main {
+        margin-left: 384px;
+    }
+
+    body.lesson-sidebar-inline-active .site-main {
+        width: calc(100% - 384px);
+    }
+
+    body.ai-tutor-inline-active.lesson-sidebar-inline-active .site-main {
+        width: calc(100% - 864px);
+    }
+
+    .lesson-sidebar-overlay {
+        pointer-events: none;
+    }
+
+    .lesson-sidebar-overlay .lesson-sidebar-backdrop {
+        display: none;
+    }
+
+    .lesson-sidebar-overlay .lesson-sidebar-panel {
+        width: 384px;
+        max-width: none;
+        pointer-events: auto;
+    }
+}

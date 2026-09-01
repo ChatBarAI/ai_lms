@@ -25,7 +25,36 @@ class EnrollmentTest < ActiveSupport::TestCase
   test "completion_percentage counts completed progresses" do
     enrollment = enrollments(:student_in_algebra)
     Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:intro)).update!(status: :completed)
-    total = courses(:algebra).lessons.count
+    total = courses(:algebra).lessons_required_for_completion.count
     assert_in_delta (1.0 / total * 100).round(1), enrollment.completion_percentage, 0.01
+  end
+
+  test "completion ignores draft lessons and their progresses" do
+    enrollment = enrollments(:student_in_algebra)
+    Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:intro)).update!(status: :completed)
+    Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:draft_lesson)).update!(status: :completed)
+
+    assert_equal 2, enrollment.lessons_required_count
+    assert_equal 1, enrollment.lessons_completed_count
+    assert_equal 50.0, enrollment.completion_percentage
+  end
+
+  test "published lessons can be fully completed while a draft remains incomplete" do
+    enrollment = enrollments(:student_in_algebra)
+    Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:intro)).update!(status: :completed)
+    Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:advanced)).update!(status: :completed)
+
+    assert enrollment.fully_completed?
+    assert_includes Enrollment.completed, enrollment
+  end
+
+  test "a course with no published lessons is not fully completed" do
+    course = Course.create!(title: "Draft only", subject: subjects(:math), owner: users(:instructor))
+    course.lessons.create!(title: "Coming soon", position: 1)
+    enrollment = Enrollment.create!(user: users(:other_student), course: course)
+
+    assert_equal 0, enrollment.completion_percentage
+    assert_not enrollment.fully_completed?
+    assert_not_includes Enrollment.completed, enrollment
   end
 end

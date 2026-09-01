@@ -115,6 +115,19 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    course_sidebar:
+      open: "Progress"
+      close: "Close course contents"
+      course: "%{course_l}"
+      progress: "Course progress"
+      percent_complete: "%{percent}% complete"
+      lesson_navigation: "%{lessons} in this course"
+      duration: "%{count} min"
+      details_for: "Show or hide details for %{title}"
+      completed: "Completed"
+      in_progress: "In progress"
+      not_started: "Not started"
+      back: "Back to %{course_l}"
     index:
       heading: "%{lessons}"
       add: "Add %{lesson_l}"

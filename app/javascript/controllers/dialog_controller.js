@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { lockBodyScroll, unlockBodyScroll } from "controllers/scroll_lock"
 
 // Controls a fixed-overlay modal using the same div-based pattern as the AI tutor.
 // The outer element is the overlay (fixed inset-0); open/close toggle the `hidden` class.
@@ -18,7 +19,7 @@ export default class extends Controller {
     this.previousActiveElement = document.activeElement
     this.element.classList.remove("hidden")
     this.element.setAttribute("aria-hidden", "false")
-    document.body.classList.add("overflow-hidden")
+    lockBodyScroll(this)
     this._boundKeydown = this.onKeydown.bind(this)
     document.addEventListener("keydown", this._boundKeydown)
 
@@ -32,7 +33,7 @@ export default class extends Controller {
   close() {
     this.element.classList.add("hidden")
     this.element.setAttribute("aria-hidden", "true")
-    document.body.classList.remove("overflow-hidden")
+    unlockBodyScroll(this)
     if (this._boundKeydown) {
       document.removeEventListener("keydown", this._boundKeydown)
       this._boundKeydown = null
@@ -44,6 +45,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    unlockBodyScroll(this)
     if (this._boundKeydown) {
       document.removeEventListener("keydown", this._boundKeydown)
       this._boundKeydown = null

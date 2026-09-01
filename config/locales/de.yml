@@ -116,6 +116,19 @@ de:
       update_failed: "Profil konnte nicht gespeichert werden."
 
   lessons:
+    course_sidebar:
+      open: "Fortschritt"
+      close: "Kursinhalte schließen"
+      course: "%{course_l}"
+      progress: "Kursfortschritt"
+      percent_complete: "%{percent}% abgeschlossen"
+      lesson_navigation: "%{lessons} in diesem Kurs"
+      duration: "%{count} Min."
+      details_for: "Details für %{title} ein- oder ausblenden"
+      completed: "Abgeschlossen"
+      in_progress: "In Bearbeitung"
+      not_started: "Nicht begonnen"
+      back: "Zurück zum %{course_l}"
     index:
       heading: "%{lessons}"
       add: "%{lesson_l} hinzufügen"

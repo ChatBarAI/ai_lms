@@ -48,6 +48,8 @@ class LessonsController < ApplicationController
 
     @anam_session_token = nil
     @anam_session_token = fetch_anam_session_token if @lesson.anam_enabled?
+
+    prepare_course_sidebar
   end
 
   def start
@@ -209,6 +211,24 @@ class LessonsController < ApplicationController
   end
 
   private
+
+  def prepare_course_sidebar
+    visible_lessons = can?(:update, @course) ? @course.lessons : @course.lessons.published
+    @course_lessons = visible_lessons
+      .with_attached_cover_image
+      .with_rich_text_body
+      .includes(:tags)
+      .to_a
+    @lesson_progress_by_id = if @enrollment
+      @enrollment.progresses
+        .where(lesson_id: @course_lessons.map(&:id))
+        .index_by(&:lesson_id)
+    else
+      {}
+    end
+
+    @course_progress_percentage = @enrollment ? @enrollment.completion_percentage.to_i : 0
+  end
 
   def submission_answers
     answers_param = params[:answers]

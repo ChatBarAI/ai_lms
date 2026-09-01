@@ -6,6 +6,42 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "lesson sidebar shows published lessons without exposing drafts" do
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select "#lesson-course-sidebar[aria-hidden='true']"
+    assert_select "#lesson-course-sidebar [data-controller='lesson-accordion']"
+    assert_select "#lesson-course-sidebar a[aria-current='page']", text: /Intro to Algebra/
+    assert_select "#lesson-sidebar-details-#{lessons(:intro).id}:not(.hidden)"
+    assert_select "#lesson-sidebar-details-#{lessons(:advanced).id}.hidden"
+    assert_match "Quadratic equations", response.body
+    assert_no_match "Draft Lesson", response.body
+  end
+
+  test "lesson sidebar shows draft lessons to the course owner" do
+    sign_in users(:instructor)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select "#lesson-course-sidebar", text: /Draft Lesson/
+  end
+
+  test "lesson sidebar progress ignores draft lessons like enrollment completion" do
+    enrollment = enrollments(:student_in_algebra)
+    Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:intro)).update!(status: :completed)
+    Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:advanced)).update!(status: :completed)
+    sign_in users(:student)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select "#lesson-course-sidebar [role='progressbar'][aria-valuenow='100']"
+    assert_equal 100.0, enrollment.completion_percentage
+    assert enrollment.fully_completed?
+  end
+
   test "show does not label incomplete quiz progress as completed" do
     progress = progresses(:student_intro)
     progress.update!(status: :not_started, completed_at: nil)
