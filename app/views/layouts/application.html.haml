@@ -32,8 +32,8 @@
             - if show_site_brand_name?
               %span.font-semibold.text-lg= site_brand_name
           - if subjects_enabled?
-            = link_to t("layouts.application.subjects"), subjects_path, class: "text-sm hover:opacity-80"
-          = link_to t("layouts.application.courses"), courses_path, class: "text-sm hover:opacity-80"
+            = link_to t("layouts.application.subjects", **terms), subjects_path, class: "text-sm hover:opacity-80"
+          = link_to t("layouts.application.courses", **terms), courses_path, class: "text-sm hover:opacity-80"
         .flex.items-center.gap-3
           - if user_signed_in?
             .relative{ data: { controller: "dropdown" } }
@@ -52,7 +52,7 @@
                 = link_to t("layouts.application.my_learning"), me_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 = link_to t("layouts.application.my_profile"), profile_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.instructor? || current_user.admin?
-                  = link_to t("layouts.application.my_courses"), courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
+                  = link_to t("layouts.application.my_courses", **terms), courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.admin?
                   = link_to "Admin", admin_root_path, class: "block px-4 py-2 text-sm text-indigo-600 hover:bg-gray-50"
                 .border-t.border-gray-100.mt-1.pt-1

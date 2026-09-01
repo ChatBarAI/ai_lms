@@ -12,7 +12,7 @@
 - if @courses.any?
   %section.mb-8
     %h2.text-lg.font-semibold.mb-3
-      Courses
+      = terms[:courses]
       %span.text-sm.font-normal.text-gray-400.ml-1= "(#{@courses.size})"
     .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
       - @courses.each do |course|

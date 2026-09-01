@@ -53,11 +53,11 @@ de:
 
   layouts:
     application:
-      subjects: "Fächer"
-      courses: "Kurse"
+      subjects: "%{subjects}"
+      courses: "%{courses}"
       my_learning: "Mein Lernen"
       my_profile: "Mein Profil"
-      my_courses: "Meine Kurse"
+      my_courses: "Meine %{courses}"
       sign_in: "Anmelden"
       sign_up: "Registrieren"
       sign_out: "Abmelden"
@@ -70,16 +70,16 @@ de:
     index:
       title: "Start"
       hero_heading: "Lerne mit einem KI-Tutor"
-      browse_subjects: "Fächer durchsuchen"
-      all_courses: "Alle Kurse"
-      sign_in_to_access: "Anmelden, um Kurse zu öffnen"
+      browse_subjects: "%{subjects} durchsuchen"
+      all_courses: "Alle %{courses}"
+      sign_in_to_access: "Anmelden, um %{courses} zu öffnen"
       recently_published: "Zuletzt veröffentlicht"
-      empty: "Noch keine veröffentlichten Kurse."
+      empty: "Noch keine veröffentlichten %{courses}."
     me:
       title: "Mein Lernen"
       heading: "Mein Lernen"
-      not_enrolled: "Du bist noch in keinen Kurs eingeschrieben."
-      browse_courses: "Kurse durchsuchen"
+      not_enrolled: "Du bist noch in keinen %{courses_l} eingeschrieben."
+      browse_courses: "%{courses} durchsuchen"
       progress: "Fortschritt"
       lessons_completed: "%{lessons} abgeschlossen"
       avg_score: "Durchschnitt"

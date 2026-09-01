@@ -5,8 +5,8 @@
 - if @enrollments.empty?
   .bg-white.border.border-gray-200.rounded-lg.p-6
     %p.text-gray-600
-      = t(".not_enrolled")
-      = link_to t(".browse_courses"), courses_path, class: "text-indigo-600 hover:underline"
+      = t(".not_enrolled", **terms)
+      = link_to t(".browse_courses", **terms), courses_path, class: "text-indigo-600 hover:underline"
 
 - else
   .bg-white.border.border-gray-200.rounded-lg.overflow-hidden.mb-8
