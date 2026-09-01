@@ -8,5 +8,5 @@
   = render "courses/fields", f: f, course: course, admin: true
 
   .flex.w-full.gap-2
-    = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
+    = f.submit(course.persisted? ? "Update #{terms[:course]}" : "Create #{terms[:course]}", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center")
     = link_to "Cancel", admin_courses_path, class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

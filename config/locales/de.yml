@@ -178,6 +178,9 @@ de:
       title: "%{courses}"
       new: "Neuen %{course_l} erstellen"
       empty: "Keine %{courses_l} gefunden."
+      sort_by: "Sortieren nach"
+      publication_date: "Veröffentlichungsdatum"
+      learning_order: "Lernreihenfolge"
     show:
       back: "← %{courses}"
       unpublish_confirm: "Diesen %{course_l} nicht mehr veröffentlichen?"

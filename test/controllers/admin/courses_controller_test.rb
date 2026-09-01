@@ -16,6 +16,72 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span", text: "Public"
   end
 
+  test "admin can sort courses by learning order" do
+    courses(:algebra).update!(learning_order: 2)
+    courses(:other_owner_course).update!(learning_order: 1)
+    sign_in users(:admin)
+
+    get admin_courses_path(sort: "learning_order")
+
+    assert_response :success
+    assert_operator response.body.index("Physics 101"), :<, response.body.index("Algebra")
+    assert_select "select[name=sort] option[selected][value=learning_order]"
+    assert_select "th", text: "Learning order"
+    assert_select "tr" do |rows|
+      algebra_row = rows.find { |row| row.text.include?("Algebra") }
+      assert_select algebra_row, "td", text: "2"
+    end
+  end
+
+  test "admin hides learning order column for publication date sorting" do
+    sign_in users(:admin)
+
+    get admin_courses_path(sort: "published_at")
+
+    assert_response :success
+    assert_select "th", { text: "Learning order", count: 0 }
+  end
+
+  test "admin course index uses configured terminology" do
+    setting = SiteSetting.current
+    setting.update!(terminology: {
+      "en" => {
+        "course_one" => "Module",
+        "course_other" => "Modules"
+      }
+    })
+    sign_in users(:admin)
+
+    get admin_courses_path
+
+    assert_response :success
+    assert_select "nav a", text: "Modules"
+    assert_select "h1", text: "Modules"
+    assert_select "a", text: "New Module"
+  ensure
+    setting&.update!(terminology: {})
+  end
+
+  test "admin new course form uses configured terminology" do
+    setting = SiteSetting.current
+    setting.update!(terminology: {
+      "en" => {
+        "course_one" => "Module",
+        "course_other" => "Modules"
+      }
+    })
+    sign_in users(:admin)
+
+    get new_admin_course_path
+
+    assert_response :success
+    assert_select "h1", text: "New Module"
+    assert_select "a", text: "← All Modules"
+    assert_select "input[type=submit][value='Create Module']"
+  ensure
+    setting&.update!(terminology: {})
+  end
+
   test "admin can filter courses by subject" do
     sign_in users(:admin)
     get admin_courses_path(subject_id: subjects(:math).id)

@@ -21,6 +21,23 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Physics 101/, response.body)
   end
 
+  test "index can sort courses by learning order" do
+    courses(:algebra).update!(learning_order: 2)
+    courses(:other_owner_course).update!(learning_order: 1, public_access_enabled: true)
+
+    get courses_path(sort: "learning_order")
+
+    assert_response :success
+    assert_operator response.body.index("Physics 101"), :<, response.body.index("Algebra")
+  end
+
+  test "index defaults to publication date and ignores unknown sorts" do
+    get courses_path(sort: "not-a-column")
+
+    assert_response :success
+    assert_select "select[name=sort] option[selected][value=published_at]"
+  end
+
   test "show published course anonymously" do
     get course_path(courses(:algebra))
     assert_response :success
@@ -76,6 +93,14 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     patch course_path(courses(:algebra)), params: { course: { description: "Updated" } }
     assert_redirected_to courses(:algebra)
     assert_equal "Updated", courses(:algebra).reload.description
+  end
+
+  test "owner can update a course's learning order" do
+    sign_in users(:instructor)
+    patch course_path(courses(:algebra)), params: { course: { learning_order: 3 } }
+
+    assert_redirected_to courses(:algebra)
+    assert_equal 3, courses(:algebra).reload.learning_order
   end
 
   test "owner sees lessons and add lesson action on edit page" do

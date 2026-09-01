@@ -177,6 +177,9 @@ en:
       title: "%{courses}"
       new: "New %{course_l}"
       empty: "No %{courses_l} found."
+      sort_by: "Sort by"
+      publication_date: "Publication date"
+      learning_order: "Learning order"
     show:
       back: "← %{courses}"
       unpublish_confirm: "Unpublish this %{course_l}?"

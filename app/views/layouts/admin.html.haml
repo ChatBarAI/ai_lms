@@ -23,8 +23,8 @@
             = site_logo_tag
             %span.font-semibold= show_site_brand_name? ? "#{site_brand_name} · Admin" : "Admin"
           - if subjects_enabled?
-            = link_to "Subjects", admin_subjects_path, class: "text-sm hover:opacity-80"
-          = link_to "Courses", admin_courses_path, class: "text-sm hover:opacity-80"
+            = link_to terms[:subjects], admin_subjects_path, class: "text-sm hover:opacity-80"
+          = link_to terms[:courses], admin_courses_path, class: "text-sm hover:opacity-80"
           = link_to "Users", admin_users_path, class: "text-sm hover:opacity-80"
           = link_to "Certificates", admin_certificates_path, class: "text-sm hover:opacity-80"
           = link_to "Tags", admin_tags_path, class: "text-sm hover:opacity-80"

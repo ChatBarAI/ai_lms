@@ -1,26 +1,33 @@
-- content_for :title, "Courses"
+- content_for :title, terms[:courses]
 
 .flex.items-center.justify-between.mb-4
   %div
-    %h1.text-2xl.font-bold Courses
+    %h1.text-2xl.font-bold= terms[:courses]
     - if subjects_enabled? && @selected_subject
       %p.text-sm.text-gray-500.mt-1= "Filtered by subject: #{@selected_subject.name}"
   .flex.items-center.gap-2
     = link_to "Export CSV", admin_courses_path(request.query_parameters.merge(format: :csv)), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
-    = link_to "New course", new_admin_course_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+    = form_with url: admin_courses_path, method: :get, class: "flex items-center gap-2" do |f|
+      - if @selected_subject
+        = hidden_field_tag :subject_id, @selected_subject.id
+      = f.label :sort, t("courses.index.sort_by"), class: "text-sm font-medium text-gray-700"
+      = f.select :sort, [[t("courses.index.publication_date"), "published_at"], [t("courses.index.learning_order"), "learning_order"]], { selected: @sort }, { onchange: "this.form.requestSubmit()", class: "border border-gray-300 rounded px-3 py-2 bg-white text-sm" }
+    = link_to "New #{terms[:course]}", new_admin_course_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
 
 %table.w-full.bg-white.border.border-gray-200.rounded
   %thead.bg-gray-50
     %tr
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The course title shown to learners and administrators." } Title
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The #{terms[:course_l]} title shown to learners and administrators." } Title
       - if subjects_enabled?
-        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The subject this course is grouped under." } Subject
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The language used for this course." } Language
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The instructor or administrator who owns this course." } Owner
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Shows whether this course is published or still a draft." } Status
-      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Displays when a Course and Lessons are publicly viewable without sign in." } Access
-      %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The number of lessons in this course." } Lessons
-      %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Available actions for this course." }
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The #{terms[:subject_l]} this #{terms[:course_l]} is grouped under." }= terms[:subject]
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The language used for this #{terms[:course_l]}." } Language
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The instructor or administrator who owns this #{terms[:course_l]}." } Owner
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Shows whether this #{terms[:course_l]} is published or still a draft." } Status
+      %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Displays when a #{terms[:course]} and #{terms[:lessons]} are publicly viewable without sign in." } Access
+      - if @sort == "learning_order"
+        %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The position of this #{terms[:course_l]} in the learning sequence." } Learning order
+      %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The number of #{terms[:lessons_l]} in this #{terms[:course_l]}." }= terms[:lessons]
+      %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Available actions for this #{terms[:course_l]}." }
   %tbody
     - @courses.each do |c|
       %tr.border-t.border-gray-100
@@ -36,6 +43,8 @@
             %span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-sky-100.text-sky-800 Public
           - else
             %span.text-xs.text-gray-400 —
+        - if @sort == "learning_order"
+          %td.px-3.py-2.text-center.text-sm.text-gray-600= c.learning_order.presence || "—"
         %td.px-3.py-2.text-center.text-sm
           = link_to c.lessons.size, admin_course_lessons_path(c), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors"
         %td.px-3.py-2.text-right
