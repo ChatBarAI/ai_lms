@@ -6,7 +6,7 @@ class Enrollment < ApplicationRecord
   has_many :lesson_material_acknowledgements, dependent: :destroy
   has_many :question_answers, dependent: :destroy
 
-  enum :role, { student: 0, tutor: 1, assistant: 2 }, default: :student
+  enum :role, { student: 0, instructor: 1, assistant: 2 }, default: :student
 
   attr_accessor :skip_prerequisite_check
 

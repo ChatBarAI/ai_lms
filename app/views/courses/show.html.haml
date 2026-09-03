@@ -28,6 +28,7 @@
     %p.text-gray-700.mt-4= simple_format(@course.description)
 
   .mt-6.clear-both
+    - missing_prerequisites = @course.missing_prerequisites_for(user_signed_in? ? current_user : nil)
     - if user_signed_in?
       - if @enrollment
         - pct = @enrollment.completion_percentage.to_i
@@ -42,29 +43,19 @@
           - if @enrollment.fully_completed?
             = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
           = button_to t(".unenrol"), course_enrollment_path(@course, @enrollment), method: :delete, data: { turbo_confirm: t(".unenrol_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer transition-colors"
+      - elsif missing_prerequisites.any?
+        .bg-amber-50.border.border-amber-200.text-amber-900.rounded.p-4.text-sm.space-y-3
+          = render "prerequisite_list", missing: missing_prerequisites
+          %button.inline-flex.items-center.px-3.py-1.5.rounded-full.text-sm.font-medium.bg-gray-200.text-gray-500.cursor-not-allowed{ type: "button", disabled: true }= t(".enrol_now")
       - else
-        - missing = @course.missing_prerequisites_for(current_user)
-        - if missing.any?
-          .bg-amber-50.border.border-amber-200.text-amber-900.rounded.p-4.text-sm.space-y-3
-            %p.font-medium Complete these courses first
-            %ul.list-disc.pl-5.space-y-1
-              - missing.each do |prereq|
-                %li= link_to prereq.title, course_path(prereq), class: "text-indigo-700 hover:underline"
-            %button.inline-flex.items-center.px-3.py-1.5.rounded-full.text-sm.font-medium.bg-gray-200.text-gray-500.cursor-not-allowed{ type: "button", disabled: true }= t(".enrol_now")
-        - else
-          .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
-            %p.flex-1= t(".enrol_prompt", **terms)
-            = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
+        .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+          %p.flex-1= t(".enrol_prompt", **terms)
+          = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
     - else
-      - missing = @course.missing_prerequisites_for(nil)
       .bg-blue-50.border.border-blue-200.text-blue-800.rounded.p-4.text-sm.space-y-3
-        %p.flex-1= t(".signin_prompt", **terms)
-        - if missing.any?
-          %div
-            %p.font-medium.text-blue-900.mb-1 Complete these courses first
-            %ul.list-disc.pl-5.space-y-1
-              - missing.each do |prereq|
-                %li= link_to prereq.title, course_path(prereq), class: "text-indigo-700 hover:underline"
+        %p= t(".signin_prompt", **terms)
+        - if missing_prerequisites.any?
+          = render "prerequisite_list", missing: missing_prerequisites, heading_class: "text-blue-900"
         .flex.justify-end
           = link_to t(".signin_cta"), new_user_session_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
 
