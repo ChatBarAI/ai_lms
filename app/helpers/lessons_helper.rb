@@ -1,4 +1,6 @@
 module LessonsHelper
+  YOUTUBE_VIDEO_ID_PATTERN = /\A[A-Za-z0-9_-]+\z/
+
   def lesson_progress_ring(progress, classes: nil)
     pct = progress.completed? ? 100 : 50
     circ = (2 * Math::PI * 20).round(2)
@@ -46,14 +48,8 @@ module LessonsHelper
 
     embed_src =
       case host
-      when "youtube.com", "m.youtube.com"
-        vid = Rack::Utils.parse_query(uri.query.to_s)["v"]
-        vid.present? ? "https://www.youtube.com/embed/#{vid}?enablejsapi=1" : nil
-      when "youtu.be"
-        vid = uri.path.delete_prefix("/")
-        vid.present? ? "https://www.youtube.com/embed/#{vid}?enablejsapi=1" : nil
-      when "youtube-nocookie.com"
-        url
+      when "youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "youtube-nocookie.com"
+        youtube_embed_url(uri, host)
       when "vimeo.com"
         vid = uri.path.delete_prefix("/").split("/").first
         vid.present? ? "https://player.vimeo.com/video/#{vid}" : nil
@@ -72,11 +68,12 @@ module LessonsHelper
             class: "absolute inset-0 w-full h-full rounded-lg border border-gray-200",
             allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
             allowfullscreen: true,
+            referrerpolicy: "strict-origin-when-cross-origin",
             loading: "lazy"
           )
         end
       end
-    elsif url.match?(/\.(mp4|webm|ogg)\z/i)
+    elsif uri.path.match?(/\.(mp4|webm|ogg)\z/i)
       video_attrs = { controls: true, class: "w-full mb-6 rounded-lg border border-gray-200" }
       video_attrs[:poster] = poster_url if poster_url.present?
       content_tag(:video, video_attrs) do
@@ -210,6 +207,23 @@ module LessonsHelper
   end
 
   private
+
+  def youtube_embed_url(uri, host)
+    path_parts = uri.path.to_s.split("/").reject(&:blank?)
+    video_id =
+      if host == "youtu.be"
+        path_parts.first
+      elsif path_parts.first == "watch"
+        Rack::Utils.parse_query(uri.query.to_s)["v"]
+      elsif %w[embed shorts live].include?(path_parts.first)
+        path_parts.second
+      end
+
+    video_id = video_id.to_s
+    return unless video_id.match?(YOUTUBE_VIDEO_ID_PATTERN)
+
+    "https://www.youtube.com/embed/#{video_id}?enablejsapi=1"
+  end
 
   def result_descriptor(label, classes)
     { label: label, classes: classes }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_01_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -107,6 +107,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.jsonb "certificate_layout", default: {}, null: false
     t.string "locale", default: "en", null: false
     t.boolean "public_access_enabled", default: false, null: false
+    t.integer "learning_order"
+    t.index ["learning_order"], name: "index_courses_on_learning_order"
     t.index ["owner_id"], name: "index_courses_on_owner_id"
     t.index ["slug"], name: "index_courses_on_slug", unique: true
     t.index ["subject_id"], name: "index_courses_on_subject_id"
@@ -148,6 +150,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.boolean "open_by_default", default: false, null: false
     t.bigint "source_material_id"
     t.bigint "copied_by_id"
+    t.string "chatbar_token"
+    t.text "chatbar_prompt"
     t.index ["copied_by_id"], name: "index_lesson_materials_on_copied_by_id"
     t.index ["lesson_id", "position"], name: "index_lesson_materials_on_lesson_id_and_position"
     t.index ["lesson_id"], name: "index_lesson_materials_on_lesson_id"
@@ -180,6 +184,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_02_000000) do
     t.string "custom_tutor_embed_url"
     t.string "custom_tutor_embed_type"
     t.text "custom_tutor_embed_script"
+    t.string "material_layout", default: "stacked", null: false
     t.index ["cbai_token"], name: "index_lessons_on_cbai_token"
     t.index ["course_id", "position"], name: "index_lessons_on_course_id_and_position"
     t.index ["course_id"], name: "index_lessons_on_course_id"

@@ -1,9 +1,9 @@
-- content_for :title, "Edit course"
+- content_for :title, "Edit #{terms[:course_l]}"
 
 .flex.items-center.justify-between.mb-4
   %h1.text-2xl.font-bold= "Edit · #{@course.title}"
   = link_to admin_courses_path, class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
-    ← All courses
+    = "← All #{terms[:courses_l]}"
 
 .mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
@@ -15,8 +15,8 @@
 .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
     .flex.items-center.gap-2
-      Lessons in this course
-      = link_to "Add lesson", new_course_lesson_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+      = "#{terms[:lessons]} in this #{terms[:course_l]}"
+      = link_to "Add #{terms[:lesson_l]}", new_course_lesson_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
     = collapsible_icon_badge
   %div{data: { collapsible_target: "content" }}
     - if @lessons.any?
@@ -26,7 +26,7 @@
             .min-w-0
               .text-sm.font-medium.truncate= lesson.title
               .text-xs.text-gray-500
-                = "Lesson #{index + 1}"
+                = "#{terms[:lesson]} #{index + 1}"
                 - unless lesson.published?
                   = " · draft"
             .flex.flex-wrap.gap-2.items-center
@@ -34,7 +34,7 @@
               = link_to "Edit", edit_course_lesson_path(@course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
     - else
       .mt-3.bg-gray-50.border.border-gray-200.rounded.p-4.text-sm.text-gray-500
-        No lessons yet. Add the first lesson for this course.
+        = "No #{terms[:lessons_l]} yet. Add the first #{terms[:lesson_l]} for this #{terms[:course_l]}."
 
 .bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}

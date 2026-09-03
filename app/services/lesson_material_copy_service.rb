@@ -41,6 +41,8 @@ class LessonMaterialCopyService
       kind: source.kind,
       raw_html_content: source.raw_html_content,
       url: source.url,
+      chatbar_token: source.chatbar_token,
+      chatbar_prompt: source.chatbar_prompt,
       required: copy_settings ? source.required : true,
       open_by_default: copy_settings ? source.open_by_default : false,
       source_material: source,
@@ -94,6 +96,9 @@ class LessonMaterialCopyService
   end
 
   def rewrite_raw_html!
+    # The preliminary save happens before design assets are copied, so its sanitizer cannot yet
+    # authorize asset-backed videos. Restore the source before rewriting every copied asset URL.
+    material.raw_html_content = source.raw_html_content
     return if material.raw_html_content.blank? || @html_replacements.empty?
 
     rewritten = material.raw_html_content.dup

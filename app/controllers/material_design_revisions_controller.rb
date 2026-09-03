@@ -120,7 +120,8 @@ class MaterialDesignRevisionsController < ApplicationController
     @imported_assets = MaterialDesignAssetCatalog.new(@lesson_material).entries.select do |asset|
       asset.source == :imported
     end
-    @asset = @lesson_material.material_design_assets.new(role: :content)
+    @image_asset = @lesson_material.material_design_assets.new(role: :content)
+    @video_asset = @lesson_material.material_design_assets.new(role: :content)
   end
 
   def source_html_for(revision)

@@ -1,6 +1,37 @@
 require "test_helper"
 
 class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
+  test "copies a designed video asset and rewrites its player URL" do
+    source = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Video page", kind: :raw_html_iframe,
+      raw_html_content: LessonMaterial::AI_DESIGN_STARTER_HTML
+    )
+    asset = source.material_design_assets.create!(
+      created_by: users(:instructor), name: "Demonstration", role: :content,
+      file: Rack::Test::UploadedFile.new(
+        Rails.root.join("test/fixtures/files/clip.mp4"), "video/mp4", true
+      )
+    )
+    source_url = Rails.application.routes.url_helpers.material_design_asset_file_path(
+      asset.signed_id(purpose: :material_design_asset), v: asset.file.blob_id
+    )
+    source.update!(
+      raw_html_content: %(<html><body><video controls src="#{source_url}"></video></body></html>)
+    )
+
+    copy = copy_material(source)
+    copied_asset = copy.material_design_assets.first
+    copied_url = Rails.application.routes.url_helpers.material_design_asset_file_path(
+      copied_asset.signed_id(purpose: :material_design_asset), v: copied_asset.file.blob_id
+    )
+
+    assert copied_asset.video?
+    assert_not_equal asset.file.blob_id, copied_asset.file.blob_id
+    assert_includes copy.raw_html_content, "<video"
+    assert_includes copy.raw_html_content, copied_url
+    assert_not_includes copy.raw_html_content, source_url
+  end
+
   test "copies material files and imported assets into new blobs" do
     source = LessonMaterial.create!(
       lesson: lessons(:intro), title: "Illustrated handout", kind: :image_upload,
@@ -63,6 +94,20 @@ class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
 
     assert_empty copy.acknowledgements
     assert_empty copy.material_design_revisions
+  end
+
+  test "copies a ChatBar prompt as material data" do
+    source = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Discussion", kind: :chatbar,
+      chatbar_token: "discussion-chatbar",
+      chatbar_prompt: "Compare these two approaches"
+    )
+
+    copy = copy_material(source)
+
+    assert copy.chatbar?
+    assert_equal source.chatbar_token, copy.chatbar_token
+    assert_equal source.chatbar_prompt, copy.chatbar_prompt
   end
 
   private

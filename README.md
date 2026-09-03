@@ -94,12 +94,15 @@ Course / Lesson ─< Tagging >─ Tag
    video_url, published_at`.
   - `has_one_attached :intro_video` (mp4/webm/ogg, ≤100 MB)
   - `has_one_attached :poster_image` (image, ≤5 MB)
-- **LessonMaterial** represents supplementary content attached to a lesson.
-  Supports five `kind` values: `pdf` (uploaded PDF, ≤25 MB), `html` (rich
-  text via ActionText), `raw_html` (sanitised HTML pasted directly),
-  `audio_upload` (uploaded audio file, ≤50 MB), and `audio_url` (external
-  audio link). Materials can be marked `required`, in which case students
-  must acknowledge them before the lesson counts as fully complete.
+- **LessonMaterial** represents supplementary content attached to a lesson,
+  including ChatBar conversation materials that store and submit their starting
+  prompt and instance token independently of any EverLink URL. A lesson's token
+  is only offered as the initial default when authoring the material; starting
+  the conversation mounts ChatBar directly inside the material container.
+  Material kinds cover PDFs, rich or imported HTML, audio, images, video, web
+  pages, and ChatBar conversations. Materials can be marked `required`, in
+  which case students must acknowledge them before the lesson counts as fully
+  complete.
   - `has_one_attached :document` (PDF)
   - `has_one_attached :audio_file` (audio)
 - **LessonMaterialAcknowledgement** records that a specific enrolled student

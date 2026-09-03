@@ -102,6 +102,48 @@ class MaterialDesignGenerationServiceTest < ActiveSupport::TestCase
     assert_not_includes client.user_prompt, reference.prompt_token
   end
 
+  test "offers video tokens without sending video bytes to the AI provider" do
+    material = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Video design", kind: :raw_html_iframe,
+      raw_html_content: LessonMaterial::AI_DESIGN_STARTER_HTML
+    )
+    video = material.material_design_assets.create!(
+      created_by: users(:instructor), name: "Worked example", role: :content,
+      description: "A narrated worked example", alt_text: "Play the worked example",
+      file: Rack::Test::UploadedFile.new(
+        Rails.root.join("test/fixtures/files/clip.mp4"), "video/mp4", true
+      )
+    )
+    configuration = AiModelConfiguration.create!(
+      name: "Video layout model", provider: "openai", model: "test-model",
+      base_url: "https://api.openai.com/v1", api_key: "secret"
+    )
+    revision = material.material_design_revisions.create!(
+      ai_model_configuration: configuration, created_by: users(:instructor),
+      request: "Place the worked example"
+    )
+    client = FakeClient.new(
+      OpenaiResponsesClient::Result.new(
+        html: %(<html><body><video controls preload="metadata" aria-label="Play the worked example" src="#{video.prompt_token}"></video></body></html>),
+        request_id: "resp_video", input_tokens: 10, output_tokens: 20
+      )
+    )
+
+    MaterialDesignGenerationService.new(revision, client: client).call
+
+    assert_empty client.content_assets
+    assert_includes client.user_prompt, "video: Worked example"
+    assert_includes client.user_prompt, video.prompt_token
+    assert_includes client.system_prompt, "Video content assets are metadata only"
+    assert_includes revision.reload.sanitized_html, "/material-design-assets/"
+    assert_includes revision.sanitized_html, "<video"
+    assert_not_includes revision.sanitized_html, "asset://"
+
+    revision.accept!
+    assert_includes material.reload.raw_html_content, "<video"
+    assert_includes material.raw_html_content, "/material-design-assets/"
+  end
+
   test "sends the complete source when it fits the configured context window" do
     marker = "Important lesson content after the large stylesheet"
     source = "<html><head><style>#{'a' * 110_000}</style></head><body><main>#{marker}</main></body></html>"

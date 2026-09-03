@@ -1,6 +1,15 @@
 require "test_helper"
 
 class CourseTest < ActiveSupport::TestCase
+  test "learning order is optional and non-negative" do
+    course = courses(:algebra)
+    assert course.update(learning_order: nil)
+    assert course.update(learning_order: 0)
+
+    assert_not course.update(learning_order: -1)
+    assert_includes course.errors[:learning_order], "must be greater than or equal to 0"
+  end
+
   test "valid fixture" do
     assert courses(:algebra).valid?
   end

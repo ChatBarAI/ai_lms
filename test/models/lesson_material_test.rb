@@ -53,6 +53,22 @@ class LessonMaterialTest < ActiveSupport::TestCase
     assert_includes r.errors[:url], "can't be blank"
   end
 
+  test "chatbar material requires its own token and a prompt no longer than the EverLink limit" do
+    material = LessonMaterial.new(lesson: @lesson, title: "Discuss", kind: :chatbar)
+
+    assert_not material.valid?
+    assert_includes material.errors[:chatbar_token], "can't be blank"
+    assert_includes material.errors[:chatbar_prompt], "can't be blank"
+
+    material.chatbar_token = "material-token"
+    material.chatbar_prompt = "x" * 1501
+    assert_not material.valid?
+    assert_includes material.errors[:chatbar_prompt], "is too long (maximum is 1500 characters)"
+
+    material.chatbar_prompt = "Help me understand this lesson"
+    assert material.valid?
+  end
+
   test "google doc material requires imported content" do
     material = LessonMaterial.new(lesson: @lesson, title: "Imported", kind: :google_doc)
 

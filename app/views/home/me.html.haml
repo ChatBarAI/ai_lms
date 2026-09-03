@@ -5,8 +5,8 @@
 - if @enrollments.empty?
   .bg-white.border.border-gray-200.rounded-lg.p-6
     %p.text-gray-600
-      = t(".not_enrolled")
-      = link_to t(".browse_courses"), courses_path, class: "text-indigo-600 hover:underline"
+      = t(".not_enrolled", **terms)
+      = link_to t(".browse_courses", **terms), courses_path, class: "text-indigo-600 hover:underline"
 
 - else
   .bg-white.border.border-gray-200.rounded-lg.overflow-hidden.mb-8
@@ -27,7 +27,7 @@
           %tr
             %td.px-4.py-2= link_to course.title, course_path(course), class: "text-indigo-700 hover:text-indigo-900 hover:underline font-medium"
             %td.px-4.py-2 #{enrollment.completion_percentage}%
-            %td.px-4.py-2 #{enrollment.lessons_completed_count} / #{course.lessons.count}
+            %td.px-4.py-2 #{enrollment.lessons_completed_count} / #{enrollment.lessons_required_count}
             %td.px-4.py-2= enrollment.average_score || "—"
             %td.px-4.py-2
               - if attempts.size > 1

@@ -2,6 +2,7 @@ class LessonMaterialsController < ApplicationController
   DOCUMENT_CONTENT_SECURITY_POLICY = [
     "default-src 'none'",
     "img-src 'self' data:",
+    "media-src 'self'",
     "style-src 'unsafe-inline'",
     "font-src 'none'",
     "script-src 'none'",
@@ -35,6 +36,8 @@ class LessonMaterialsController < ApplicationController
   end
 
   def new
+    @chatbar_token_prefilled = @lesson.cbai_token.present?
+    @lesson_material.chatbar_token ||= @lesson.cbai_token
     @copy_source_catalog = copy_source_catalog
   end
 
@@ -121,14 +124,24 @@ class LessonMaterialsController < ApplicationController
   def acknowledge
     enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
     unless enrollment
-      redirect_to course_lesson_path(@course, @lesson), alert: "Enrol to mark materials as complete." and return
+      respond_to do |format|
+        format.html { redirect_to course_lesson_path(@course, @lesson), alert: "Enrol to mark materials as complete." }
+        format.json { render json: { error: "Enrol to mark materials as complete." }, status: :unprocessable_entity }
+      end
+      return
     end
 
-    ack = LessonMaterialAcknowledgement.new(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
+    ack = LessonMaterialAcknowledgement.find_or_initialize_by(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
     authorize! :create, ack
-    ack.save
-    redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
-                notice: "Marked as complete."
+    ack.save!
+
+    respond_to do |format|
+      format.html do
+        redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
+                    notice: "Marked as complete."
+      end
+      format.json { render json: { acknowledged: true } }
+    end
   end
 
   def document
@@ -177,7 +190,7 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip)
+    params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip, :chatbar_token, :chatbar_prompt)
   end
 
   def starting_ai_design?

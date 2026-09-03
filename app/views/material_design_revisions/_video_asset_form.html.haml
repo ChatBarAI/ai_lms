@@ -1,0 +1,25 @@
+= form_with model: asset, scope: :material_design_asset, namespace: :video_asset, url: course_lesson_lesson_material_material_design_assets_path(course, lesson, lesson_material), multipart: true, class: "space-y-4", data: { controller: "file-preview", file_preview_type_value: "file" } do |f|
+  - if local_assigns[:return_to].present?
+    = hidden_field_tag :return_to, return_to
+  - if local_assigns[:parent_revision_id].present?
+    = hidden_field_tag :parent_revision_id, parent_revision_id
+  = f.hidden_field :role, value: "content"
+  %div
+    = f.label :name, "Asset name", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_field :name, placeholder: "Asset name", class: "w-full border border-gray-300 rounded px-3 py-2", required: true
+  %div
+    = f.label :description, "Video description", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_area :description, placeholder: "Optional description to help the AI place this video", rows: 2, class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :alt_text, "Accessible label", class: "block text-sm font-medium text-gray-700 mb-1"
+    = f.text_field :alt_text, placeholder: "Describe the video for learners", class: "w-full border border-gray-300 rounded px-3 py-2"
+  %div
+    = f.label :file, "Choose a video — mp4, webm, or ogg — max 100 MB", class: "block text-sm font-medium text-gray-700 mb-2"
+    = f.file_field :file, accept: MaterialDesignAsset::VIDEO_CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", action: "change->file-preview#update" }
+  .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { file_preview_target: "previewContainer" } }
+    %p.text-xs.font-medium.text-gray-700 Selected video
+    %p.mt-1.truncate.text-xs.text-gray-600{ data: { file_preview_target: "filename" } }
+  %p.text-xs.text-gray-500 The video remains in the LMS. Only its name, description, accessible label, and secure asset token are sent to the AI.
+  .flex.items-center.justify-end.gap-2.pt-2
+    %button.px-4.py-2.rounded-lg.bg-gray-100.text-gray-700.text-sm.font-medium.hover:bg-gray-200.cursor-pointer{ type: "button", data: { action: "click->dialog#close" } } Cancel
+    = f.submit "Upload video", class: "px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 cursor-pointer"

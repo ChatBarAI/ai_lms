@@ -61,7 +61,7 @@
         - else
           %p.text-sm.text-gray-500 Custom tutor scripts can only be configured by an administrator.
 
-    .flex.flex-col.gap-4.sm:flex-row.sm:items-end
+    .grid.grid-cols-1.gap-4.sm:grid-cols-3
       %div.flex-1
         = f.label :position, class: "block text-sm font-medium mb-1"
         = f.number_field :position, title: "The order this lesson appears within the course.", class: "w-full border border-gray-300 rounded px-3 h-10"
@@ -69,6 +69,10 @@
       %div.flex-1
         = f.label :quiz_layout, "#{terms[:quiz]} layout", class: "block text-sm font-medium mb-1"
         = f.select :quiz_layout, [["Scrolling (all questions)", "scrolling"], ["One at a time", "one_at_a_time"]], {}, title: "How #{terms[:quiz_l]} questions are presented to students.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
+
+      %div.flex-1
+        = f.label :material_layout, "Material layout", class: "block text-sm font-medium mb-1"
+        = f.select :material_layout, [["Stacked (all materials)", "stacked"], ["Horizontal scroller", "scroller"]], {}, title: "Show every material vertically or let learners move through them one at a time.", class: "w-full border border-gray-300 rounded px-3 h-10 bg-white"
 
     .flex.flex-col.gap-4.sm:flex-row.sm:items-end
       %div.flex-1{:title => "Retry incorrect only (students redo only wrong questions)"}

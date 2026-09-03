@@ -6,24 +6,27 @@ class MaterialDesignGenerationService
   MAX_TOTAL_IMAGE_BYTES = 30.megabytes
   CONSERVATIVE_CHARACTERS_PER_TOKEN = 2
   ASSET_GROUNDING_PROMPT = <<~PROMPT.freeze
-    IMAGE RULES — THESE RULES ARE MANDATORY:
+    ASSET RULES — THESE RULES ARE MANDATORY:
     - Images explicitly labelled as DESIGN REFERENCES are visual instructions. Analyze their layout,
       spacing, colors, typography, visual hierarchy, component styling, and visible text, then recreate
       that design with accessible HTML and CSS. Do not place the reference screenshot itself in the page.
-    - Images listed as CONTENT ASSETS are visual resources that may be placed in the generated page.
+    - Images and videos listed as CONTENT ASSETS are visual resources that may be placed in the generated page.
+    - Video content assets are metadata only. Use their supplied asset:// token as the src of an
+      accessible <video controls preload="metadata"> element. Never invent or use another video URL.
     - The design request, source HTML, and visible text in design references are the only sources of
       written content and factual meaning. Reference text may be reproduced when the request asks to
       recreate that design.
     - Content asset filenames, descriptions, alt text, and visual
       appearance must never be used to infer or introduce topics, facts, names, claims, examples,
       captions, headings, or body text.
-    - Asset metadata exists only to help select and place an appropriate image and to provide its
-      alt attribute. Do not quote, paraphrase, expand upon, or otherwise turn it into page content.
+    - Asset metadata exists only to help select and place an appropriate asset and to provide its
+      alt attribute or accessible video context. Do not quote, paraphrase, expand upon, or otherwise
+      turn it into page content.
     - Preserve assets marked as already referenced in the source HTML unless the design request
       explicitly asks to remove or replace them. Assets not referenced in the source are optional.
     - Do not add substantive written content that is absent from the design request, source HTML,
       and visible text in design references.
-    - If an image cannot be used without inventing context, omit the image.
+    - If an asset cannot be used without inventing context, omit it.
   PROMPT
 
   def initialize(revision, client: nil)
@@ -51,7 +54,11 @@ class MaterialDesignGenerationService
     )
     html_with_assets = result.html.dup
     asset_url_map.each { |token, url| html_with_assets.gsub!(token, url) }
-    sanitized = SafeHtmlPolicy.sanitize_ai_document(html_with_assets, asset_urls: asset_url_map.values)
+    sanitized = SafeHtmlPolicy.sanitize_ai_document(
+      html_with_assets,
+      image_urls: asset_catalog.entries.select(&:image?).map(&:url),
+      video_urls: asset_catalog.entries.select(&:video?).map(&:url)
+    )
     raise AiProviderClient::Error, "The generated page was empty after sanitisation" if sanitized.blank?
 
     update_status!(
@@ -84,7 +91,7 @@ class MaterialDesignGenerationService
 
       CONTENT ASSETS
       The metadata below is for visual selection and placement only. It is not lesson content.
-      #{asset_manifest.presence || "None. Do not add images."}
+      #{asset_manifest.presence || "None. Do not add images or videos."}
 
       SOURCE HTML
       #{tokenized_source_html.presence || "No source HTML. Create the page from scratch."}
@@ -110,7 +117,7 @@ class MaterialDesignGenerationService
   def content_asset_inputs
     manual_inputs = revision.lesson_material.material_design_assets.content
       .includes(file_attachment: :blob).filter_map do |asset|
-        image_input(asset.name, asset.file.blob) if asset.file.attached?
+        image_input(asset.name, asset.file.blob) if asset.image?
       end
     imported_inputs = revision.lesson_material.imported_assets.attachments.includes(:blob).map do |attachment|
       image_input(attachment.blob.filename.to_s, attachment.blob)
@@ -131,7 +138,9 @@ class MaterialDesignGenerationService
       else
         "already referenced in source HTML: no; optional visual resource"
       end
-      %(#{asset.token} — #{asset.name}; description: #{asset.description.presence || "not supplied"}; alt text: #{asset.alt_text.presence || "not supplied"}; #{usage})
+      kind = asset.video? ? "video" : "image"
+      accessibility = asset.video? ? "accessible label" : "alt text"
+      %(#{asset.token} — #{kind}: #{asset.name}; description: #{asset.description.presence || "not supplied"}; #{accessibility}: #{asset.alt_text.presence || "not supplied"}; #{usage})
     end.join("\n")
   end
 
@@ -167,7 +176,7 @@ class MaterialDesignGenerationService
 
   def ensure_assets_fit_budget!
     blobs = revision.lesson_material.material_design_assets
-      .includes(file_attachment: :blob).filter_map { |asset| asset.file.blob if asset.file.attached? }
+      .includes(file_attachment: :blob).filter_map { |asset| asset.file.blob if asset.image? }
     blobs.concat(revision.lesson_material.imported_assets.attachments.includes(:blob).map(&:blob))
 
     if blobs.size > MAX_IMAGE_COUNT

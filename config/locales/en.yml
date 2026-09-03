@@ -52,11 +52,11 @@ en:
 
   layouts:
     application:
-      subjects: "Subjects"
-      courses: "Courses"
+      subjects: "%{subjects}"
+      courses: "%{courses}"
       my_learning: "My learning"
       my_profile: "My profile"
-      my_courses: "My courses"
+      my_courses: "My %{courses_l}"
       sign_in: "Sign in"
       sign_up: "Sign up"
       sign_out: "Sign out"
@@ -69,16 +69,16 @@ en:
     index:
       title: "Home"
       hero_heading: "Learn with an AI tutor"
-      browse_subjects: "Browse subjects"
-      all_courses: "All courses"
-      sign_in_to_access: "Sign in to access courses"
+      browse_subjects: "Browse %{subjects_l}"
+      all_courses: "All %{courses_l}"
+      sign_in_to_access: "Sign in to access %{courses_l}"
       recently_published: "Recently published"
-      empty: "No published courses yet."
+      empty: "No published %{courses_l} yet."
     me:
       title: "My learning"
       heading: "My learning"
-      not_enrolled: "You're not enrolled in any courses yet."
-      browse_courses: "Browse courses"
+      not_enrolled: "You're not enrolled in any %{courses_l} yet."
+      browse_courses: "Browse %{courses_l}"
       progress: "Progress"
       lessons_completed: "%{lessons} completed"
       avg_score: "Avg score"
@@ -115,6 +115,19 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    course_sidebar:
+      open: "Progress"
+      close: "Close course contents"
+      course: "%{course_l}"
+      progress: "Course progress"
+      percent_complete: "%{percent}% complete"
+      lesson_navigation: "%{lessons} in this course"
+      duration: "%{count} min"
+      details_for: "Show or hide details for %{title}"
+      completed: "Completed"
+      in_progress: "In progress"
+      not_started: "Not started"
+      back: "Back to %{course_l}"
     index:
       heading: "%{lessons}"
       add: "Add %{lesson_l}"
@@ -164,6 +177,9 @@ en:
       title: "%{courses}"
       new: "New %{course_l}"
       empty: "No %{courses_l} found."
+      sort_by: "Sort by"
+      publication_date: "Publication date"
+      learning_order: "Learning order"
     show:
       back: "← %{courses}"
       unpublish_confirm: "Unpublish this %{course_l}?"

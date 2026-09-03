@@ -23,6 +23,39 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#material-#{@material.id}[data-expanded='true']"
   end
 
+  test "guest sees a youtube video URL material as an iframe" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "YouTube clip",
+      kind: :video_url,
+      url: "https://youtu.be/Hla6u6WpRE0?si=OEhPSA0s1EZog4ws"
+    )
+
+    get course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_select "iframe[src^='https://www.youtube.com/embed/Hla6u6WpRE0']", count: 1
+    assert_select "video", count: 0
+  end
+
+  test "guest can start a ChatBar material with its stored prompt" do
+    material = LessonMaterial.create!(
+      lesson: @lesson,
+      title: "Guided discussion",
+      kind: :chatbar,
+      chatbar_token: "material-chatbar-token",
+      chatbar_prompt: "Help me compare the two methods"
+    )
+
+    get course_lesson_lesson_material_path(@course, @lesson, material)
+
+    assert_response :success
+    assert_select "#cbai_launcher_#{@lesson.id}", count: 0
+    assert_select "#material-#{material.id} [data-controller='chatbar-material'][data-chatbar-material-token-value=?][data-chatbar-material-prompt-value=?]", material.chatbar_token, material.chatbar_prompt
+    assert_select "button[data-action='click->chatbar-material#start']", text: /Start conversation/
+    assert_select "#material-#{material.id} .hidden[data-chatbar-material-target='mount']", count: 1
+  end
+
   test "guest can view a published Google document with restrictive headers" do
     material = LessonMaterial.create!(
       lesson: @lesson,
@@ -36,6 +69,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "text/html", response.media_type
     assert_includes response.headers["Content-Security-Policy"], "script-src 'none'"
+    assert_includes response.headers["Content-Security-Policy"], "media-src 'self'"
     assert_includes response.headers["Content-Security-Policy"], "frame-ancestors 'self'"
     assert_nil response.headers["X-Frame-Options"]
     assert_includes response.body, "<p>Hello</p>"
@@ -166,6 +200,20 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:instructor)
     get new_course_lesson_lesson_material_path(@course, @lesson)
     assert_response :success
+    assert_select "button", text: /Insert HTML/, count: 1
+    assert_select 'input[name="lesson_material[chatbar_token]"][value=?]', @lesson.cbai_token
+    assert_select 'label[for="lesson_material_chatbar_token"][title=?]', "Prefilled with this lesson's ChatBar token. Replace it to use a different ChatBar for this material."
+  end
+
+  test "new material form does not describe an empty token as prefilled" do
+    lesson = lessons(:advanced)
+    sign_in users(:instructor)
+
+    get new_course_lesson_lesson_material_path(@course, lesson)
+
+    assert_response :success
+    assert_select 'input[name="lesson_material[chatbar_token]"][value]', count: 0
+    assert_select 'label[for="lesson_material_chatbar_token"][title]', count: 0
   end
 
   test "material form submits without turbo so validation errors stay visible" do
@@ -344,12 +392,29 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://example.com/clip.mp4", material.url
   end
 
+  test "instructor creates a ChatBar material with a separate prompt" do
+    sign_in users(:instructor)
+
+    assert_difference("LessonMaterial.count", 1) do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: "different-chatbar", chatbar_prompt: "Start with a worked example" } }
+    end
+
+    material = LessonMaterial.order(:created_at).last
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert material.chatbar?
+    assert_equal "different-chatbar", material.chatbar_token
+    assert_equal "Start with a worked example", material.chatbar_prompt
+    assert_nil material.url
+  end
+
   test "instructor can get edit form for own material" do
     sign_in users(:instructor)
     get edit_course_lesson_lesson_material_path(@course, @lesson, @material)
     assert_response :success
     assert_select "a[href='#{course_lesson_lesson_material_path(@course, @lesson, @material)}'][target='_blank']", text: "View material"
     assert_select "a.ai-design-action[href='#{course_lesson_lesson_material_material_design_revisions_path(@course, @lesson, @material)}']", text: "Design"
+    assert_select "button", text: /Insert HTML/, count: 0
   end
 
   test "instructor can update own material" do
@@ -478,6 +543,18 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to course_lesson_path(@course, @lesson,
                                             anchor: "material-#{@material.id}")
+  end
+
+  test "enrolled student can acknowledge a material as JSON" do
+    sign_in users(:student)
+
+    assert_difference("LessonMaterialAcknowledgement.count", 1) do
+      post acknowledge_course_lesson_lesson_material_path(@course, @lesson, @material),
+           as: :json
+    end
+
+    assert_response :success
+    assert_equal true, response.parsed_body["acknowledged"]
   end
 
   # ---------------------------------------------------------------------------

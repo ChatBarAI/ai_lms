@@ -17,21 +17,29 @@ class Enrollment < ApplicationRecord
 
   scope :enrolled_between, ->(range) { range ? where(enrolled_at: range) : all }
   scope :completed, lambda {
-    joins(:progresses).where(progresses: { status: Progress.statuses[:completed] })
-      .group("enrollments.id")
-      .having("COUNT(progresses.id) >= (SELECT COUNT(*) FROM lessons WHERE lessons.course_id = enrollments.course_id)")
+    required_lessons = Lesson.required_for_completion.where("lessons.course_id = enrollments.course_id")
+    completed_lesson_ids = Progress.completed
+      .where("progresses.enrollment_id = enrollments.id")
+      .select(:lesson_id)
+    incomplete_required_lessons = required_lessons.where.not(id: completed_lesson_ids)
+
+    where(required_lessons.arel.exists)
+      .where.not(incomplete_required_lessons.arel.exists)
   }
   scope :active, -> { joins(:progresses).where(progresses: { status: [ Progress.statuses[:in_progress], Progress.statuses[:completed] ] }).distinct }
 
   def completion_percentage
-    total = course.lessons.count
+    total = lessons_required_count
     return 0 if total.zero?
-    completed = progresses.where(status: Progress.statuses[:completed]).count
-    ((completed.to_f / total) * 100).round(1)
+    ((lessons_completed_count.to_f / total) * 100).round(1)
+  end
+
+  def lessons_required_count
+    course.lessons_required_for_completion.count
   end
 
   def lessons_completed_count
-    progresses.where(status: Progress.statuses[:completed]).count
+    completed_required_progresses.count
   end
 
   def average_score
@@ -43,11 +51,15 @@ class Enrollment < ApplicationRecord
   end
 
   def fully_completed?
-    total = course.lessons.count
+    total = lessons_required_count
     total.positive? && lessons_completed_count >= total
   end
 
   private
+
+  def completed_required_progresses
+    progresses.completed.where(lesson_id: course.lessons_required_for_completion.select(:id))
+  end
 
   def set_enrolled_at
     self.enrolled_at ||= Time.current

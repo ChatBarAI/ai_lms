@@ -3,7 +3,9 @@ class CoursesController < ApplicationController
   load_and_authorize_resource find_by: :slug
 
   def index
-    @courses = (params[:mine] && current_user ? current_user.owned_courses : Course.catalog_visible_to(current_user)).includes(:tags, :prerequisite_courses).order(published_at: :desc)
+    @sort = params[:sort] == "learning_order" ? "learning_order" : "published_at"
+    scope = params[:mine] && current_user ? current_user.owned_courses : Course.catalog_visible_to(current_user)
+    @courses = scope.includes(:tags, :prerequisite_courses).merge(Course.catalog_order(@sort))
   end
 
   def show
@@ -97,7 +99,7 @@ class CoursesController < ApplicationController
   private
 
   def course_params
-    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
     filter_prerequisite_course_ids!(permitted)
     permitted
   end

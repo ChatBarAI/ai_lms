@@ -1,7 +1,8 @@
 - content_for :title, @lesson.title
 
-.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show" } }
+.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show lesson-sidebar" } }
   .flex.flex-wrap.gap-2.items-center
+    = render "course_sidebar"
     = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
       ← Course
     - if can?(:update, @lesson)
@@ -41,8 +42,23 @@
 - if @lesson.lesson_materials.any?
   #lesson-materials.mb-6
     %h2.text-lg.font-semibold.mb-3 Materials
-    - @lesson.lesson_materials.each do |m|
-      = render "lesson_materials/material", material: m, course: @course, lesson: @lesson, enrollment: @enrollment
+    - if @lesson.material_layout_or_default == "scroller"
+      .relative{ data: { controller: "material-scroller", action: "keydown.left->material-scroller#previous keydown.right->material-scroller#next" }, tabindex: "0", aria: { label: "Lesson materials" } }
+        .flex.items-start.overflow-x-auto.overflow-y-hidden.snap-x.snap-mandatory.scroll-smooth{ data: { material_scroller_target: "track", action: "scroll->material-scroller#sync" } }
+          - @lesson.lesson_materials.each_with_index do |m, index|
+            - acknowledged = m.acknowledged_by?(@enrollment)
+            .w-full.shrink-0.snap-start{ data: { material_scroller_target: "slide", material_scroller_acknowledge_url: (@enrollment && !acknowledged ? acknowledge_course_lesson_lesson_material_path(@course, @lesson, m) : nil) }, role: "group", aria: { label: "Material #{index + 1} of #{@lesson.lesson_materials.size}" } }
+              = render "lesson_materials/material", material: m, course: @course, lesson: @lesson, enrollment: @enrollment, acknowledged: acknowledged, collapsed: false
+        .flex.items-center.justify-between.gap-3.mt-3
+          %button.inline-flex.items-center.px-3.py-1.5.rounded.border.border-gray-300.bg-white.text-sm.font-medium.text-gray-700.hover:bg-gray-50.cursor-pointer.disabled:opacity-40.disabled:cursor-not-allowed{ type: "button", data: { action: "material-scroller#previous", material_scroller_target: "previous" } }
+            ← Previous
+          %p.text-sm.text-gray-500.tabular-nums{ data: { material_scroller_target: "counter" }, aria: { live: "polite" } }
+          %button.inline-flex.items-center.px-3.py-1.5.rounded.bg-indigo-600.text-white.text-sm.font-medium.hover:bg-indigo-700.cursor-pointer.disabled:opacity-40.disabled:cursor-not-allowed{ type: "button", data: { action: "material-scroller#next", material_scroller_target: "next" } }
+            Next →
+        %p.hidden.mt-2.text-sm.text-red-700{ role: "alert", data: { material_scroller_target: "status" } }
+    - else
+      - @lesson.lesson_materials.each do |m|
+        = render "lesson_materials/material", material: m, course: @course, lesson: @lesson, enrollment: @enrollment
 
 - if @enrollment
   .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{ id: "lesson-status" }
@@ -79,17 +95,16 @@
                      mini_svg_width: "170",
                      show_attempt_numbers: true,
                      axis_label: "Attempt Number"
-      - if !@progress.completed? && @lesson.questions.none?
-        - unless @marking_pending
-          .self-center.ml-auto
-            = form_with model: @progress, url: progress_path(@progress.id), method: :patch, local: true do |f|
-              = f.hidden_field :status, value: "completed"
-              = f.submit t(".mark_complete"), data: { turbo_confirm: t(".confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
-      - else
+      - if @progress.completed?
         .flex.items-center.gap-2.self-center.ml-auto
           %span.text-sm.font-medium.text-green-700= t(".completed")
           - if @enrollment.fully_completed?
             = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+      - elsif @lesson.questions.none? && !@marking_pending
+        .self-center.ml-auto
+          = form_with model: @progress, url: progress_path(@progress.id), method: :patch, local: true do |f|
+            = f.hidden_field :status, value: "completed"
+            = f.submit t(".mark_complete"), data: { turbo_confirm: t(".confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
 
   - if @latest_quiz_answers.present?
     = render "latest_quiz_results", lesson: @lesson, progress: @progress, answers: @latest_quiz_answers

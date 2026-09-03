@@ -53,11 +53,11 @@ de:
 
   layouts:
     application:
-      subjects: "Fächer"
-      courses: "Kurse"
+      subjects: "%{subjects}"
+      courses: "%{courses}"
       my_learning: "Mein Lernen"
       my_profile: "Mein Profil"
-      my_courses: "Meine Kurse"
+      my_courses: "Meine %{courses}"
       sign_in: "Anmelden"
       sign_up: "Registrieren"
       sign_out: "Abmelden"
@@ -70,16 +70,16 @@ de:
     index:
       title: "Start"
       hero_heading: "Lerne mit einem KI-Tutor"
-      browse_subjects: "Fächer durchsuchen"
-      all_courses: "Alle Kurse"
-      sign_in_to_access: "Anmelden, um Kurse zu öffnen"
+      browse_subjects: "%{subjects} durchsuchen"
+      all_courses: "Alle %{courses}"
+      sign_in_to_access: "Anmelden, um %{courses} zu öffnen"
       recently_published: "Zuletzt veröffentlicht"
-      empty: "Noch keine veröffentlichten Kurse."
+      empty: "Noch keine veröffentlichten %{courses}."
     me:
       title: "Mein Lernen"
       heading: "Mein Lernen"
-      not_enrolled: "Du bist noch in keinen Kurs eingeschrieben."
-      browse_courses: "Kurse durchsuchen"
+      not_enrolled: "Du bist noch in keinen %{courses_l} eingeschrieben."
+      browse_courses: "%{courses} durchsuchen"
       progress: "Fortschritt"
       lessons_completed: "%{lessons} abgeschlossen"
       avg_score: "Durchschnitt"
@@ -116,6 +116,19 @@ de:
       update_failed: "Profil konnte nicht gespeichert werden."
 
   lessons:
+    course_sidebar:
+      open: "Fortschritt"
+      close: "Kursinhalte schließen"
+      course: "%{course_l}"
+      progress: "Kursfortschritt"
+      percent_complete: "%{percent}% abgeschlossen"
+      lesson_navigation: "%{lessons} in diesem Kurs"
+      duration: "%{count} Min."
+      details_for: "Details für %{title} ein- oder ausblenden"
+      completed: "Abgeschlossen"
+      in_progress: "In Bearbeitung"
+      not_started: "Nicht begonnen"
+      back: "Zurück zum %{course_l}"
     index:
       heading: "%{lessons}"
       add: "%{lesson_l} hinzufügen"
@@ -165,6 +178,9 @@ de:
       title: "%{courses}"
       new: "Neuen %{course_l} erstellen"
       empty: "Keine %{courses_l} gefunden."
+      sort_by: "Sortieren nach"
+      publication_date: "Veröffentlichungsdatum"
+      learning_order: "Lernreihenfolge"
     show:
       back: "← %{courses}"
       unpublish_confirm: "Diesen %{course_l} nicht mehr veröffentlichen?"

@@ -116,6 +116,7 @@ export default class extends Controller {
     iframe.className = "absolute inset-0 w-full h-full rounded-lg border border-gray-200"
     iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
     iframe.setAttribute("allowfullscreen", "true")
+    iframe.referrerPolicy = "strict-origin-when-cross-origin"
 
     el.innerHTML = ""
     el.appendChild(iframe)

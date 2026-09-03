@@ -5,9 +5,10 @@ class Admin::CoursesController < Admin::BaseController
     @selected_subject = Subject.find_by(id: params[:subject_id]) if params[:subject_id].present?
     respond_to do |format|
       format.html do
+        @sort = params[:sort] == "learning_order" ? "learning_order" : "published_at"
         @courses = Course.includes(:subject, :owner, :lessons)
         @courses = @courses.where(subject_id: @selected_subject.id) if @selected_subject
-        @courses = @courses.order(created_at: :desc)
+        @courses = @courses.merge(Course.catalog_order(@sort))
       end
 
       format.csv do
@@ -30,7 +31,7 @@ class Admin::CoursesController < Admin::BaseController
     @course = Course.new(course_params)
     @course.owner ||= current_user
     if @course.save
-      redirect_to admin_courses_path, notice: "Course created."
+      redirect_to admin_courses_path, notice: "#{Course.model_name.human} created."
     else
       render :new, status: :unprocessable_entity
     end
@@ -44,7 +45,7 @@ class Admin::CoursesController < Admin::BaseController
     @course.cover_image.purge if ActiveModel::Type::Boolean.new.cast(params.dig(:course, :remove_cover_image))
     @course.certificate_template.purge if ActiveModel::Type::Boolean.new.cast(params.dig(:course, :remove_certificate_template))
     if @course.update(course_params)
-      redirect_to admin_courses_path, notice: "Course updated."
+      redirect_to admin_courses_path, notice: "#{Course.model_name.human} updated."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -52,7 +53,7 @@ class Admin::CoursesController < Admin::BaseController
 
   def destroy
     @course.destroy
-    redirect_to admin_courses_path, notice: "Course deleted.", status: :see_other
+    redirect_to admin_courses_path, notice: "#{Course.model_name.human} deleted.", status: :see_other
   end
 
   def report
@@ -124,7 +125,7 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def course_params
-    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
     filter_prerequisite_course_ids!(permitted)
     permitted
   end

@@ -10,6 +10,8 @@ module SafeHtmlPolicy
     href src alt title class id style dir lang target rel name width height
     colspan rowspan span start type value scope headers
   ].freeze
+  VIDEO_TAGS = %w[video source].freeze
+  VIDEO_ATTRIBUTES = %w[aria-label controls preload playsinline muted loop].freeze
 
   SYSTEM_FONT_STACKS = {
     sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
@@ -37,25 +39,28 @@ module SafeHtmlPolicy
 
   module_function
 
-  def sanitize_fragment(html)
+  def sanitize_fragment(html, video_urls: [])
     source = Nokogiri::HTML5.fragment(html.to_s)
     source.css("script, style, form, iframe, object, embed").remove
     sanitized = Rails::HTML::SafeListSanitizer.new.sanitize(
       source.to_html,
-      tags: ALLOWED_TAGS,
-      attributes: ALLOWED_ATTRIBUTES
+      tags: ALLOWED_TAGS + (video_urls.any? ? VIDEO_TAGS : []),
+      attributes: ALLOWED_ATTRIBUTES + (video_urls.any? ? VIDEO_ATTRIBUTES : [])
     )
     fragment = Nokogiri::HTML5.fragment(sanitized)
+    restrict_video_sources(fragment, video_urls) if video_urls.any?
     map_inline_fonts(fragment)
     fragment.to_html
   end
 
-  def sanitize_isolated_document(html)
+  def sanitize_isolated_document(html, video_urls: [])
     return "" if html.blank?
 
     document = Nokogiri::HTML5.parse(html.to_s)
     source_body = document.at_css("body")
-    body = Nokogiri::HTML5.fragment(sanitize_fragment(source_body&.inner_html.to_s))
+    body = Nokogiri::HTML5.fragment(
+      sanitize_fragment(source_body&.inner_html.to_s, video_urls: video_urls)
+    )
     styles = document.css("style").map(&:text).join("\n")
 
     <<~HTML
@@ -73,13 +78,13 @@ module SafeHtmlPolicy
     HTML
   end
 
-  def sanitize_ai_document(html, asset_urls: [])
-    document = Nokogiri::HTML5.parse(sanitize_isolated_document(html))
-    allowed = asset_urls.to_set
+  def sanitize_ai_document(html, image_urls: [], video_urls: [])
+    document = Nokogiri::HTML5.parse(sanitize_isolated_document(html, video_urls: video_urls))
+    allowed_images = image_urls.to_set
 
     document.css("img").each do |image|
       source = image["src"].to_s
-      image.remove unless allowed.include?(source)
+      image.remove unless allowed_images.include?(source)
     end
     document.css("a[href]").each do |link|
       href = link["href"].to_s
@@ -102,6 +107,13 @@ module SafeHtmlPolicy
   def map_inline_fonts(fragment)
     fragment.css("[style]").each do |element|
       element["style"] = map_font_families(element["style"])
+    end
+  end
+
+  def restrict_video_sources(fragment, video_urls)
+    allowed = video_urls.to_set
+    fragment.css("video[src], video source[src]").each do |media|
+      media.remove_attribute("src") unless allowed.include?(media["src"].to_s)
     end
   end
 

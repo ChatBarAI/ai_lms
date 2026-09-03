@@ -9,6 +9,26 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_match(/All courses/, response.body)
   end
 
+  test "uses configured course terminology in public navigation and home actions" do
+    setting = SiteSetting.current
+    setting.update!(terminology: {
+      "en" => {
+        "course_one" => "Module",
+        "course_other" => "Modules"
+      }
+    })
+
+    get root_path
+
+    assert_response :success
+    assert_select "nav a", text: "Modules"
+    assert_select "a", text: "All modules"
+    assert_no_match(/>Courses</, response.body)
+    assert_no_match(/>All courses</, response.body)
+  ensure
+    setting&.update!(terminology: {})
+  end
+
   test "signed in German user sees German locale chrome" do
     student = users(:student)
     student.update!(locale: "de")

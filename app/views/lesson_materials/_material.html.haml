@@ -104,10 +104,31 @@
         %p.text-sm.text-gray-500.italic No video file attached.
     - when "video_url"
       - if material.url.present?
-        %video.w-full.rounded.bg-black{ controls: true, preload: "metadata" }
-          %source{ src: material.url }
+        - if (video = lesson_video_embed(material.url))
+          = video
+        - else
           %p.text-sm.p-2
-            Your browser does not support video playback.
-            = link_to "Open video", material.url, class: "text-indigo-600 hover:underline"
+            This video URL cannot be embedded.
+            = link_to "Open video", material.url, target: "_blank", rel: "noopener noreferrer", class: "text-indigo-600 hover:underline"
       - else
         %p.text-sm.text-gray-500.italic No video URL set.
+    - when "chatbar"
+      .rounded-lg.border.border-indigo-100.bg-indigo-50.p-4{
+        class: "dark:border-slate-700 dark:bg-slate-800/70",
+        data: {
+          controller: "chatbar-material",
+          chatbar_material_token_value: material.chatbar_token,
+          chatbar_material_prompt_value: material.chatbar_prompt,
+          chatbar_material_context_value: "Lesson: #{lesson.title}. Course: #{course.title}. Material: #{material.title}."
+        }
+      }
+        .flex.items-center.justify-between.gap-4{ data: { chatbar_material_target: "intro" } }
+          %p.min-w-0.flex-1.text-sm.text-slate-800{ class: "dark:text-slate-100" } Start a guided conversation with the AI tutor about this material.
+          - if material.chatbar_token.present?
+            %button.shrink-0.inline-flex.items-center.gap-2.px-4.py-2.rounded.bg-indigo-600.text-white.hover:bg-indigo-700.cursor-pointer.text-sm.font-medium.disabled:opacity-50{ type: "button", data: { action: "click->chatbar-material#start", chatbar_material_target: "startButton" } }
+              = site_favicon_img_tag
+              Start conversation
+          - else
+            %p.shrink-0.text-sm.text-amber-700{ class: "dark:text-amber-300" } This material does not have a ChatBar instance configured.
+        %p.hidden.text-sm.text-amber-700.mt-2{ class: "dark:text-amber-300", role: "status", aria: { live: "polite" }, data: { chatbar_material_target: "status" } }
+        .hidden.w-full.min-h-96.bg-white.rounded{ data: { chatbar_material_target: "mount" } }

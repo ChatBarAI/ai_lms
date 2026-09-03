@@ -4,4 +4,4 @@
   %h1.text-2xl.font-bold= "New material · #{@lesson.title}"
   = link_to "← Back to lesson", edit_course_lesson_path(@course, @lesson), class: "inline-flex shrink-0 items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
 .p-4.bg-white.border.border-gray-200.rounded-lg
-  = render "form", course: @course, lesson: @lesson, material: @lesson_material, copy_source_catalog: @copy_source_catalog
+  = render "form", course: @course, lesson: @lesson, material: @lesson_material, copy_source_catalog: @copy_source_catalog, chatbar_token_prefilled: @chatbar_token_prefilled

@@ -23,7 +23,7 @@
     %div{ data: { cbai_embed_target: "panel" }, class: "absolute bg-white shadow-xl flex flex-col" }
       .flex.items-center.justify-between.px-4.py-3.border-b.border-gray-200
         %h3.font-semibold{ id: "#{root_id}_title" } AI tutor
-        %button.w-8.h-8.inline-flex.items-center.justify-center.rounded-full.bg-red-500.hover:bg-red-600.text-white.cursor-pointer.transition-colors.focus:outline-none.focus:ring-2.focus:ring-red-400.focus:ring-offset-1{ type: "button", aria: { label: "Close" }, data: { action: "click->cbai-embed#close" } }
+        %button.w-8.h-8.inline-flex.items-center.justify-center.rounded-full.bg-red-500.hover:bg-red-600.text-white.cursor-pointer.transition-colors.focus:outline-none.focus-visible:ring-2.focus-visible:ring-red-400.focus-visible:ring-offset-1{ type: "button", aria: { label: "Close" }, data: { action: "click->cbai-embed#close" } }
           %svg{ xmlns: "http://www.w3.org/2000/svg", viewbox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2.5", "stroke-linecap": "round", "stroke-linejoin": "round", width: "16", height: "16", "aria-hidden": "true" }
             %line{ x1: "18", y1: "6", x2: "6", y2: "18" }
             %line{ x1: "6", y1: "6", x2: "18", y2: "18" }

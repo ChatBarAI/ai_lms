@@ -1,0 +1,4 @@
+- video_label = local_assigns[:label].presence || name
+%video.w-full.rounded.bg-black{ controls: true, preload: "metadata", "aria-label": video_label }
+  %source{ src: url, type: media_type }
+  Your browser does not support video playback.

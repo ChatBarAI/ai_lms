@@ -9,6 +9,7 @@ class LessonFormAssignmentService
     :custom_tutor_embed_type,
     :custom_tutor_embed_script,
     :quiz_layout,
+    :material_layout,
     :published_at,
     :pass_mark,
     :duration_minutes,

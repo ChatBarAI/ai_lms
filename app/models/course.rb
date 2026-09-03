@@ -25,6 +25,7 @@ class Course < ApplicationRecord
 
   validates :title, presence: true
   validates :locale, presence: true, inclusion: { in: User::SUPPORTED_LOCALES.keys }
+  validates :learning_order, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :slug, presence: true, uniqueness: true,
                    format: { with: /\A[a-z0-9-]+\z/ }
 
@@ -46,9 +47,12 @@ class Course < ApplicationRecord
       none
     end
   }
+  scope :catalog_order, ->(sort) {
+    sort == "learning_order" ? order(learning_order: :asc, published_at: :desc) : order(published_at: :desc)
+  }
 
   def self.ransackable_attributes(_auth = nil)
-    %w[title slug description locale owner_id subject_id published_at public_access_enabled created_at updated_at id]
+    %w[title slug description locale owner_id subject_id published_at learning_order public_access_enabled created_at updated_at id]
   end
 
   def self.ransackable_associations(_auth = nil)
@@ -134,6 +138,10 @@ class Course < ApplicationRecord
 
   def progresses
     Progress.where(enrollment_id: enrollments.select(:id))
+  end
+
+  def lessons_required_for_completion
+    lessons.required_for_completion
   end
 
   def enrollment_count

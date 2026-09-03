@@ -1,6 +1,34 @@
 require "test_helper"
 
 class MaterialDesignAssetsControllerTest < ActionDispatch::IntegrationTest
+  test "uploads a video as a content asset" do
+    sign_in users(:instructor)
+    material = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Video content", kind: :raw_html_iframe,
+      raw_html_content: LessonMaterial::AI_DESIGN_STARTER_HTML
+    )
+
+    assert_difference("MaterialDesignAsset.count", 1) do
+      post course_lesson_lesson_material_material_design_assets_path(
+        material.lesson.course, material.lesson, material
+      ), params: {
+        material_design_asset: {
+          name: "Worked example", description: "A narrated example", role: "content",
+          file: Rack::Test::UploadedFile.new(
+            Rails.root.join("test/fixtures/files/clip.mp4"), "video/mp4", true
+          )
+        }
+      }
+    end
+
+    asset = MaterialDesignAsset.order(:id).last
+    assert asset.video?
+    assert asset.content?
+    assert_redirected_to course_lesson_lesson_material_material_design_revisions_path(
+      material.lesson.course, material.lesson, material
+    )
+  end
+
   test "uploads an image with an explicit design-reference role" do
     sign_in users(:instructor)
     material = LessonMaterial.create!(
