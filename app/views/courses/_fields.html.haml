@@ -47,3 +47,17 @@
 
   %div
     = render "shared/tag_picker", f: f, record: course
+
+  - options = Course.prerequisite_options_for(current_user, except: course)
+  - if options.any?
+    %div
+      %p.block.text-sm.font-medium.mb-1 Complete these courses first (milestones)
+      %p.text-xs.text-gray-500.mb-2 Students must finish every selected course before they can enrol here.
+      .max-h-48.overflow-y-auto.border.border-gray-200.rounded.p-2.space-y-1
+        - options.each do |option|
+          %label.flex.items-center.gap-2.text-sm.cursor-pointer
+            = check_box_tag "course[prerequisite_course_ids][]", option.id, course.prerequisite_course_ids.include?(option.id), id: "course_prerequisite_course_ids_#{option.id}", class: "rounded border-gray-300"
+            %span= option.title
+            - unless option.published?
+              %span.text-xs.text-amber-700 (draft)
+      = hidden_field_tag "course[prerequisite_course_ids][]", ""

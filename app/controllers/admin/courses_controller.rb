@@ -125,6 +125,15 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def course_params
-    params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [])
+    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    filter_prerequisite_course_ids!(permitted)
+    permitted
+  end
+
+  def filter_prerequisite_course_ids!(permitted)
+    return unless permitted.key?(:prerequisite_course_ids)
+
+    allowed = Course.prerequisite_options_for(current_user, except: @course).pluck(:id).map(&:to_s)
+    permitted[:prerequisite_course_ids] = Array(permitted[:prerequisite_course_ids]).reject(&:blank?) & allowed
   end
 end

@@ -1,0 +1,5 @@
+- heading_class = local_assigns.fetch(:heading_class, "text-amber-900")
+%p.font-medium.mb-1{ class: heading_class } Complete these courses first
+%ul.list-disc.pl-5.space-y-1
+  - missing.each do |prereq|
+    %li= link_to prereq.title, course_path(prereq), class: "text-indigo-700 hover:underline"

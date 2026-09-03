@@ -9,6 +9,11 @@ class Course < ApplicationRecord
   has_many :students, through: :enrollments, source: :user
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
+  has_many :course_prerequisites, -> { order(:position, :id) }, dependent: :destroy, inverse_of: :course
+  has_many :prerequisite_courses, through: :course_prerequisites, source: :prerequisite_course
+  has_many :inverse_course_prerequisites, class_name: "CoursePrerequisite",
+           foreign_key: :prerequisite_course_id, dependent: :restrict_with_error, inverse_of: :prerequisite_course
+  has_many :unlocks_courses, through: :inverse_course_prerequisites, source: :course
 
   has_one_attached :cover_image
   has_one_attached :certificate_template
@@ -106,6 +111,25 @@ class Course < ApplicationRecord
 
   def public_to_guests?
     SiteSetting.current.allow_guest_access? && published? && public_access_enabled?
+  end
+
+  def missing_prerequisites_for(user)
+    prereqs = prerequisite_courses.to_a
+    return prereqs if user.blank?
+
+    prereqs.reject { |c| user.enrollments.find_by(course_id: c.id)&.fully_completed? }
+  end
+
+  def prerequisites_met_by?(user)
+    missing_prerequisites_for(user).empty?
+  end
+
+  def self.prerequisite_options_for(user, except: nil)
+    scope = order(:title)
+    scope = scope.where.not(id: except.id) if except
+    return scope if user&.admin?
+
+    scope.where("published_at <= ? OR owner_id = ?", Time.current, user&.id)
   end
 
   def to_param

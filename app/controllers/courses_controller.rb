@@ -5,7 +5,7 @@ class CoursesController < ApplicationController
   def index
     @sort = params[:sort] == "learning_order" ? "learning_order" : "published_at"
     scope = params[:mine] && current_user ? current_user.owned_courses : Course.catalog_visible_to(current_user)
-    @courses = scope.includes(:tags).merge(Course.catalog_order(@sort))
+    @courses = scope.includes(:tags, :prerequisite_courses).merge(Course.catalog_order(@sort))
   end
 
   def show
@@ -99,6 +99,15 @@ class CoursesController < ApplicationController
   private
 
   def course_params
-    params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [])
+    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    filter_prerequisite_course_ids!(permitted)
+    permitted
+  end
+
+  def filter_prerequisite_course_ids!(permitted)
+    return unless permitted.key?(:prerequisite_course_ids)
+
+    allowed = Course.prerequisite_options_for(current_user, except: @course).pluck(:id).map(&:to_s)
+    permitted[:prerequisite_course_ids] = Array(permitted[:prerequisite_course_ids]).reject(&:blank?) & allowed
   end
 end
