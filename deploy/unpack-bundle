@@ -1,0 +1,35 @@
+# Shared by restore scripts; caller sets bundle and a private work_dir.
+tar -tzf "$bundle" > "$work_dir/entries"
+mapfile -t bundle_entries < "$work_dir/entries"
+if printf '%s\n' "${bundle_entries[@]}" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+  echo "Unsafe path found in clone bundle." >&2
+  exit 1
+fi
+expected_entries=$'database.dump\nmetadata\nstorage.tar.gz'
+actual_entries=$(printf '%s\n' "${bundle_entries[@]}" | sort)
+[[ $actual_entries == "$expected_entries" ]] || {
+  echo "Clone bundle contains unexpected files." >&2
+  exit 1
+}
+tar -tvzf "$bundle" > "$work_dir/types"
+if awk 'substr($1, 1, 1) != "-" { unsafe = 1 } END { exit !unsafe }' "$work_dir/types"; then
+  echo "Clone bundle must contain only regular files." >&2
+  exit 1
+fi
+tar --no-same-owner --no-same-permissions -xzf "$bundle" -C "$work_dir"
+
+[[ $(sed -n 's/^format=//p' "$work_dir/metadata") == ai_lms_clone_v1 ]] ||
+  { echo "Unsupported or invalid clone bundle." >&2; exit 1; }
+[[ -s "$work_dir/database.dump" && -s "$work_dir/storage.tar.gz" ]] ||
+  { echo "Clone bundle is incomplete." >&2; exit 1; }
+
+tar -tzf "$work_dir/storage.tar.gz" > "$work_dir/entries"
+if grep -Eq '(^/|(^|/)\.\.(/|$))' "$work_dir/entries"; then
+  echo "Unsafe path found in Active Storage archive." >&2
+  exit 1
+fi
+tar -tvzf "$work_dir/storage.tar.gz" > "$work_dir/types"
+if awk 'substr($1, 1, 1) != "-" && substr($1, 1, 1) != "d" { unsafe = 1 } END { exit !unsafe }' "$work_dir/types"; then
+  echo "Active Storage archive contains links or special files." >&2
+  exit 1
+fi

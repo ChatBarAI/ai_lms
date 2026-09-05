@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
 
 usage() {
   cat <<'USAGE'
@@ -7,15 +8,47 @@ Usage:
   deploy/restore --force CLONE_BUNDLE
 
 This completely replaces the target database and Active Storage files.
+Accepts the single .tar.gz archive produced by deploy/backup or deploy/export.
+For isolated local testing with Docker and PostgreSQL 16 instead, use:
+  bin/local-clone restore --force CLONE_BUNDLE
+Run on the DESTINATION machine in a prepared checkout/deployment. Install the
+matching or compatible newer application code, dependencies, database, and
+required Rails keys first. Native PostgreSQL client tools must be compatible
+with the source database (the Docker deployment uses PostgreSQL 16).
+
+Docker: stops web/worker/proxy, restores data, migrates, then restarts them.
+If restore fails after stopping services, they remain stopped for inspection.
+Native: stop Rails/background workers before running; restart after success.
+By default, clears copied app_url and redis_url settings for the destination.
+Other copied settings and integration credentials remain; review before use.
 
 Environment:
   DEPLOY_MODE=auto|docker|native
   DEPLOY_ROOT=/opt/ai_lms
+  RAILS_ENV=production               # native; use development locally
   STORAGE_PATH=/path/to/storage       # native only
   NATIVE_WRITES_STOPPED=1             # required for native restore
   PRESERVE_INSTANCE_SETTINGS=1        # retain source app_url and redis_url
+
+Local development example (Rails and background workers must be stopped):
+  RAILS_ENV=development bin/rails db:create
+  DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
+    deploy/restore --force /absolute/path/to/ai-lms-clone.tar.gz
+  bin/dev
+
+Docker destination example (deploy application code first):
+  /opt/ai_lms/current/deploy/restore --force /tmp/ai-lms-clone.tar.gz
+
+Check the destination database configuration, including DATABASE_URL: --force
+authorizes replacing its contents and the target storage files.
+See deploy/backup --help for backup/download steps, and README.md.
 USAGE
 }
+
+if [[ ${1:-} == --help ]]; then
+  usage
+  exit 0
+fi
 
 [[ ${1:-} == --force && $# -eq 2 ]] || { usage >&2; exit 2; }
 
@@ -38,33 +71,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mapfile -t bundle_entries < <(tar -tzf "$bundle")
-if printf '%s\n' "${bundle_entries[@]}" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-  echo "Unsafe path found in clone bundle." >&2
-  exit 1
-fi
-expected_entries=$'database.dump\nmetadata\nstorage.tar.gz'
-actual_entries=$(printf '%s\n' "${bundle_entries[@]}" | sort)
-[[ $actual_entries == "$expected_entries" ]] || {
-  echo "Clone bundle contains unexpected files." >&2
-  exit 1
-}
-tar -xzf "$bundle" -C "$work_dir"
-
-[[ $(sed -n 's/^format=//p' "$work_dir/metadata") == ai_lms_clone_v1 ]] ||
-  { echo "Unsupported or invalid clone bundle." >&2; exit 1; }
-[[ -s "$work_dir/database.dump" && -s "$work_dir/storage.tar.gz" ]] ||
-  { echo "Clone bundle is incomplete." >&2; exit 1; }
-
-if tar -tzf "$work_dir/storage.tar.gz" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-  echo "Unsafe path found in Active Storage archive." >&2
-  exit 1
-fi
-if tar -tvzf "$work_dir/storage.tar.gz" |
-    awk 'substr($1, 1, 1) != "-" && substr($1, 1, 1) != "d" { unsafe = 1 } END { exit !unsafe }'; then
-  echo "Active Storage archive contains links or special files." >&2
-  exit 1
-fi
+source "$app_root/deploy/unpack-bundle"
 
 docker_available() {
   command -v docker >/dev/null 2>&1 &&
@@ -102,7 +109,7 @@ case "$mode" in
     docker run --rm \
       -v ai_lms_storage:/target \
       -v "$work_dir:/backup:ro" \
-      alpine:3.22 sh -c 'tar -xzf /backup/storage.tar.gz -C /target && chown -R 1000:1000 /target && chmod -R u=rwX,go=rX /target'
+      alpine:3.22 sh -c 'tar -xzf /backup/storage.tar.gz -C /target && chown -R 1000:1000 /target && find /target -type d -exec chmod 700 {} + && find /target -type f -exec chmod 600 {} +'
 
     "${compose[@]}" run --rm web ./bin/rails db:migrate
     if [[ ${PRESERVE_INSTANCE_SETTINGS:-0} != 1 ]]; then
@@ -115,6 +122,15 @@ case "$mode" in
     requested_storage_path=$(readlink -m "${STORAGE_PATH:-"$app_root/storage"}")
     [[ $requested_storage_path =~ ^/[A-Za-z0-9._/-]+$ && $requested_storage_path != / ]] ||
       { echo "STORAGE_PATH must be a safe absolute directory other than /." >&2; exit 1; }
+    case "$requested_storage_path" in
+      /bin|/boot|/dev|/etc|/home|/lib|/lib64|/media|/mnt|/opt|/proc|/root|/run|/sbin|/srv|/sys|/tmp|/usr|/var)
+        echo 'STORAGE_PATH is too broad; provide the dedicated uploads directory.' >&2; exit 1 ;;
+    esac
+    [[ $app_root != "$requested_storage_path" && $app_root != "$requested_storage_path/"* &&
+       $bundle != "$requested_storage_path/"* && $work_dir != "$requested_storage_path/"* ]] || {
+      echo 'STORAGE_PATH must not contain the app, backup archive, or restore staging directory.' >&2
+      exit 1
+    }
     command -v pg_restore >/dev/null 2>&1 || { echo "pg_restore is required." >&2; exit 1; }
     [[ ${NATIVE_WRITES_STOPPED:-0} == 1 ]] || {
       echo "Stop Puma and Sidekiq, then run with NATIVE_WRITES_STOPPED=1." >&2
@@ -124,7 +140,7 @@ case "$mode" in
     echo "Replacing PostgreSQL data..."
     (
       cd "$app_root"
-      RAILS_ENV=production bin/rails runner \
+      RAILS_ENV=${RAILS_ENV:-production} bin/rails runner \
         deploy/database_transfer.rb restore "$work_dir/database.dump"
     )
 
@@ -136,14 +152,16 @@ case "$mode" in
     find "$storage_path" -mindepth 1 -delete
     tar --no-same-owner --no-same-permissions \
       -xzf "$work_dir/storage.tar.gz" -C "$storage_path"
+    find "$storage_path" -type d -exec chmod 700 {} +
+    find "$storage_path" -type f -exec chmod 600 {} +
     (
       cd "$app_root"
-      RAILS_ENV=production bin/rails db:migrate
+      RAILS_ENV=${RAILS_ENV:-production} bin/rails db:migrate
     )
     if [[ ${PRESERVE_INSTANCE_SETTINGS:-0} != 1 ]]; then
       (
         cd "$app_root"
-        RAILS_ENV=production bin/rails runner \
+        RAILS_ENV=${RAILS_ENV:-production} bin/rails runner \
           'SiteSetting.update_all(redis_url: nil, app_url: nil)'
       )
     fi

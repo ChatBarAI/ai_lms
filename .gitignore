@@ -41,6 +41,9 @@
 /config/credentials/production.key
 /config/deploy/generated/
 /ai-lms-clone-*.tar.gz
+*.tar.gz
+*.dump
+*.sql.gz
 
 # Copilot/agent local guidance
 AGENTS.md

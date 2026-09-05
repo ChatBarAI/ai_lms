@@ -1,24 +1,63 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
 
-deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
-backup_dir=${1:-"$deploy_root/backups"}
-timestamp=$(date -u +%Y%m%dT%H%M%SZ)
-env_file="$deploy_root/shared/.env"
+if [[ ${1:-} == --help ]]; then
+  cat <<'USAGE'
+Usage: deploy/backup [OUTPUT.tar.gz | BACKUP_DIRECTORY]
 
-cd "$deploy_root/current"
-mkdir -p "$backup_dir"
-chmod 700 "$backup_dir"
-export DEPLOY_ROOT="$deploy_root"
-export APP_IMAGE="ai_lms:$(basename "$(readlink -f "$deploy_root/current")")"
-compose=(docker compose --env-file "$env_file")
+How the commands fit together:
+  bin/deploy      Installs/updates application code; does NOT back up data.
+  bin/backup      Runs remote backup over SSH and downloads the archive.
+  bin/export      Runs remote export over SSH and downloads the archive.
+  bin/restore     Uploads and restores an archive onto a remote Docker instance.
+  deploy/backup   Calls deploy/export, choosing a backup directory and filename.
+  deploy/export   Packages the database and uploaded files into one archive.
+  deploy/restore Imports either command's archive into a prepared app instance.
 
-"${compose[@]}" exec -T db pg_dump -U ai_lms -d ai_lms_production |
-  gzip > "$backup_dir/database-$timestamp.sql.gz"
+Run backup on the SOURCE machine, where the database and uploads live.
+To invoke it from your computer instead:
+  SSH_PORT=51760 bin/backup root@148.72.159.88
+See bin/backup --help for the remote wrappers.
+With no argument, writes:
+  /opt/ai_lms/backups/ai-lms-clone-TIMESTAMP.tar.gz
+Pass a directory for a timestamped backup, or a .tar.gz path for an exact name.
+Existing archive files are never overwritten. DEPLOY_ROOT changes /opt/ai_lms.
 
-docker run --rm \
-  -v ai_lms_storage:/source:ro \
-  -v "$backup_dir:/backup" \
-  alpine:3.22 tar -czf "/backup/storage-$timestamp.tar.gz" -C /source .
+The archive contains PostgreSQL data, local Active Storage uploads (videos,
+logos, etc.), and source release metadata. It excludes application code,
+environment files, Rails keys, Redis queues, and externally hosted media.
+Keep the matching code and required keys separately. Treat backups as private:
+they include user data and credentials stored in the database.
 
-echo "Backup written to $backup_dir (*-$timestamp.*)"
+Docker: running web/worker services stop during the snapshot and are restarted
+afterwards, including on failure. Allow downtime; do not deploy concurrently.
+Native: stop Rails and background workers yourself, then set
+  DEPLOY_MODE=native NATIVE_WRITES_STOPPED=1
+
+Example: back up a server and download the archive (run from your computer):
+  ssh -p 51760 root@148.72.159.88 \
+    '/opt/ai_lms/current/deploy/backup /tmp/ai-lms-clone.tar.gz'
+  scp -P 51760 root@148.72.159.88:/tmp/ai-lms-clone.tar.gz .
+Use a new filename for subsequent backups, or use the timestamped default.
+
+Example: restore locally into a prepared checkout, with Rails/workers stopped:
+  RAILS_ENV=development bin/rails db:create
+  DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
+    deploy/restore --force /absolute/path/to/ai-lms-clone.tar.gz
+  bin/dev
+Restore REPLACES the target database contents and storage files. Check your
+local database configuration, including DATABASE_URL, before running it.
+
+More: deploy/export --help, deploy/restore --help, and README.md.
+USAGE
+  exit 0
+fi
+[[ $# -le 1 ]] || { echo 'Expected at most one output path.' >&2; exit 2; }
+app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+output=${1:-"${DEPLOY_ROOT:-/opt/ai_lms}/backups"}
+if [[ $output != *.tar.gz || -d $output ]]; then
+  mkdir -p "$output"
+  output="$output/ai-lms-clone-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
+fi
+exec "$app_root/deploy/export" "$output"

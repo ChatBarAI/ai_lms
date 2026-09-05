@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+
+operation=$1
+shift
+usage() {
+  cat <<USAGE
+Usage:
+  bin/backup USER@HOST [LOCAL_OUTPUT.tar.gz]
+  bin/export USER@HOST [LOCAL_OUTPUT.tar.gz]
+  bin/restore --force USER@HOST LOCAL_ARCHIVE.tar.gz
+
+Run these commands on your computer, like bin/deploy.
+Backup/export create a remote database + uploads archive and download it.
+Both produce the same format. Default output is ./ai-lms-clone-TIMESTAMP.tar.gz.
+Restore uploads an archive and REPLACES the remote database and uploads.
+Deploy the destination application first. Restore does not install app code.
+For an isolated local Docker destination:
+  bin/local-clone restore --force LOCAL_ARCHIVE.tar.gz
+For native local development, use deploy/restore (see its --help).
+
+Environment:
+  SSH_PORT=22                 SSH/SCP port, as with bin/deploy
+  DEPLOY_ROOT=/opt/ai_lms      Remote Docker deployment root
+
+Examples:
+  SSH_PORT=51760 bin/backup root@148.72.159.88
+  SSH_PORT=51760 bin/export root@148.72.159.88 ./ai-lms-clone-copy.tar.gz
+  SSH_PORT=51760 bin/restore --force root@148.72.159.88 ./ai-lms-clone-copy.tar.gz
+
+Remote scripts run from DEPLOY_ROOT/current on an existing Docker deployment.
+Both download commands use deploy/export (older deploy/backup writes two files).
+Running web/workers stop during backups.
+The temporary remote archive is removed after a successful download; failed
+backups/downloads retain the staging directory for recovery. Local files are
+never overwritten. Archives contain private user data and stored credentials.
+No automatic backups are created by bin/deploy. See README.md for details.
+USAGE
+}
+if [[ ${1:-} == --help ]]; then usage; exit 0; fi
+if [[ $operation == restore ]]; then
+  [[ ${1:-} == --force && $# -eq 3 ]] || { usage >&2; exit 2; }
+  shift
+else
+  [[ $# -ge 1 && $# -le 2 ]] || { usage >&2; exit 2; }
+fi
+host=$1
+ssh_port=${SSH_PORT:-22}
+deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+[[ $host =~ ^[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+$ ]] || {
+  echo 'HOST must have the form USER@HOSTNAME_OR_IP.' >&2; exit 2;
+}
+[[ $ssh_port =~ ^[0-9]+$ && $ssh_port -ge 1 && $ssh_port -le 65535 ]] || {
+  echo 'SSH_PORT must be between 1 and 65535.' >&2; exit 2;
+}
+[[ $deploy_root =~ ^/[A-Za-z0-9._/-]+$ && $deploy_root != / &&
+   ! $deploy_root =~ (^|/)\.\.?(/|$) ]] || {
+  echo 'DEPLOY_ROOT must be a safe absolute application directory.' >&2; exit 2;
+}
+if [[ $operation == restore ]]; then
+  archive=$(readlink -f "$2")
+  [[ -f $archive ]] || { echo "Archive not found: $2" >&2; exit 1; }
+else
+  archive=$(readlink -m "${2:-ai-lms-clone-$(date -u +%Y%m%dT%H%M%SZ).tar.gz}")
+  [[ ! -e $archive && ! -L $archive ]] || { echo "Output already exists: $archive" >&2; exit 1; }
+  mkdir -p "$(dirname "$archive")"
+fi
+local_stage=$(mktemp -d)
+download_stage=
+remote_stage=
+completed=false
+ssh_args=(-p "$ssh_port" -o ControlMaster=auto -o ControlPersist=60 -o "ControlPath=$local_stage/control")
+scp_args=(-P "$ssh_port" -o ControlMaster=auto -o ControlPersist=60 -o "ControlPath=$local_stage/control")
+cleanup() {
+  status=$?
+  if [[ $remote_stage =~ ^/tmp/ai_lms-transfer\.[A-Za-z0-9]+$ ]]; then
+    if $completed || [[ $operation == restore ]]; then
+      ssh "${ssh_args[@]}" "$host" "rm -f '$remote_stage/bundle.tar.gz'; rmdir '$remote_stage'" >&2 || true
+    else
+      echo "Remote staging retained for recovery: $host:$remote_stage" >&2
+    fi
+  fi
+  [[ -z $download_stage ]] || rm -rf -- "$download_stage"
+  rm -rf -- "$local_stage"
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+remote_stage=$(ssh "${ssh_args[@]}" "$host" 'umask 077; mktemp -d /tmp/ai_lms-transfer.XXXXXXXX')
+[[ $remote_stage =~ ^/tmp/ai_lms-transfer\.[A-Za-z0-9]+$ ]] || {
+  echo 'Server returned an unsafe staging path.' >&2; exit 1;
+}
+if [[ $operation == restore ]]; then
+  echo "Uploading archive to $host..."
+  scp "${scp_args[@]}" "$archive" "$host:$remote_stage/bundle.tar.gz"
+  ssh "${ssh_args[@]}" "$host" \
+    "DEPLOY_MODE=docker DEPLOY_ROOT='$deploy_root' '$deploy_root/current/deploy/restore' --force '$remote_stage/bundle.tar.gz'"
+else
+  echo "Creating archive on $host..."
+  # Older deploy/backup treats every argument as a directory and writes two
+  # separate files. Export has always produced the single bundle we download.
+  ssh "${ssh_args[@]}" "$host" \
+    "DEPLOY_MODE=docker DEPLOY_ROOT='$deploy_root' '$deploy_root/current/deploy/export' '$remote_stage/bundle.tar.gz'"
+  ssh "${ssh_args[@]}" "$host" "test -f '$remote_stage/bundle.tar.gz'" || {
+    echo 'Remote export did not produce a regular archive file; check the deployed export script.' >&2
+    exit 1
+  }
+  download_stage=$(mktemp -d "$(dirname "$archive")/.ai-lms-download.XXXXXXXX")
+  scp "${scp_args[@]}" "$host:$remote_stage/bundle.tar.gz" "$download_stage/bundle.tar.gz"
+  chmod 600 "$download_stage/bundle.tar.gz"
+  ln "$download_stage/bundle.tar.gz" "$archive"
+  echo "Archive downloaded to $archive"
+fi
+completed=true

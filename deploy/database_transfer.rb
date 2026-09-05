@@ -1,5 +1,5 @@
 # Used by deploy/export and deploy/restore for native Rails installations.
-# Run through `bin/rails runner` so the effective production database
+# Run through `bin/rails runner` so the selected Rails environment's database
 # configuration (including config/database_password) is available.
 
 operation, transfer_file = ARGV
@@ -7,7 +7,7 @@ abort "Usage: bin/rails runner deploy/database_transfer.rb dump|restore FILE" un
 
 configuration = ActiveRecord::Base.connection_db_config.configuration_hash
 database = configuration.fetch(:database).to_s
-abort "The production database name is empty" if database.empty?
+abort "The database name is empty" if database.empty?
 
 postgres_environment = {
   "PGHOST" => configuration[:host],

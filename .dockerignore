@@ -14,6 +14,12 @@
 # Ignore all default key files.
 /config/master.key
 /config/credentials/*.key
+/config/database_password
+/ai-lms-clone-*.tar.gz
+*.dump
+*.sql
+*.sql.gz
+*.tar.gz
 
 # Ignore all logfiles and tempfiles.
 /log/*

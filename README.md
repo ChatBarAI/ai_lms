@@ -8,6 +8,19 @@ follow-up questions in a popup or slide-in drawer.
 
 Use Chatbar AI or provide your own endpoint to create lesson questions. Free-form Quiz and Test answers can be automatically marked by ChatBar AI or your own authenticated AI RAG end-point with callbacks.
 
+## Contents
+
+- [Roles](#roles) and [key features](#key-features)
+- [Stack](#stack), [domain model](#domain-model), and [namespaces](#namespaces)
+- [Authentication and SSO](#authentication-and-sso)
+- [ChatBar AI integration](#chatbar-ai-integration)
+- [Getting started](#getting-started) and [PWA](#pwa-chrome)
+- [Deployment](#deployment) and [command reference](#command-reference)
+- [Backups](#backups) and [cloning an instance](#cloning-an-instance)
+- [Local Docker restore](#restore-locally-in-docker-recommended)
+- [Native local restore](#restore-locally-without-docker)
+- [Configuration](#configuration), [conventions](#conventions), and [known gotchas](#known-gotchas)
+
 ## Roles
 
 | Role           | Description                                                                                                                                                                                                                      |
@@ -386,31 +399,199 @@ This app is wired for Chrome PWA installability and offline fallback:
 
 ## Deployment
 
-Production can be bootstrapped on a fresh Debian server from the committed
-local Git revision:
+The production stack is designed for a fresh Debian server with SSH access.
+It runs Rails, Sidekiq, PostgreSQL, Redis, and Caddy in Docker containers.
+Caddy obtains and renews the HTTPS certificate automatically.
+
+Persistent state lives in named Docker volumes. Application releases live
+under `/opt/ai_lms/releases`, and `/opt/ai_lms/current` points to the active
+release.
+
+### Command reference
+
+Run `bin/` commands from your local checkout. The `deploy/` scripts operate
+on the machine where they run.
+
+| Command | Purpose |
+| --- | --- |
+| `bin/deploy root@HOST DOMAIN` | Deploy application code to the remote server; no automatic data backup. |
+| `bin/backup USER@HOST [FILE]` | Create a remote snapshot and download one archive locally. |
+| `bin/export USER@HOST [FILE]` | Same portable archive as `bin/backup`. |
+| `bin/restore --force USER@HOST FILE` | Upload and restore onto a prepared remote Docker instance. |
+| `bin/local-clone restore --force FILE` | Build and restore an isolated local Docker test instance. |
+| `bin/local-clone start\|stop\|logs\|status` | Manage the local Docker clone. |
+| `deploy/backup [FILE\|DIRECTORY]` | Back up the instance on this machine. |
+| `deploy/export [FILE]` | Export the instance on this machine as one archive. |
+| `deploy/restore --force FILE` | Restore into the instance on this machine. |
+
+Backup, export, restore, and local-clone commands support `--help`.
+Remote wrappers accept `SSH_PORT` and `DEPLOY_ROOT`.
+
+### Single-instance limitation
+
+The current Docker deployment supports one LMS instance per server. It uses
+the fixed Compose project name `ai_lms`, fixed image and named-volume names,
+the fixed `/opt/ai_lms` deployment root, and a Caddy container bound to host
+ports 80 and 443.
+
+Do not run an unchanged second copy on the same server. Besides port and
+container conflicts, the fixed PostgreSQL and Active Storage volume names
+could cause instances to share persistent data. A multi-instance deployment
+must parameterize every stack, image, directory, network, and volume name and
+use one shared edge proxy to route each domain to its corresponding Rails
+service.
+
+### Source-only sync for native installations
+
+`bin/sync-source` is a small rsync wrapper for an existing native installation:
+
+```bash
+bin/sync-source USER@HOST /absolute/path/to/ai_lms
+```
+
+It mirrors the current working tree, including uncommitted source changes, but
+protects remote `log`, `tmp`, `storage`, and compiled assets and excludes local
+secrets, Git metadata, dependencies, clone bundles, and common database backup
+files (`*.dump`, `*.sql`, `*.sql.gz`, and `*.backup`). It does not install gems,
+migrate the database, compile assets, or restart Puma/Sidekiq.
+
+Preview the exact changes first with:
+
+```bash
+bin/sync-source --dry-run USER@HOST /absolute/path/to/ai_lms
+```
+
+Set `SSH_PORT` when the target does not use port 22. Run any required native
+maintenance separately after syncing:
+
+```bash
+RAILS_ENV=production bundle install
+RAILS_ENV=production bin/rails db:migrate
+RAILS_ENV=production bin/rails assets:precompile
+sudo systemctl restart puma-ai_lms.service sidekiq-ai_lms.service
+```
+
+### Deployment prerequisites
+
+The pre-commit Brakeman review reported that the pinned Rails 7.2.3.2 version
+is past its support date (2026-08-09). Track the Rails upgrade separately;
+backup tooling does not resolve this dependency warning. Do not extend the
+EOL exception in `config/brakeman.ignore` without a maintenance decision.
+
+- A Debian server reachable over SSH by root (or another account that is
+  already able to run the deploy as root).
+- Ports 22, 80, and 443 open at the provider/firewall.
+- A DNS `A`/`AAAA` record for the application domain pointing at the server.
+- `config/credentials/production.key` on the deploying computer. It remains
+  ignored by Git and is copied through SSH only for the deployment.
+- A clean, committed local Git `HEAD`.
+
+Docker does not need to be preinstalled. The first deployment installs Docker
+using Docker's official Debian installer.
+
+### Deploy
+
+From the repository root:
 
 ```bash
 bin/deploy root@SERVER_IP learn.example.com
 ```
 
-The Docker Compose stack includes Rails, Sidekiq, PostgreSQL, Redis, persistent
-uploads, and automatic HTTPS through Caddy. See
-[`DEPLOYMENT.md`](DEPLOYMENT.md) for prerequisites, configuration, operations,
-and backups.
+SSH will prompt for the root password if no key is configured. A nonstandard
+SSH port can be supplied with `SSH_PORT=2222`.
 
-> **One instance per server:** the current Docker deployment is not
-> multi-instance safe. It uses fixed Compose, image, container-volume, and
-> deployment names, and its Caddy container owns host ports 80 and 443. Do not
-> start a second copy of this stack on the same server: it could conflict with
-> the first instance or share its persistent data. Multiple instances require
-> unique stack/volume names and a single shared edge proxy that routes each
-> domain to the correct Rails service.
+The first run:
 
-> **Rails maintenance:** Rails 7.2.3.1 contains the current 7.2 security
-> patches, but the Rails 7.2 series reaches end of security support on
-> 2026-08-09. Upgrade to a supported Rails series before that date. Brakeman's
-> temporary EOL exception in `config/brakeman.ignore` must not be extended
-> without an explicit maintenance decision.
+1. Sends an archive of the committed local `HEAD` (repository access is not
+   required on the server).
+2. Installs Docker and Docker Compose.
+3. Creates `/opt/ai_lms/shared/.env` with generated database credentials and
+   the Rails production key.
+4. Builds the application image, prepares the database, and starts the web,
+   worker, database, Redis, and HTTPS proxy services.
+
+Subsequent runs repeat only the release, build, migration, and restart steps.
+The five newest source releases are retained. Deploys intentionally refuse
+tracked uncommitted changes so the deployed revision is reproducible.
+
+While developing the deployment mechanism itself, an explicit development mode
+can package the current working tree:
+
+```bash
+bin/deploy --dirty root@SERVER_IP learn.example.com
+```
+
+This includes tracked modifications and non-ignored new files, but continues
+to exclude ignored secrets such as `.env` files and Rails credential keys.
+Dirty releases receive a timestamped `-dirty-` suffix and should not be used
+for normal production releases.
+
+#### Domain aliases
+
+Point every alias domain at the same server, then include the aliases after the
+canonical domain:
+
+```bash
+bin/deploy root@SERVER_IP learn.example.com academy.example.com courses.example.com
+```
+
+Caddy obtains certificates for all supplied names and serves the same
+application on each. `APP_HOST` remains the canonical first domain for email
+links and authentication callbacks. Once aliases have been configured, normal
+deploy commands that omit them preserve the existing list. Supplying aliases
+again replaces the complete alias list.
+
+To change the canonical domain explicitly:
+
+```bash
+bin/deploy --change-domain root@SERVER_IP new.example.com
+```
+
+The previous canonical domain and configured aliases remain aliases unless a
+new complete alias list is supplied on the same command. The change updates
+`APP_HOST`, `CALLBACK_HOST`, and generated default mail/ACME addresses. Update
+DNS first, and update allowed callback/logout URLs in external identity
+providers such as Kinde.
+
+For Kinde, update its permitted callback and logout URLs:
+
+```text
+https://new.example.com/kinde/callback
+https://new.example.com/kinde/logout_callback
+```
+
+### Configuration and operations
+
+The environment is stored on the server at `/opt/ai_lms/shared/.env` with mode
+`0600`. Add SMTP provider settings there, for example:
+
+```dotenv
+MAIL_DELIVERY_METHOD=smtp
+SMTP_ADDRESS=smtp.example.com
+SMTP_PORT=587
+SMTP_DOMAIN=example.com
+SMTP_USERNAME=...
+SMTP_PASSWORD=...
+SMTP_AUTHENTICATION=plain
+SMTP_ENABLE_STARTTLS_AUTO=true
+```
+
+After editing it, recreate the app processes:
+
+```bash
+cd /opt/ai_lms/current
+export APP_IMAGE="ai_lms:$(basename "$(readlink -f /opt/ai_lms/current)")"
+docker compose --env-file /opt/ai_lms/shared/.env up -d web worker proxy
+```
+
+Useful checks:
+
+```bash
+cd /opt/ai_lms/current
+export APP_IMAGE="ai_lms:$(basename "$(readlink -f /opt/ai_lms/current)")"
+docker compose --env-file /opt/ai_lms/shared/.env ps
+docker compose --env-file /opt/ai_lms/shared/.env logs -f --tail=200 web worker
+```
 
 ### Docker console and logs
 
@@ -443,54 +624,251 @@ sudo journalctl -u puma-ai_lms.service -f
 sudo journalctl -u sidekiq-ai_lms.service -f
 ```
 
-### Canonical domain changes
+### Rollback
 
-Point the new domain's DNS at the server before changing it, then run:
-
-```bash
-bin/deploy --change-domain root@SERVER_IP new.example.com
-```
-
-Use `--dirty` as well only while testing uncommitted deployment changes. Any
-domains after the canonical domain are treated as the complete alias list:
+List the retained releases and choose a full Git SHA:
 
 ```bash
-bin/deploy --change-domain root@SERVER_IP \
-  new.example.com alias.example.com
+ls -1t /opt/ai_lms/releases
 ```
 
-Changing the canonical domain updates the application host, callback host,
-`SiteSetting#app_url`, and Caddy certificate configuration. When Kinde is in
-use, also update its permitted callback and logout URLs:
+Then recreate the application from that release:
+
+```bash
+release=FULL_GIT_SHA
+cd "/opt/ai_lms/releases/$release"
+export APP_IMAGE="ai_lms:$release"
+docker compose --env-file /opt/ai_lms/shared/.env up -d
+ln -sfn "/opt/ai_lms/releases/$release" /opt/ai_lms/current
+```
+
+This rolls back application containers, not PostgreSQL migrations. Restore the
+pre-deploy database backup as well if the schema change is not backward
+compatible.
+
+### Backups
+
+#### Run from your computer
+
+The `bin/` commands connect over SSH, like `bin/deploy`. Updated scripts must
+already be deployed on the remote Docker instance:
+
+```bash
+SSH_PORT=51760 bin/backup root@148.72.159.88
+```
+
+This creates a remote snapshot and downloads a single timestamped
+`ai-lms-clone-*.tar.gz` into your current directory. To choose the local filename:
+
+```bash
+SSH_PORT=51760 bin/backup root@148.72.159.88 ./ai-lms-clone-craig.tar.gz
+```
+
+`bin/export HOST [LOCAL_OUTPUT.tar.gz]` does the same. Both wrappers call
+`deploy/export` remotely, including on older deployments where `deploy/backup`
+still creates two separate files.
+Both archives work with either restore command. A successful download removes
+the temporary remote copy; failed backups/downloads print the retained remote
+staging path for recovery. Existing local files are never overwritten.
+
+To restore onto another **already deployed** Docker server:
+
+```bash
+SSH_PORT=22 bin/restore --force root@NEW_SERVER ./ai-lms-clone-craig.tar.gz
+```
+
+This uploads the archive and replaces the destination data. To restore on
+your own computer, use [the local Docker clone](#restore-locally-in-docker-recommended)
+or [the native restore](#restore-locally-without-docker) described below. All three wrappers support `--help`, `SSH_PORT` (default 22), and
+`DEPLOY_ROOT` (default `/opt/ai_lms`). They target Docker deployments;
+use the `deploy/` scripts directly for native instances.
+
+#### Run directly on the source instance
+
+Run the bundled backup command on the server:
+
+```bash
+/opt/ai_lms/current/deploy/backup
+```
+
+It creates one `ai-lms-clone-TIMESTAMP.tar.gz` in `/opt/ai_lms/backups`,
+containing a PostgreSQL custom-format dump, all local Active Storage files,
+and metadata identifying the source release. An optional argument selects an
+output `.tar.gz` file or a backup directory. Existing files are never overwritten;
+the final filename appears only after the archive is complete, with mode `0600`.
+`deploy/export` uses the same format and remains available.
+
+For example, create a backup on the server and download it:
+
+```bash
+ssh root@SERVER_IP '/opt/ai_lms/current/deploy/backup /tmp/ai-lms-clone.tar.gz'
+scp root@SERVER_IP:/tmp/ai-lms-clone.tar.gz .
+```
+
+Docker web and worker services are stopped during the snapshot; services that
+were running are restarted even if the backup fails. Allow for this downtime
+and do not deploy or run other database/storage writers during the backup.
+For native installations, stop all writers yourself and set
+`DEPLOY_MODE=native NATIVE_WRITES_STOPPED=1`.
+
+The archive contains application data and stored API credentials. Keep it
+private and copy it off the server. It does not include application source,
+environment files, Rails credential keys, Redis queues, or external media
+referenced by URL. Keep the matching code and required keys separately; set up
+destination infrastructure before restoring.
+
+Restore only archives from trusted instances: a PostgreSQL dump can contain
+SQL executed with the restoring database user's privileges. Archive path and
+file-type checks do not make an untrusted database dump safe. Archives are
+not encrypted at rest; SSH protects transfers. Keep all backups private.
+
+**Deploys do not automatically back up data.** Retained source releases are
+not database backups. Run this command explicitly before a deploy or schedule
+it separately.
+
+Database migrations are applied before a release starts. Rolling application
+code back after a migration is not universally safe, so take a backup before
+deploying schema changes.
+
+### Cloning an instance
+
+`deploy/export` creates a portable clone bundle containing a custom-format
+PostgreSQL dump and all Active Storage files. It auto-detects the Docker
+deployment or a native Rails/PostgreSQL installation.
+
+For a native source, first copy these files into the source application's
+`deploy/` directory if that checkout does not have them:
 
 ```text
-https://new.example.com/kinde/callback
-https://new.example.com/kinde/logout_callback
+deploy/export
+deploy/restore
+deploy/database_transfer.rb
+deploy/unpack-bundle
 ```
 
-Other external identity providers must likewise allow their callback URL on
-the new domain.
-
-### Source-only sync for native installations
-
-To mirror source files to an existing native installation without performing
-a deployment:
+Stop the native Puma and Sidekiq services, then export as the application user:
 
 ```bash
-bin/sync-source --dry-run USER@HOST /absolute/path/to/ai_lms
-bin/sync-source USER@HOST /absolute/path/to/ai_lms
+cd /path/to/native/ai_lms
+NATIVE_WRITES_STOPPED=1 DEPLOY_MODE=native \
+  deploy/export /tmp/ai-lms-clone.tar.gz
 ```
 
-Set `SSH_PORT=2222` when needed. The command protects runtime data, compiled
-assets, secrets, dependencies, and database dumps. It does not run Bundler,
-migrations, asset compilation, or service restarts. Run the applicable native
-maintenance commands separately after syncing, for example:
+Restart the source services immediately after the export. Copy the resulting
+bundle through the deploying computer:
 
 ```bash
-RAILS_ENV=production bundle install
-RAILS_ENV=production bin/rails db:migrate
-RAILS_ENV=production bin/rails assets:precompile
-sudo systemctl restart puma-ai_lms.service sidekiq-ai_lms.service
+scp root@OLD_SERVER:/tmp/ai-lms-clone.tar.gz .
+scp ai-lms-clone.tar.gz root@NEW_SERVER:/tmp/
+```
+
+Deploy the current code to the Docker destination before restoring so its
+restore script and migrations are current. Then restore on the destination:
+
+```bash
+ssh root@NEW_SERVER
+/opt/ai_lms/current/deploy/restore \
+  --force /tmp/ai-lms-clone.tar.gz
+```
+
+The restore command deliberately replaces the entire destination database and
+Active Storage volume. On Docker it stops and restarts Rails, Sidekiq, and
+Caddy automatically. It retains destination infrastructure configuration from
+`/opt/ai_lms/shared/.env`; cloned `SiteSetting#redis_url` and `app_url` values
+are cleared so Redis uses the Docker service and generated links use the new
+canonical hostname. Set `PRESERVE_INSTANCE_SETTINGS=1` only when those two
+source settings should also be copied literally.
+
+For a Docker source, `deploy/export /tmp/ai-lms-clone.tar.gz` pauses and
+restarts web/worker processes automatically. Native service names vary, so the
+operator must stop and restart those services and acknowledge this with
+`NATIVE_WRITES_STOPPED=1`.
+
+#### Restore locally in Docker (recommended)
+
+Use the standalone local clone stack to avoid installing Ruby gems or matching
+PostgreSQL client versions on your computer:
+
+```bash
+bin/local-clone restore --force ./ai-lms-clone-20260905T094642Z.tar.gz
+```
+
+This builds the current checkout using the production Dockerfile, starts
+PostgreSQL 16 and Redis, restores the archive, runs migrations, and starts the
+app at **http://localhost:3100**. The first build downloads Ruby gems and system
+dependencies. Docker Compose with `up --wait` support is required.
+
+The `ai_lms_local_clone` Compose project has its own database and storage
+volumes. It does not use the production Compose file, `/opt/ai_lms`, or the
+native development database/storage directory.
+
+**Why `--force`?** Restore deletes the local clone's database and uploaded
+files before importing the backup. Any courses, users, or uploads changed
+while testing that clone will be lost. The flag explicitly acknowledges this
+replacement and is required even for the first restore; it does not bypass
+archive validation. To resume an existing clone with its data intact, use
+`bin/local-clone start` instead of restoring again.
+
+The web port binds only to loopback. Set `LOCAL_PORT=3101`
+on each command if port 3100 is occupied.
+
+```bash
+bin/local-clone status
+bin/local-clone logs
+bin/local-clone stop
+bin/local-clone start
+```
+
+Stopping preserves the Docker volumes. This is a production-mode test copy,
+not a live-reloading development environment. Restore again after source
+changes to rebuild it. Local HTTP is enabled, email delivery is disabled,
+and no background worker runs. Source accounts and integration credentials
+remain; SSO callbacks and external integrations may need local configuration.
+The command reads `config/credentials/production.key` if present; alternatively
+provide `RAILS_MASTER_KEY` for credentials required by your checkout.
+The wrapper generates a private `.env.local-clone-secret` signing key, excluded
+from Git and Docker builds. Existing clone sessions will be invalidated once
+when switching from the earlier fixed signing key. Remote Docker endpoints
+are refused; the wrapper requires a local Unix Docker socket. There is one
+local clone stack per Docker daemon; run its restore/start/stop commands one
+at a time, including across checkouts.
+
+An `unsupported version (1.15) in file header` error from native `pg_restore`
+means the local client cannot read that dump format. This Docker workflow
+uses the PostgreSQL 16 client matching the deployed database.
+
+#### Restore locally without Docker
+
+Use a separate checkout of the source release (or a compatible newer release),
+install its gems, and install PostgreSQL client tools compatible with the source
+database (the Docker source uses PostgreSQL 16). These shell scripts require
+Bash and GNU `tar`/`readlink`, as on the project's Linux development environment.
+Configure the local database and required Rails keys first. Make sure
+`DATABASE_URL`, if set, points to the intended local database.
+
+Stop the local Rails server and background workers. From that checkout:
+
+```bash
+RAILS_ENV=development bin/rails db:create &&
+DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
+  deploy/restore --force /absolute/path/to/ai-lms-clone.tar.gz
+bin/dev
+```
+
+This replaces the configured development database contents and the checkout's
+`storage/` files, then runs migrations. `RAILS_ENV` defaults to `production`
+when omitted. Set `STORAGE_PATH` only if the destination uses a custom Disk
+storage root. The restore clears source `app_url` and `redis_url` settings by
+default; other source settings, users, and integration credentials remain.
+Review those integrations before using the clone with external services.
+
+Standalone backup script checks (no Rails boot or database access):
+
+```bash
+ruby test/deploy/backup_test.rb
+ruby test/deploy/remote_transfer_test.rb
+ruby test/deploy/local_clone_test.rb
+ruby test/deploy/unpack_bundle_test.rb
 ```
 
 ### Rate limiting
@@ -516,14 +894,6 @@ limit counters.
 
 Throttle names, limits, and periods are defined centrally in
 [`config/initializers/rack_attack.rb`](config/initializers/rack_attack.rb).
-
-### First-time server setup
-
-The target only needs Debian, root SSH access, DNS pointing at it, and ports
-80/443 open. `bin/deploy` installs the remaining runtime and creates the
-database and Redis services. Keep `config/credentials/production.key` on the
-deploying machine; it is transferred securely on the first deployment and is
-never committed. See [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Configuration
 

@@ -1,5 +1,41 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
+
+if [[ ${1:-} == --help ]]; then
+  cat <<'USAGE'
+Usage: deploy/export [OUTPUT.tar.gz]
+
+Run on the source instance. Creates the same portable archive as deploy/backup:
+PostgreSQL custom-format dump + local Active Storage files + release metadata.
+Default output: APP_ROOT/ai-lms-clone-TIMESTAMP.tar.gz
+Existing output files are never overwritten; completed archives have mode 0600.
+Use deploy/backup when you want the default /opt/ai_lms/backups directory.
+Use deploy/restore --force ARCHIVE on a prepared destination to import it.
+
+Environment:
+  DEPLOY_MODE=auto|docker|native      # default auto-detects the source
+  DEPLOY_ROOT=/opt/ai_lms            # Docker deployment configuration
+  RAILS_ENV=production               # native; development for a local source
+  STORAGE_PATH=/path/to/storage      # native; default APP_ROOT/storage
+  NATIVE_WRITES_STOPPED=1             # required after stopping native writers
+
+Docker web/worker services stop temporarily and restart, including on failure.
+For native installations, stop and restart Rails/background workers yourself.
+Do not deploy or run other database/storage writers during the snapshot.
+
+Examples:
+  deploy/export /tmp/ai-lms-clone.tar.gz
+  DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
+    deploy/export /tmp/local-clone.tar.gz
+
+Code, environment files, Rails keys, Redis queues and external media are not
+included. Stored user data and integration credentials ARE included.
+For the complete backup/download/local-restore workflow: deploy/backup --help.
+USAGE
+  exit 0
+fi
+[[ $# -le 1 ]] || { echo 'Expected at most one output path.' >&2; exit 2; }
 
 app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
@@ -8,16 +44,26 @@ output=$(readlink -m "$output")
 mode=${DEPLOY_MODE:-auto}
 deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
 env_file="$deploy_root/shared/.env"
-work_dir=$(mktemp -d)
+[[ ! -e $output ]] || { echo "Output already exists: $output" >&2; exit 1; }
+mkdir -p "$(dirname "$output")"
+work_dir=$(mktemp -d "$(dirname "$output")/.ai-lms-backup.XXXXXXXX")
+running_services=()
 docker_stopped=false
 
 cleanup() {
+  status=$?
   if $docker_stopped; then
-    "${compose[@]}" up -d web worker proxy >/dev/null
+    if ! "${compose[@]}" start "${running_services[@]}" >/dev/null; then
+      echo "Failed to restart source services; restart them manually." >&2
+      status=1
+    fi
   fi
   rm -rf -- "$work_dir"
+  exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 docker_available() {
   command -v docker >/dev/null 2>&1 &&
@@ -26,6 +72,7 @@ docker_available() {
 
 if [[ $mode == auto ]]; then
   if docker_available; then
+    export DEPLOY_ROOT="$deploy_root"
     export APP_IMAGE="ai_lms:$(basename "$app_root")"
     compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
     if [[ -n $("${compose[@]}" ps -q db 2>/dev/null) ]]; then
@@ -41,12 +88,21 @@ fi
 case "$mode" in
   docker)
     docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
+    export DEPLOY_ROOT="$deploy_root"
     export APP_IMAGE="ai_lms:$(basename "$app_root")"
     compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
 
     echo "Pausing Docker web and worker services for a consistent snapshot..."
-    "${compose[@]}" stop web worker
-    docker_stopped=true
+    running=$("${compose[@]}" ps --status running --services)
+    for service in web worker; do
+      if [[ $'\n'"$running"$'\n' == *$'\n'"$service"$'\n'* ]]; then
+        running_services+=("$service")
+      fi
+    done
+    if [[ ${#running_services[@]} -gt 0 ]]; then
+      docker_stopped=true
+      "${compose[@]}" stop "${running_services[@]}"
+    fi
 
     "${compose[@]}" exec -T db \
       pg_dump --format=custom --no-owner --no-privileges \
@@ -62,6 +118,10 @@ case "$mode" in
     [[ $storage_path =~ ^/[A-Za-z0-9._/-]+$ && $storage_path != / ]] ||
       { echo "STORAGE_PATH must be a safe absolute directory other than /." >&2; exit 1; }
     [[ -d $storage_path ]] || { echo "Storage directory not found: $storage_path" >&2; exit 1; }
+    [[ $output != "$storage_path/"* ]] || {
+      echo "Backup output must be outside the Active Storage directory." >&2
+      exit 1
+    }
     command -v pg_dump >/dev/null 2>&1 || { echo "pg_dump is required." >&2; exit 1; }
 
     if [[ ${NATIVE_WRITES_STOPPED:-0} != 1 ]]; then
@@ -72,7 +132,7 @@ case "$mode" in
 
     (
       cd "$app_root"
-      RAILS_ENV=production bin/rails runner \
+      RAILS_ENV=${RAILS_ENV:-production} bin/rails runner \
         deploy/database_transfer.rb dump "$work_dir/database.dump"
     )
     tar -czf "$work_dir/storage.tar.gz" -C "$storage_path" .
@@ -87,9 +147,10 @@ esac
   printf 'format=ai_lms_clone_v1\n'
   printf 'created_at=%s\n' "$timestamp"
   printf 'source_mode=%s\n' "$mode"
+  printf 'source_release=%s\n' "$(git -C "$app_root" rev-parse HEAD 2>/dev/null || basename "$app_root")"
 } > "$work_dir/metadata"
 
-mkdir -p "$(dirname "$output")"
-tar -czf "$output" -C "$work_dir" metadata database.dump storage.tar.gz
-chmod 600 "$output"
+tar -czf "$work_dir/bundle.tar.gz" -C "$work_dir" metadata database.dump storage.tar.gz
+# Publish atomically without overwriting an existing backup.
+ln "$work_dir/bundle.tar.gz" "$output"
 echo "Clone bundle written to $output"

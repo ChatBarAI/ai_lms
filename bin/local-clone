@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+usage() {
+  cat <<'USAGE'
+Usage:
+  bin/local-clone restore --force ARCHIVE.tar.gz
+  bin/local-clone start|stop|logs|status
+
+Builds this checkout in Docker and restores a backup into an isolated local
+PostgreSQL 16 database and uploads volume. Opens at http://localhost:3100.
+No locally installed Ruby gems or PostgreSQL client tools are needed.
+Requires Docker Compose with --wait support. First build downloads dependencies.
+Requires a local Unix Docker socket; remote Docker contexts are refused.
+Creates a private .env.local-clone-secret signing key in this checkout.
+Only restore trusted backups; SQL dumps can execute database-side code.
+
+Why --force? Restore deletes the local clone's database and uploads before
+importing the archive. Any changes made while testing the clone will be lost.
+--force explicitly acknowledges that replacement; it is required even on the
+first restore. It does not bypass archive validation. To resume an existing
+clone without replacing its data, use: bin/local-clone start
+Native development and remote instances are unaffected. Stop preserves data.
+The clone uses production-mode Rails with local HTTP and email delivery disabled.
+No background worker starts. Source users and integration credentials remain;
+external integrations/SSO may require local configuration.
+
+Environment:
+  LOCAL_PORT=3100
+  RAILS_MASTER_KEY             Optional; otherwise reads the local
+                              config/credentials/production.key if present.
+
+Examples:
+  bin/local-clone restore --force ./ai-lms-clone-20260905T094642Z.tar.gz
+  bin/local-clone stop
+  bin/local-clone start
+USAGE
+}
+[[ ${1:-} != --help && $# -gt 0 ]] || { usage; exit 0; }
+app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+action=$1
+case "$action" in
+  restore)
+    if [[ ${2:-} != --force ]]; then
+      cat >&2 <<'MESSAGE'
+Restore deletes and replaces the local Docker clone's database and uploads.
+Any changes made while testing that clone will be lost.
+Pass --force to acknowledge this (required even for a first restore):
+  bin/local-clone restore --force ARCHIVE.tar.gz
+To resume the existing clone without replacing data: bin/local-clone start
+MESSAGE
+      exit 2
+    fi
+    [[ $# -eq 3 ]] || { usage >&2; exit 2; }
+    ;;
+  start|stop|logs|status) [[ $# -eq 1 ]] || { usage >&2; exit 2; } ;;
+  *) usage >&2; exit 2 ;;
+esac
+export LOCAL_PORT=${LOCAL_PORT:-3100}
+[[ $LOCAL_PORT =~ ^[0-9]+$ && $LOCAL_PORT -ge 1024 && $LOCAL_PORT -le 65535 ]] || {
+  echo 'LOCAL_PORT must be between 1024 and 65535.' >&2; exit 2;
+}
+if [[ -z ${RAILS_MASTER_KEY:-} && -f "$app_root/config/credentials/production.key" ]]; then
+  RAILS_MASTER_KEY=$(cat "$app_root/config/credentials/production.key")
+  export RAILS_MASTER_KEY
+fi
+# Docker environment/context settings can otherwise silently target a remote host.
+if [[ -n ${DOCKER_CONTEXT:-} || -z ${DOCKER_HOST:-} ]]; then
+  docker_endpoint=$(docker context inspect --format '{{(index .Endpoints "docker").Host}}')
+else
+  docker_endpoint=$DOCKER_HOST
+fi
+[[ $docker_endpoint == unix:///* ]] || {
+  echo 'Local clone requires a local Unix Docker socket; remote Docker contexts are refused.' >&2
+  exit 1
+}
+# A persistent, per-checkout signing key; never bake a shared key into the image.
+secret_file="$app_root/.env.local-clone-secret"
+if [[ ! -f $secret_file ]]; then
+  secret_temp=$(mktemp "$app_root/.env.local-clone-secret.XXXXXXXX")
+  od -An -N64 -tx1 /dev/urandom | tr -d ' \n' > "$secret_temp"
+  ln "$secret_temp" "$secret_file" 2>/dev/null || true
+  rm -f -- "$secret_temp"
+fi
+LOCAL_CLONE_SECRET_KEY_BASE=$(cat "$secret_file")
+[[ $LOCAL_CLONE_SECRET_KEY_BASE =~ ^[a-f0-9]{128}$ ]] || {
+  echo 'Invalid .env.local-clone-secret; expected a generated 128-character hex key.' >&2
+  exit 1
+}
+export LOCAL_CLONE_SECRET_KEY_BASE
+# Explicit project and file prevent production COMPOSE_* settings selecting a target.
+compose=(docker compose --project-name ai_lms_local_clone --env-file /dev/null -f "$app_root/compose.local.yaml")
+case "$action" in
+  stop) exec "${compose[@]}" stop ;;
+  logs) exec "${compose[@]}" logs -f --tail=100 web ;;
+  status) exec "${compose[@]}" ps ;;
+  start) exec "${compose[@]}" up -d --wait web ;;
+esac
+bundle=$(readlink -f "$3")
+[[ -f $bundle ]] || { echo "Archive not found: $3" >&2; exit 1; }
+work_dir=$(mktemp -d)
+trap 'rm -rf -- "$work_dir"' EXIT
+source "$app_root/deploy/unpack-bundle"
+"${compose[@]}" build web
+"${compose[@]}" up -d --wait db redis
+# Reject incompatible/corrupt dumps before stopping or replacing anything.
+"${compose[@]}" exec -T db pg_restore --list < "$work_dir/database.dump" >/dev/null
+"${compose[@]}" stop web
+"${compose[@]}" exec -T db dropdb --if-exists --force -U ai_lms ai_lms_clone
+"${compose[@]}" exec -T db createdb -U ai_lms ai_lms_clone
+"${compose[@]}" exec -T db pg_restore --no-owner --no-privileges --exit-on-error \
+  -U ai_lms -d ai_lms_clone < "$work_dir/database.dump"
+"${compose[@]}" run --rm -T --no-deps --user 0 --entrypoint /bin/sh web -c \
+  'find /rails/storage -mindepth 1 -delete && tar --no-same-owner --no-same-permissions -xzf - -C /rails/storage && chown -R 1000:1000 /rails/storage && find /rails/storage -type d -exec chmod 700 {} + && find /rails/storage -type f -exec chmod 600 {} +' \
+  < "$work_dir/storage.tar.gz"
+"${compose[@]}" run --rm -T web ./bin/rails db:migrate
+"${compose[@]}" run --rm -T web ./bin/rails runner \
+  'SiteSetting.update_all(redis_url: nil, app_url: ENV.fetch("APP_HOST"))'
+"${compose[@]}" up -d --wait web
+echo "Local clone ready at http://localhost:$LOCAL_PORT"

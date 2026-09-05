@@ -51,7 +51,9 @@ Rails.application.configure do
   # config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  # The isolated local backup tester binds only to localhost and has no TLS proxy.
+  config.force_ssl = ENV["LOCAL_BACKUP_TEST"] != "1"
+  config.action_mailer.perform_deliveries = false if ENV["LOCAL_BACKUP_TEST"] == "1"
 
   # Skip http-to-https redirect for the default health check endpoint.
   # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }

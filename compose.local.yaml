@@ -1,0 +1,48 @@
+# Separate from the production stack: no production volumes, proxy, or ports.
+services:
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ai_lms
+      POSTGRES_PASSWORD: local-clone-only
+      POSTGRES_DB: ai_lms_clone
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U ai_lms -d ai_lms_clone']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7-bookworm
+  web:
+    build: .
+    environment:
+      RAILS_ENV: production
+      LOCAL_BACKUP_TEST: '1'
+      DATABASE_URL: postgresql://ai_lms:local-clone-only@db:5432/ai_lms_clone
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY_BASE: '${LOCAL_CLONE_SECRET_KEY_BASE:?Use bin/local-clone to load the local signing key}'
+      RAILS_MASTER_KEY: '${RAILS_MASTER_KEY:-}'
+      APP_HOST: 'http://localhost:${LOCAL_PORT:-3100}'
+      CALLBACK_HOST: 'http://localhost:${LOCAL_PORT:-3100}'
+      RAILS_SERVE_STATIC_FILES: 'true'
+    command: ['./bin/rails', server, '-b', '0.0.0.0']
+    ports:
+      - '127.0.0.1:${LOCAL_PORT:-3100}:3000'
+    volumes:
+      - storage:/rails/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, 'http://localhost:3000/up']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+volumes:
+  postgres:
+  storage:
