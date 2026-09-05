@@ -196,17 +196,23 @@
 
 /* On desktop, the lesson progress drawer becomes a non-modal left column. */
 @media (min-width: 1024px) {
+    body {
+        --lesson-sidebar-width: clamp(308px, 20vw, 384px);
+    }
+
+    body.lesson-sidebar-inline-active .site-nav {
+        max-width: 72rem;
+    }
+
     body.lesson-sidebar-inline-active .site-nav,
     body.lesson-sidebar-inline-active .site-main {
-        margin-left: 384px;
+        margin-left: var(--lesson-sidebar-width);
+        width: calc(100% - var(--lesson-sidebar-width));
     }
 
-    body.lesson-sidebar-inline-active .site-main {
-        width: calc(100% - 384px);
-    }
-
+    body.ai-tutor-inline-active.lesson-sidebar-inline-active .site-nav,
     body.ai-tutor-inline-active.lesson-sidebar-inline-active .site-main {
-        width: calc(100% - 864px);
+        width: calc(100% - var(--lesson-sidebar-width) - 480px);
     }
 
     .lesson-sidebar-overlay {
@@ -218,7 +224,7 @@
     }
 
     .lesson-sidebar-overlay .lesson-sidebar-panel {
-        width: 384px;
+        width: var(--lesson-sidebar-width);
         max-width: none;
         pointer-events: auto;
     }

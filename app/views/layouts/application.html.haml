@@ -15,18 +15,16 @@
     = yield :head
     = site_favicon_link_tag
     = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
-    %link{ rel: "preload", href: asset_path("application.css"), as: "style" }
-    %link{ rel: "stylesheet", href: asset_path("application.css"), media: "print", onload: "this.media='all'", "data-turbo-track": "reload" }
-    %noscript
-      = stylesheet_link_tag "application", "data-turbo-track": "reload"
+    -# Keep tracked asset markup stable: changing media on load forces Turbo to reload.
+    = stylesheet_link_tag "application", "data-turbo-track": "reload"
     = javascript_importmap_tags
     = yield :javascript
     = theme_style_tag
     = theme_mode_script
-  %body
-    %nav.site-nav.border-b.border-gray-200
-      .max-w-6xl.mx-auto.px-4.py-3.flex.items-center.justify-between
-        .flex.items-center.gap-6
+  %body{ data: { controller: content_for(:body_controllers).presence } }
+    %nav.site-nav.sticky.top-0.z-40.border-b.border-gray-200
+      .max-w-6xl.mx-auto.px-4.py-3.flex.flex-wrap.items-center.justify-between.gap-3
+        .flex.flex-wrap.items-center.gap-3
           = link_to root_path, class: "flex items-center gap-2" do
             = site_logo_tag
             - if show_site_brand_name?
@@ -34,10 +32,11 @@
           - if subjects_enabled?
             = link_to t("layouts.application.subjects", **terms), subjects_path, class: "text-sm hover:opacity-80"
           = link_to t("layouts.application.courses", **terms), courses_path, class: "text-sm hover:opacity-80"
-        .flex.items-center.gap-3
+        .flex.flex-wrap.items-center.gap-3
+          = yield :header_actions
           - if user_signed_in?
             .relative{ data: { controller: "dropdown" } }
-              %button.flex.items-center.gap-1.5.cursor-pointer{ type: "button", data: { action: "click->dropdown#toggle", dropdown_target: "button" }, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "user-menu" }
+              %button.flex.items-center.gap-1.5.cursor-pointer{ type: "button", data: { action: "click->dropdown#toggle", dropdown_target: "button" }, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "user-menu", "aria-label": current_user.display_name }
                 - if current_user.avatar.attached?
                   = image_tag url_for(current_user.avatar), class: "w-7 h-7 rounded-full object-cover border border-gray-200"
                 - elsif current_user.image_url.present?
@@ -45,7 +44,7 @@
                 - else
                   .w-7.h-7.rounded-full.bg-indigo-100.flex.items-center.justify-center.text-indigo-600.text-xs.font-bold
                     = current_user.display_name.first.upcase
-                %span{ class: "text-sm max-w-[12rem] truncate opacity-80" }= current_user.display_name
+                %span{ class: "hidden sm:inline text-sm max-w-[12rem] truncate opacity-80" }= current_user.display_name
                 %svg.w-4.h-4.opacity-50{ xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 20 20", fill: "currentColor" }
                   %path{ "fill-rule": "evenodd", d: "M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z", "clip-rule": "evenodd" }
               .absolute.right-0.top-full.z-50.mt-1.w-52.rounded-lg.border.border-gray-200.bg-white.py-1.shadow-lg.hidden{ id: "user-menu", role: "menu", data: { dropdown_target: "menu" } }

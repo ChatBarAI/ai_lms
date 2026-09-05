@@ -1,8 +1,12 @@
 - content_for :title, @lesson.title
+- content_for :body_controllers, "lesson-sidebar"
+- content_for :header_actions do
+  = render "course_sidebar_button"
 
-.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show lesson-sidebar" } }
+= render "course_sidebar"
+
+.mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show" } }
   .flex.flex-wrap.gap-2.items-center
-    = render "course_sidebar"
     = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
       ← Course
     - if can?(:update, @lesson)

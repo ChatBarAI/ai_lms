@@ -48,23 +48,25 @@ export default class extends Controller {
     if (!el) return
 
     const pad = typeof margin === "number" ? margin : 16
+    const headerHeight = document.querySelector(".site-nav")?.getBoundingClientRect().height || 0
+    const topPad = headerHeight + pad
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight
     const rect = el.getBoundingClientRect()
     const currentY = window.scrollY || window.pageYOffset
     const sectionTop = currentY + rect.top
 
-    const fullyVisible = rect.top >= pad && rect.bottom <= viewportHeight - pad
+    const fullyVisible = rect.top >= topPad && rect.bottom <= viewportHeight - pad
     if (fullyVisible) return
 
-    const maxVisibleHeight = viewportHeight - (pad * 2)
+    const maxVisibleHeight = viewportHeight - topPad - pad
     let targetY
 
     if (rect.height <= maxVisibleHeight) {
       const lowerBound = sectionTop + rect.height - viewportHeight + pad
-      const upperBound = sectionTop - pad
+      const upperBound = sectionTop - topPad
       targetY = Math.min(Math.max(currentY, lowerBound), upperBound)
     } else {
-      targetY = sectionTop - pad
+      targetY = sectionTop - topPad
     }
 
     window.scrollTo({

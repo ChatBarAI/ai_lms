@@ -106,6 +106,6 @@ group :test do
   gem "selenium-webdriver"
   gem "rails-controller-testing"
   # Rails 7.2's parallel test runner uses Minitest APIs removed in Minitest 6.
+  # Minitest 5 includes mocks; minitest-mock can load a second copy and recurse.
   gem "minitest", "< 6"
-  gem "minitest-mock"
 end

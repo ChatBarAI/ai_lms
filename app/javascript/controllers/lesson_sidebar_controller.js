@@ -1,15 +1,33 @@
 import { Controller } from "@hotwired/stimulus"
 import { lockBodyScroll, unlockBodyScroll } from "controllers/scroll_lock"
 
+const storageKey = "lesson-progress-sidebar-open"
+
 export default class extends Controller {
-  static targets = ["overlay", "backdrop", "panel", "openButton", "closeButton"]
+  static targets = ["overlay", "backdrop", "panel", "openButton", "closeButton", "scrollArea"]
 
   connect() {
     this.onKeydown = this.handleKeydown.bind(this)
-    this.onBeforeCache = this.closeImmediately.bind(this)
+    this.onBeforeCache = this.finishAnimation.bind(this)
+    this.onBeforeRender = this.prepareNavigation.bind(this)
     this.onResize = this.applyPresentation.bind(this)
     document.addEventListener("turbo:before-cache", this.onBeforeCache)
+    document.addEventListener("turbo:before-render", this.onBeforeRender)
     window.addEventListener("resize", this.onResize)
+    let open = this.overlayTarget.getAttribute("aria-hidden") === "false"
+    try {
+      const saved = sessionStorage.getItem(storageKey)
+      if (saved !== null) open = saved === "true"
+    } catch {
+      // The live drawer still retains its state when storage is unavailable.
+    }
+    if (open) this.open({ restore: true })
+    else this.closeImmediately()
+
+    if (this.overlayTarget.dataset.scrollTop !== undefined) {
+      this.scrollAreaTarget.scrollTop = Number(this.overlayTarget.dataset.scrollTop)
+      delete this.overlayTarget.dataset.scrollTop
+    }
   }
 
   toggle() {
@@ -20,7 +38,7 @@ export default class extends Controller {
     }
   }
 
-  open() {
+  open({ restore = false } = {}) {
     if (!this.hasOverlayTarget || !this.hasPanelTarget) return
 
     this.clearCloseTimer()
@@ -28,8 +46,17 @@ export default class extends Controller {
     this.overlayTarget.classList.remove("invisible", "pointer-events-none")
     this.overlayTarget.setAttribute("aria-hidden", "false")
     this.openButtonTarget.setAttribute("aria-expanded", "true")
+    this.rememberState(true)
     this.applyPresentation()
     document.addEventListener("keydown", this.onKeydown)
+
+    if (restore) {
+      this.finishAnimation()
+      if (!this.inlineAvailable && !this.panelTarget.contains(document.activeElement)) {
+        this.closeButtonTarget.focus({ preventScroll: true })
+      }
+      return
+    }
 
     this.openFrame = requestAnimationFrame(() => {
       this.openFrame = null
@@ -37,7 +64,7 @@ export default class extends Controller {
       this.backdropTarget.classList.add("opacity-100")
       this.panelTarget.classList.remove("-translate-x-full")
       this.panelTarget.classList.add("translate-x-0")
-      this.closeButtonTarget.focus()
+      if (!restore || !this.inlineAvailable) this.closeButtonTarget.focus()
     })
   }
 
@@ -51,6 +78,7 @@ export default class extends Controller {
     this.panelTarget.classList.add("-translate-x-full")
     this.overlayTarget.setAttribute("aria-hidden", "true")
     this.openButtonTarget.setAttribute("aria-expanded", "false")
+    this.rememberState(false)
     this.unlockPage()
     document.removeEventListener("keydown", this.onKeydown)
 
@@ -59,9 +87,8 @@ export default class extends Controller {
       this.closeTimer = null
     }, 300)
 
-    if (this.previousActiveElement && typeof this.previousActiveElement.focus === "function") {
-      this.previousActiveElement.focus()
-    }
+    const returnTarget = this.previousActiveElement?.isConnected ? this.previousActiveElement : this.openButtonTarget
+    returnTarget.focus({ preventScroll: true })
   }
 
   disconnect() {
@@ -69,8 +96,48 @@ export default class extends Controller {
     this.clearOpenFrame()
     document.removeEventListener("keydown", this.onKeydown)
     document.removeEventListener("turbo:before-cache", this.onBeforeCache)
+    document.removeEventListener("turbo:before-render", this.onBeforeRender)
     window.removeEventListener("resize", this.onResize)
-    this.closeImmediately()
+    this.unlockPage()
+  }
+
+  prepareNavigation(event) {
+    const incoming = event.detail.newBody.querySelector(`#${this.overlayTarget.id}[data-turbo-permanent]`)
+    if (!incoming) return
+
+    // Turbo transfers the existing shell. Refresh server-rendered details inside it.
+    this.finishAnimation()
+    const scrollTop = this.scrollAreaTarget.scrollTop
+    const incomingPanel = incoming.querySelector('[data-lesson-sidebar-target="panel"]')
+    this.panelTarget.replaceChildren(...incomingPanel.childNodes)
+    this.overlayTarget.dataset.scrollTop = String(scrollTop)
+    this.scrollAreaTarget.scrollTop = scrollTop
+
+    const open = this.overlayTarget.getAttribute("aria-hidden") === "false"
+    event.detail.newBody.classList.toggle("lesson-sidebar-inline-active", open && this.inlineAvailable)
+    event.detail.newBody.classList.toggle("overflow-hidden", open && !this.inlineAvailable)
+    event.detail.newBody.querySelector('[data-lesson-sidebar-target="openButton"]')
+      ?.setAttribute("aria-expanded", String(open))
+  }
+
+  finishAnimation() {
+    this.clearCloseTimer()
+    this.clearOpenFrame()
+    const open = this.overlayTarget.getAttribute("aria-hidden") === "false"
+    this.overlayTarget.classList.toggle("invisible", !open)
+    this.overlayTarget.classList.toggle("pointer-events-none", !open)
+    this.backdropTarget.classList.toggle("opacity-0", !open)
+    this.backdropTarget.classList.toggle("opacity-100", open)
+    this.panelTarget.classList.toggle("-translate-x-full", !open)
+    this.panelTarget.classList.toggle("translate-x-0", open)
+  }
+
+  rememberState(open) {
+    try {
+      sessionStorage.setItem(storageKey, String(open))
+    } catch {
+      // Storage may be disabled; opening and closing must still work.
+    }
   }
 
   handleKeydown(event) {
@@ -118,6 +185,7 @@ export default class extends Controller {
   }
 
   closeImmediately() {
+    // Reset a closed drawer restored from a Turbo cache snapshot.
     if (!this.hasOverlayTarget || !this.hasPanelTarget) return
 
     const wasOpen = this.overlayTarget.getAttribute("aria-hidden") === "false"
@@ -139,7 +207,7 @@ export default class extends Controller {
 
     const inline = this.inlineAvailable
     this.overlayTarget.setAttribute("aria-modal", inline ? "false" : "true")
-    document.body.classList.toggle("lesson-sidebar-inline-active", inline)
+    this.element.classList.toggle("lesson-sidebar-inline-active", inline)
     if (inline) {
       unlockBodyScroll(this)
     } else {
@@ -148,7 +216,9 @@ export default class extends Controller {
   }
 
   unlockPage() {
-    document.body.classList.remove("lesson-sidebar-inline-active")
+    // This controller belongs to a body. Turbo may have installed the next body
+    // before disconnect runs, so cleanup must only alter our own layout.
+    this.element.classList.remove("lesson-sidebar-inline-active")
     unlockBodyScroll(this)
   }
 

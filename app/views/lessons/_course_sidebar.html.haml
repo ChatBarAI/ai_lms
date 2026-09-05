@@ -1,14 +1,9 @@
 - drawer_id = "lesson-course-sidebar"
 - title_id = "lesson-course-sidebar-title"
 
-%button.inline-flex.items-center.rounded-full.border.border-indigo-200.bg-indigo-100.px-3.py-1.text-xs.font-medium.text-indigo-700.transition-colors.hover:bg-indigo-200.cursor-pointer.dark:border-indigo-700.dark:bg-indigo-950.dark:text-indigo-200.dark:hover:bg-indigo-900{ class: "gap-1.5", type: "button", data: { action: "lesson-sidebar#toggle", lesson_sidebar_target: "openButton" }, "aria-controls": drawer_id, "aria-expanded": "false" }
-  %svg{ class: "w-3.5 h-3.5", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewbox: "0 0 24 24", stroke: "currentColor", "stroke-width": "2", "aria-hidden": "true" }
-    %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "M4 6h16M4 12h16M4 18h16" }
-  = t("lessons.course_sidebar.open")
-
-.lesson-sidebar-overlay.fixed.inset-0.z-50.invisible.pointer-events-none{ id: drawer_id, role: "dialog", "aria-modal": "true", "aria-labelledby": title_id, "aria-hidden": "true", data: { lesson_sidebar_target: "overlay" } }
+.lesson-sidebar-overlay.fixed.inset-0.z-50.invisible.pointer-events-none{ id: drawer_id, role: "dialog", "aria-modal": "true", "aria-labelledby": title_id, "aria-hidden": "true", data: { turbo_permanent: true, lesson_sidebar_target: "overlay" } }
   .lesson-sidebar-backdrop.absolute.inset-0.opacity-0.transition-opacity.duration-300{ class: "bg-gray-900/50", data: { action: "click->lesson-sidebar#close", lesson_sidebar_target: "backdrop" } }
-  %aside.lesson-sidebar-panel.absolute.inset-y-0.left-0.flex.w-full.max-w-sm.-translate-x-full.transform.flex-col.bg-white.shadow-2xl.transition-transform.duration-300.dark:bg-gray-900{ tabindex: "-1", data: { lesson_sidebar_target: "panel" } }
+  %aside.lesson-sidebar-panel.absolute.inset-y-0.left-0.flex.w-full.-translate-x-full.transform.flex-col.bg-white.shadow-2xl.transition-transform.duration-300.dark:bg-gray-900{ class: "max-w-[308px]", tabindex: "-1", data: { lesson_sidebar_target: "panel" } }
     .flex.items-start.justify-between.gap-4.border-b.border-gray-200.p-5.dark:border-gray-700
       .min-w-0
         %p.text-xs.font-semibold.uppercase.tracking-wide.text-indigo-600= t("lessons.course_sidebar.course", course_l: terms[:course_l])
@@ -18,7 +13,7 @@
           %line{ x1: "18", y1: "6", x2: "6", y2: "18" }
           %line{ x1: "6", y1: "6", x2: "18", y2: "18" }
 
-    .flex-1.overflow-y-auto
+    .flex-1.overflow-y-auto{ data: { lesson_sidebar_target: "scrollArea" } }
       - if @course.cover_image.attached?
         = image_tag @course.cover_image, class: "h-40 w-full object-cover", alt: ""
 
