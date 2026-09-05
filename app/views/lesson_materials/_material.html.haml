@@ -123,7 +123,7 @@
         }
       }
         .flex.items-center.justify-between.gap-4{ data: { chatbar_material_target: "intro" } }
-          %p.min-w-0.flex-1.text-sm.text-slate-800{ class: "dark:text-slate-100" } Start a guided conversation with the AI tutor about this material.
+          .prose.max-w-none.min-w-0.flex-1.text-sm.text-slate-800{ class: "dark:prose-invert dark:text-slate-100" }= material.body
           - if material.chatbar_token.present?
             %button.shrink-0.inline-flex.items-center.gap-2.px-4.py-2.rounded.bg-indigo-600.text-white.hover:bg-indigo-700.cursor-pointer.text-sm.font-medium.disabled:opacity-50{ type: "button", data: { action: "click->chatbar-material#start", chatbar_material_target: "startButton" } }
               = site_favicon_img_tag

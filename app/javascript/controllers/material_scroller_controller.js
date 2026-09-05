@@ -27,6 +27,7 @@ export default class extends Controller {
     if (this.advancing) return
 
     this.advancing = true
+    this.leaveCurrentMaterial()
     this.clearStatus()
     this.nextTarget.disabled = true
     this.nextTarget.textContent = "Completing…"
@@ -148,6 +149,7 @@ export default class extends Controller {
     const slide = this.slideTargets[boundedIndex]
     if (!slide) return
 
+    if (boundedIndex !== this.currentIndex) this.leaveCurrentMaterial()
     this.currentIndex = boundedIndex
     this.updateControls()
     this.observeCurrentSlide()
@@ -179,10 +181,15 @@ export default class extends Controller {
       }
     })
 
+    if (closestIndex !== this.currentIndex) this.leaveCurrentMaterial()
     this.currentIndex = closestIndex
     this.updateControls()
     this.observeCurrentSlide()
     this.updateTrackHeight()
+  }
+
+  leaveCurrentMaterial() {
+    this.slideTargets[this.currentIndex]?.dispatchEvent(new CustomEvent("material-scroller:leave"))
   }
 
   observeCurrentSlide() {

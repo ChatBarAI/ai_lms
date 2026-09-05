@@ -44,10 +44,20 @@ export default class extends Controller {
       if (event.detail?.owner !== this.element && this.active) this.reset()
     }
     window.addEventListener(SESSION_EVENT, this.onSessionActivate)
+    this.onMaterialLeave = () => {
+      if (this.active) this.reset()
+    }
+    this.materialSection = this.element.closest("[data-controller~='collapsible']")
+    this.materialSlide = this.element.closest("[data-material-scroller-target~='slide']")
+    this.materialSection?.addEventListener("collapsible:collapsed", this.onMaterialLeave)
+    this.materialSlide?.addEventListener("material-scroller:leave", this.onMaterialLeave)
   }
 
   disconnect() {
     window.removeEventListener(SESSION_EVENT, this.onSessionActivate)
+    this.materialSection?.removeEventListener("collapsible:collapsed", this.onMaterialLeave)
+    this.materialSlide?.removeEventListener("material-scroller:leave", this.onMaterialLeave)
+    this.stopViewportTracking()
     this.activationId += 1
     this.cleanupMedia()
   }
@@ -70,6 +80,7 @@ export default class extends Controller {
       this.introTarget.classList.add("hidden")
       this.mountTarget.classList.remove("hidden")
       this.mountTarget.dataset.initialised = "1"
+      this.startViewportTracking()
 
       await window._bl_ai_search.init(this.tokenValue, this.mountTarget, {
         additional_context: this.contextValue,
@@ -90,6 +101,7 @@ export default class extends Controller {
 
   reset() {
     this.activationId += 1
+    this.stopViewportTracking()
     this.cleanupMedia()
     this.mountTarget.replaceChildren()
     delete this.mountTarget.dataset.initialised
@@ -97,6 +109,63 @@ export default class extends Controller {
     this.introTarget.classList.remove("hidden")
     this.startButtonTarget.disabled = false
     this.setStatus("")
+  }
+
+  startViewportTracking() {
+    this.stopViewportTracking()
+    this.viewportTracking = true
+    this.onViewportInteraction = () => this.stopViewportTracking()
+    this.onViewportKeydown = (event) => {
+      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " ", "Tab"].includes(event.key)) {
+        this.stopViewportTracking()
+      }
+    }
+    for (const event of ["wheel", "touchstart", "pointerdown"]) {
+      window.addEventListener(event, this.onViewportInteraction, { passive: true, capture: true })
+    }
+    window.addEventListener("keydown", this.onViewportKeydown, true)
+
+    // Run after the carousel's ResizeObserver has updated its track height.
+    // Each frame is requested by a size change; there is no polling loop.
+    const scheduleAdjustment = () => {
+      window.cancelAnimationFrame(this.viewportFrame)
+      this.viewportFrame = window.requestAnimationFrame(() => this.keepMountInView())
+    }
+    this.viewportObserver = new ResizeObserver(scheduleAdjustment)
+    this.viewportObserver.observe(this.mountTarget)
+    scheduleAdjustment()
+  }
+
+  keepMountInView() {
+    if (!this.viewportTracking || !this.started) return
+
+    const rect = this.mountTarget.getBoundingClientRect()
+    if (rect.height === 0 || rect.right <= 0 || rect.left >= window.innerWidth) return
+
+    const margin = 16
+    const availableHeight = window.innerHeight - margin * 2
+    let delta = 0
+    if (rect.height > availableHeight || rect.top < margin) {
+      delta = rect.top - margin
+    } else if (rect.bottom > window.innerHeight - margin) {
+      delta = rect.bottom - (window.innerHeight - margin)
+    }
+    if (Math.abs(delta) > 1) {
+      // Only scroll the page, leaving the horizontal material carousel alone.
+      window.scrollBy({ top: delta, behavior: "instant" })
+    }
+  }
+
+  stopViewportTracking() {
+    this.viewportTracking = false
+    this.viewportObserver?.disconnect()
+    window.cancelAnimationFrame(this.viewportFrame)
+    if (this.onViewportInteraction) {
+      for (const event of ["wheel", "touchstart", "pointerdown"]) {
+        window.removeEventListener(event, this.onViewportInteraction, true)
+      }
+    }
+    if (this.onViewportKeydown) window.removeEventListener("keydown", this.onViewportKeydown, true)
   }
 
   cleanupMedia() {
