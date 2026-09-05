@@ -120,7 +120,7 @@ de:
       open: "Fortschritt"
       close: "Kursinhalte schließen"
       course: "%{course_l}"
-      progress: "Kursfortschritt"
+      progress: "%{course}-Fortschritt"
       percent_complete: "%{percent}% abgeschlossen"
       lesson_navigation: "%{lessons} in diesem Kurs"
       duration: "%{count} Min."

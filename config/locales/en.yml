@@ -119,7 +119,7 @@ en:
       open: "Progress"
       close: "Close course contents"
       course: "%{course_l}"
-      progress: "Course progress"
+      progress: "%{course} progress"
       percent_complete: "%{percent}% complete"
       lesson_navigation: "%{lessons} in this course"
       duration: "%{count} min"

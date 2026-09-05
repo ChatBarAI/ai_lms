@@ -4,7 +4,7 @@
 .lesson-sidebar-overlay.fixed.inset-0.z-50.invisible.pointer-events-none{ id: drawer_id, role: "dialog", "aria-modal": "true", "aria-labelledby": title_id, "aria-hidden": "true", data: { turbo_permanent: true, lesson_sidebar_target: "overlay" } }
   .lesson-sidebar-backdrop.absolute.inset-0.opacity-0.transition-opacity.duration-300{ class: "bg-gray-900/50", data: { action: "click->lesson-sidebar#close", lesson_sidebar_target: "backdrop" } }
   %aside.lesson-sidebar-panel.absolute.inset-y-0.left-0.flex.w-full.-translate-x-full.transform.flex-col.bg-white.shadow-2xl.transition-transform.duration-300.dark:bg-gray-900{ class: "max-w-[308px]", tabindex: "-1", data: { lesson_sidebar_target: "panel" } }
-    .flex.items-start.justify-between.gap-4.border-b.border-gray-200.p-5.dark:border-gray-700
+    .flex.items-start.justify-between.gap-4.p-5
       .min-w-0
         %p.text-xs.font-semibold.uppercase.tracking-wide.text-indigo-600= t("lessons.course_sidebar.course", course_l: terms[:course_l])
         %h2.mt-1.text-xl.font-bold.text-gray-900.dark:text-gray-100{ id: title_id }= @course.title
@@ -15,20 +15,19 @@
 
     .flex-1.overflow-y-auto{ data: { lesson_sidebar_target: "scrollArea" } }
       - if @course.cover_image.attached?
-        = image_tag @course.cover_image, class: "h-40 w-full object-cover", alt: ""
+        .px-5
+          = image_tag @course.cover_image, class: "h-auto w-full", alt: ""
 
       .border-b.border-gray-200.p-5.dark:border-gray-700
-        - if subjects_enabled? && @course.subject
-          %p.text-sm.font-medium.text-gray-600.dark:text-gray-300= @course.subject.name
         - if @course.description.present?
-          %p.mt-2.text-sm.leading-5.text-gray-600.dark:text-gray-400= truncate(@course.description, length: 180)
+          %p.text-sm.leading-5.text-gray-600.dark:text-gray-400= truncate(@course.description, length: 180)
 
         - if @enrollment
           .mt-4
             .flex.items-center.justify-between.text-xs.font-medium.text-gray-600.dark:text-gray-300{ class: "mb-1.5" }
-              %span= t("lessons.course_sidebar.progress")
+              %span= t("lessons.course_sidebar.progress", course: terms[:course])
               %span= t("lessons.course_sidebar.percent_complete", percent: @course_progress_percentage)
-            .h-2.overflow-hidden.rounded-full.bg-gray-200.dark:bg-gray-700{ role: "progressbar", "aria-label": t("lessons.course_sidebar.progress"), "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": @course_progress_percentage }
+            .h-2.overflow-hidden.rounded-full.bg-gray-200.dark:bg-gray-700{ role: "progressbar", "aria-label": t("lessons.course_sidebar.progress", course: terms[:course]), "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": @course_progress_percentage }
               .h-full.rounded-full.bg-indigo-600{ style: "width: #{@course_progress_percentage}%" }
 
       %nav.p-3{ "aria-label": t("lessons.course_sidebar.lesson_navigation", lessons: terms[:lessons]) }
