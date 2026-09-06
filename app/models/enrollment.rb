@@ -28,7 +28,11 @@ class Enrollment < ApplicationRecord
   def completion_percentage
     total = lessons_required_count
     return 0 if total.zero?
-    ((lessons_completed_count.to_f / total) * 100).round(1)
+    progress_total = progresses
+      .where(lesson_id: course.lessons_required_for_completion.select(:id))
+      .includes(lesson: [ :questions, :lesson_materials ])
+      .sum(&:completion_percentage)
+    (progress_total / total).round(1)
   end
 
   def lessons_required_count

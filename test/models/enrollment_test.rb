@@ -39,6 +39,15 @@ class EnrollmentTest < ActiveSupport::TestCase
     assert_equal 50.0, enrollment.completion_percentage
   end
 
+  test "completion percentage includes partial lesson progress without awarding completion" do
+    enrollment = enrollments(:student_in_algebra)
+    progresses(:student_intro).update!(score: 40)
+
+    assert_equal 20, enrollment.completion_percentage
+    assert_equal 0, enrollment.lessons_completed_count
+    assert_not enrollment.fully_completed?
+  end
+
   test "published lessons can be fully completed while a draft remains incomplete" do
     enrollment = enrollments(:student_in_algebra)
     Progress.find_or_initialize_by(enrollment: enrollment, lesson: lessons(:intro)).update!(status: :completed)

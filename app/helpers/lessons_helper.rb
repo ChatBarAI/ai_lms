@@ -2,7 +2,7 @@ module LessonsHelper
   YOUTUBE_VIDEO_ID_PATTERN = /\A[A-Za-z0-9_-]+\z/
 
   def lesson_progress_ring(progress, classes: nil)
-    pct = progress.completed? ? 100 : 50
+    pct = progress.completion_percentage
     circ = (2 * Math::PI * 20).round(2)
     offset = (circ * (1 - pct / 100.0)).round(2)
     ring_color = progress.completed? ? "#16a34a" : "#6366f1"

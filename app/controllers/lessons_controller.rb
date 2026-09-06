@@ -12,6 +12,7 @@ class LessonsController < ApplicationController
     @enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
     if @enrollment
       @progress = @enrollment.progresses.find_or_create_by!(lesson_id: @lesson.id)
+      @progress.with_lock { @progress.refresh_material_progress! }
       @quiz_attempts = @progress.quiz_attempts.ordered.to_a
       pending_free_text_answers =
         @progress.persisted? &&

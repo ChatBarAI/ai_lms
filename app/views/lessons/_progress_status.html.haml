@@ -16,7 +16,7 @@
           = form_with model: progress, url: progress_path(progress.id), method: :patch, local: true do |f|
             = f.hidden_field :status, value: "completed"
             = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
-      - else
+      - elsif progress.completed?
         .flex.items-center.gap-2
           %span.text-sm.font-medium.text-green-700= t("lessons.show.completed")
           - if enrollment.fully_completed?

@@ -555,6 +555,39 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal true, response.parsed_body["acknowledged"]
+    assert progresses(:student_intro).reload.in_progress?
+    assert_equal 20, progresses(:student_intro).completion_percentage
+  end
+
+  test "last material acknowledgement completes a lesson without a quiz" do
+    lesson = @course.lessons.create!(title: "Reading only", position: 99, published_at: Time.current)
+    material = lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this", required: true)
+    sign_in users(:student)
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, material), as: :json
+
+    assert_response :success
+    progress = enrollments(:student_in_algebra).progresses.find_by!(lesson: lesson)
+    assert progress.completed?
+    assert_not_nil progress.completed_at
+    assert_nil progress.score
+
+    completed_at = progress.completed_at
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, material), as: :json
+    assert_equal completed_at, progress.reload.completed_at
+  end
+
+  test "viewing a lesson reconciles existing material acknowledgements" do
+    lesson = @course.lessons.create!(title: "Previously read", position: 99, published_at: Time.current)
+    material = lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this", required: true)
+    enrollment = enrollments(:student_in_algebra)
+    LessonMaterialAcknowledgement.create!(lesson_material: material, enrollment: enrollment)
+    sign_in users(:student)
+
+    get course_lesson_path(@course, lesson)
+
+    assert_response :success
+    assert enrollment.progresses.find_by!(lesson: lesson).completed?
   end
 
   # ---------------------------------------------------------------------------

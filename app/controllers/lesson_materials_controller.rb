@@ -133,7 +133,11 @@ class LessonMaterialsController < ApplicationController
 
     ack = LessonMaterialAcknowledgement.find_or_initialize_by(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
     authorize! :create, ack
-    ack.save!
+    LessonMaterialAcknowledgement.transaction do
+      ack.save!
+      progress = enrollment.progresses.find_or_create_by!(lesson: @lesson)
+      progress.with_lock { progress.refresh_material_progress! }
+    end
 
     respond_to do |format|
       format.html do
