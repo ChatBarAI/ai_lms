@@ -2,22 +2,25 @@
 %div{ id: dom_id(progress, :status) }
   .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6
     .flex.items-center.gap-4
-      = lesson_progress_ring(progress)
+      = lesson_progress_ring(progress, classes: "shrink-0 text-gray-700")
       .flex-1
-        %p.font-semibold.text-sm= t("lessons.show.status", status: progress.status.to_s.humanize)
+        %p.text-xs.font-medium.text-gray-600.dark:text-gray-300
+          %span.block= terms[:lesson]
+          %span.block= t("lessons.show.progress_label")
+      .flex-1.border-l.border-gray-200.pl-6
         - if ai_scoring_pending
           .flex.items-center.gap-1.5.mt-0.5
             = site_favicon_img_tag(class: "w-4 h-4 shrink-0 animate-pulse")
             %p.text-xs.text-indigo-600.font-medium Queued for marking…
         - elsif progress.score.present?
-          %p.text-xs.text-gray-500= t("lessons.show.score", score: progress.score)
+          %p.text-xs.text-gray-500= t("lessons.show.score", score: progress.score.to_f.round(1), **terms)
       - if !progress.completed? && lesson.questions.none?
         - unless ai_scoring_pending
           = form_with model: progress, url: progress_path(progress.id), method: :patch, local: true do |f|
             = f.hidden_field :status, value: "completed"
             = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
       - elsif progress.completed?
-        .flex.items-center.gap-2
+        .flex.flex-col.items-end.gap-2
           %span.text-sm.font-medium.text-green-700= t("lessons.show.completed")
           - if enrollment.fully_completed?
             = link_to "Download Certificate", course_certificate_path(course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"

@@ -433,7 +433,7 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     get course_lesson_path(courses(:algebra), lessons(:intro))
 
     assert_response :success
-    assert_match "Latest Quiz results", response.body
+    assert_select "#quiz-results h2", text: "Quiz answer feedback"
     assert_match 'id="quiz-results"', response.body
     assert_match 'data-controller="collapsible"', response.body
     assert_match 'data-expanded="false"', response.body

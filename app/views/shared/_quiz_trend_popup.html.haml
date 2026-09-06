@@ -7,6 +7,7 @@
 -# - wrapper_class / button_class / mini_svg_class / mini_svg_width (optional)
 -# - show_attempt_numbers: labels points by attempt number instead of sequence
 -# - axis_label: large chart x-axis label
+- pass_mark_caption = local_assigns.fetch(:pass_mark_caption, false)
 - attempts ||= []
 - return if attempts.size < 2
 - pass_mark = pass_mark.to_f.clamp(0.0, 100.0)
@@ -42,11 +43,16 @@
 %div{ class: wrapper_class, data: { controller: "chart-tooltip status-modal", status_modal_dialog_id_value: dialog_id } }
   .pointer-events-none.fixed.hidden.z-50.max-w-xs.rounded.bg-slate-900.px-3.py-2.text-xs.leading-5.font-medium.text-white.shadow-lg.whitespace-pre-line{ data: { chart_tooltip_target: "tooltip" } }
   %button{ class: button_class, type: "button", data: { action: "click->status-modal#open" }, "aria-label": "Open larger #{terms[:quiz_l]} marks chart" }
+    - if pass_mark_caption && show_shared_pass_line
+      %span.flex.flex-wrap.items-baseline.justify-between.gap-x-2.text-xs
+        %span.font-medium.text-gray-600= t("lessons.show.quiz_scores", **terms)
+        %span.text-green-700= t("lessons.show.pass_mark", percent: resolved_pass_mark.round)
     %svg{ mini_svg_attrs }
       %line{ x1: mini_left.to_s, y1: mini_bottom.to_s, x2: mini_right.to_s, y2: mini_bottom.to_s, stroke: "#e5e7eb", "stroke-width": "1" }
       - if show_shared_pass_line
         %line{ x1: mini_left.to_s, y1: mini_pass_y.to_s, x2: mini_right.to_s, y2: mini_pass_y.to_s, stroke: "#16a34a", "stroke-width": "1", "stroke-dasharray": "3 2", "stroke-opacity": "0.9" }
-        %text{ x: mini_right.to_s, y: (mini_pass_y - 1).to_s, "text-anchor": "end", fill: "#15803d", "font-size": "7" }= "Pass #{resolved_pass_mark.round}%"
+        - unless pass_mark_caption
+          %text{ x: mini_right.to_s, y: (mini_pass_y - 1).to_s, "text-anchor": "end", fill: "#15803d", "font-size": "7" }= "Pass #{resolved_pass_mark.round}%"
       %polygon{ points: mini_area_points, fill: "#818cf8", "fill-opacity": "0.22" }
       %polyline{ points: mini_points, fill: "none", stroke: "#4f46e5", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" }
       - attempts.each_with_index do |attempt, idx|

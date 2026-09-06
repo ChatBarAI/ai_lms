@@ -63,9 +63,7 @@ export default class extends Controller {
     window.addEventListener(SESSION_EVENT, this.onSessionActivate)
 
     this.element._cbaiOpenWithEail = (eailText) => {
-      if (this.isMounted()) this.destroyTutor()
-      if (this.hasMountTarget) this.mountTarget.dataset.cbaiEail = eailText || ""
-      this.openWithMicGate()
+      return this.openWithMicGate(null, eailText || "")
     }
   }
 
@@ -80,7 +78,7 @@ export default class extends Controller {
     delete this.element._cbaiOpenWithEail
   }
 
-  async openWithMicGate() {
+  async openWithMicGate(_event, eail = "") {
     if (!this.hasOpenButtonTarget || this.openButtonTarget.disabled) return
 
     this.openButtonTarget.disabled = true
@@ -99,19 +97,20 @@ export default class extends Controller {
         return
       }
 
-      this.open()
+      this.open(eail)
     } finally {
       this.openButtonTarget.disabled = false
     }
   }
 
-  open() {
+  open(eail = "") {
     if (!this.hasOverlayTarget) return
 
+    if (this.isMounted()) this.destroyTutor()
     window.dispatchEvent(new CustomEvent(SESSION_EVENT, { detail: { owner: this.element } }))
     this.overlayTarget.classList.remove("hidden")
     this.applyPresentation()
-    this.mountTutor()
+    this.mountTutor(eail)
   }
 
   close() {
@@ -122,9 +121,10 @@ export default class extends Controller {
     this.destroyTutor()
   }
 
-  async mountTutor() {
+  async mountTutor(eail = "") {
     if (!this.hasMountTarget || this.isMounted()) return
 
+    const mount = this.mountTarget
     const token = this.mountTarget.dataset.cbaiToken
     if (!token) return
 
@@ -135,6 +135,7 @@ export default class extends Controller {
       return
     }
 
+    if (!this.hasMountTarget || this.mountTarget !== mount || this.isMounted()) return
     if (!window._bl_ai_search || typeof window._bl_ai_search.init !== "function") return
 
     this.mountTarget.dataset.initialised = "1"
@@ -145,11 +146,7 @@ export default class extends Controller {
       }
     }
 
-    const eail = this.mountTarget.dataset.cbaiEail
-    if (eail) {
-      opts.eail = eail
-      delete this.mountTarget.dataset.cbaiEail
-    }
+    if (eail) opts.eail = eail
 
     window._bl_ai_search.init(token, this.mountTarget, opts)
   }

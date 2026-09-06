@@ -216,7 +216,7 @@ export default class extends Controller {
   updateControls() {
     const count = this.slideTargets.length
     const isLast = this.currentIndex === count - 1
-    if (this.hasCounterTarget) this.counterTarget.textContent = `${this.currentIndex + 1} of ${count}`
+    if (this.hasCounterTarget) this.counterTarget.textContent = `Material ${this.currentIndex + 1} of ${count}`
     if (this.hasPreviousTarget) this.previousTarget.disabled = this.currentIndex === 0 || this.advancing
     if (this.hasNextTarget) {
       this.nextTarget.disabled = Boolean(this.advancing)

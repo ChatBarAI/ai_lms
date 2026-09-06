@@ -2,16 +2,16 @@ module LessonsHelper
   YOUTUBE_VIDEO_ID_PATTERN = /\A[A-Za-z0-9_-]+\z/
 
   def lesson_progress_ring(progress, classes: nil)
-    pct = progress.completion_percentage
+    pct = progress.completion_percentage.round
     circ = (2 * Math::PI * 20).round(2)
     offset = (circ * (1 - pct / 100.0)).round(2)
-    ring_color = progress.completed? ? "#16a34a" : "#6366f1"
+    ring_color = "var(--btn-primary-bg, #4f46e5)"
 
-    tag.svg(class: classes, width: "52", height: "52", viewBox: "0 0 48 48", fill: "none") do
+    tag.svg(class: classes, width: "52", height: "52", viewBox: "0 0 48 48", fill: "none", role: "progressbar", "aria-label": t("lessons.show.progress", **terms), "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct) do
       safe_join([
-        tag.circle(cx: "24", cy: "24", r: "20", stroke: "#e5e7eb", "stroke-width": "4", fill: "none"),
-        tag.circle(cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "4", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)"),
-        tag.text("#{pct}%", x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600")
+        tag.circle(cx: "24", cy: "24", r: "20", class: "stroke-gray-200 dark:stroke-[#4b5563]", "stroke-width": "6", "vector-effect": "non-scaling-stroke", fill: "none"),
+        tag.circle(cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "6", "vector-effect": "non-scaling-stroke", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)"),
+        tag.text("#{pct}%", x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: "currentColor", "font-weight": "600")
       ])
     end
   end
