@@ -15,11 +15,12 @@
 
     %div
       = upload_field f, :poster_image,
-          label: "Image file",
+          label: "Image file — recommended 1280 × 720 px",
           accept: "image/png,image/jpeg,image/webp,image/gif",
           current_attachment: @lesson.poster_image,
           preview_class: "max-w-xs rounded border border-gray-200",
-          required: true
+          required: true,
+          crop_size: [ 1280, 720 ]
 
     .flex.gap-2
       = f.submit (@lesson.poster_image.attached? ? "Replace poster" : "Upload poster"), class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"

@@ -61,6 +61,8 @@ module ApplicationHelper
   #   remove_label:        Label text for the remove checkbox.
   #   preview_class:       CSS classes for the current and preview <img> elements.
   #   required:            Whether the file input is required.
+  #   crop_size:           Optional [width, height] from the LMS image sizes guide. Enables
+  #                        Cropper.js zoom/crop for raster images; omit for free-aspect crop.
   def upload_field(f, attribute, label:, accept:,
                    hint: nil,
                    preview_type: :image,
@@ -71,9 +73,11 @@ module ApplicationHelper
                    remove_label: "Remove current file",
                    remove_actions: nil,
                    preview_class: "h-24 w-auto rounded border border-gray-200 object-cover",
-                   required: false)
+                   required: false,
+                   crop_size: nil)
     parts = []
     has_current_attachment = current_attachment&.attached?
+    croppable = preview_type == :image
 
     initial_preview_src = nil
     initial_filename = nil
@@ -92,6 +96,11 @@ module ApplicationHelper
 
     show_initial_preview = initial_preview_src.present? || initial_filename.present?
 
+    input_actions = [ "change->file-preview#update" ]
+    input_actions << "change->image-crop#fileChanged" if croppable
+    input_data = { "file-preview-target": "input", action: input_actions.join(" ") }
+    input_data["image-crop-target"] = "input" if croppable
+
     # ── Hidden native file input (screen-reader accessible; JS triggers .click()) ──
     parts << content_tag(:p, hint, class: "text-sm font-medium mb-2") if hint.present?
     parts << f.label(attribute, label, class: "sr-only")
@@ -99,10 +108,7 @@ module ApplicationHelper
                           accept: accept,
                           required: required,
                           class: "sr-only",
-                          data: {
-                            "file-preview-target": "input",
-                            action: "change->file-preview#update"
-                          })
+                          data: input_data)
 
     # ── Styled drop zone (contains placeholder ↔ preview) ──────────────────
     parts << content_tag(:div,
@@ -165,6 +171,8 @@ module ApplicationHelper
         ])
     end
 
+    parts << image_crop_controls(crop_size) if croppable
+
     # ── Remove checkbox ─────────────────────────────────────────────────────
     if remove_name.present? && has_current_attachment
       remove_controls = []
@@ -182,12 +190,16 @@ module ApplicationHelper
                            class: "mt-2 flex flex-wrap items-center gap-3")
     end
 
-    content_tag(:div,
-                safe_join(parts),
-                data: {
-                  controller: "file-preview",
-                  "file-preview-type-value": preview_type.to_s
-                })
+    wrapper_data = {
+      controller: croppable ? "file-preview image-crop" : "file-preview",
+      "file-preview-type-value": preview_type.to_s
+    }
+    if croppable && crop_size.is_a?(Array) && crop_size.size == 2
+      wrapper_data["image-crop-width-value"] = crop_size[0]
+      wrapper_data["image-crop-height-value"] = crop_size[1]
+    end
+
+    content_tag(:div, safe_join(parts), data: wrapper_data)
   end
 
   # Renders a SiteSetting hero_content field, returning nil when blank.
@@ -219,6 +231,57 @@ module ApplicationHelper
   end
 
   private
+
+  # Adjust button + Cropper.js dialog for image upload_field wrappers.
+  def image_crop_controls(_crop_size = nil)
+    safe_join([
+      content_tag(:div, class: "mt-2 flex justify-center") do
+        tag.button("Adjust image",
+                   type: "button",
+                   class: "hidden inline-flex items-center rounded border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100",
+                   data: { "image-crop-target": "adjustButton", action: "image-crop#open" })
+      end,
+      tag.dialog(
+        class: "m-0 h-dvh w-screen max-w-none max-h-none border-0 bg-slate-950 p-0 text-white backdrop:bg-black/70",
+        aria: { label: "Adjust image" },
+        data: { "image-crop-target": "dialog", action: "cancel->image-crop#cancel" }
+      ) do
+        content_tag(:div, class: "flex h-full min-h-0 flex-col") do
+          safe_join([
+            content_tag(:div, class: "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-700 bg-slate-900 px-4 py-3") do
+              safe_join([
+                content_tag(:div) do
+                  safe_join([
+                    content_tag(:h2, "Adjust image", class: "text-base font-semibold"),
+                    content_tag(:p, "Zoom and crop, then use the selected area.", class: "text-xs text-slate-300")
+                  ])
+                end,
+                content_tag(:div, class: "flex flex-wrap items-center gap-2") do
+                  safe_join([
+                    tag.button("Cancel", type: "button",
+                               class: "rounded border border-slate-500 bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700",
+                               data: { action: "image-crop#cancel" }),
+                    tag.button("Use cropped image", type: "button",
+                               class: "rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500",
+                               data: { action: "image-crop#use" })
+                  ])
+                end
+              ])
+            end,
+            content_tag(:div, class: "flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4") do
+              tag.img(alt: "Image to crop",
+                      class: "block max-h-full max-w-full",
+                      data: { "image-crop-target": "image" })
+            end,
+            content_tag(:p, "",
+                        role: "status",
+                        class: "shrink-0 px-4 pb-3 text-xs text-gray-500",
+                        data: { "image-crop-target": "status" })
+          ])
+        end
+      end
+    ])
+  end
 
   def upload_field_icon
     # cloud-arrow-up (Heroicons outline)

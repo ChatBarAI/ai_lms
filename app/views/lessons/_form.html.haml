@@ -108,7 +108,8 @@
             current_attachment: lesson.cover_image,
             remove_name: "lesson[remove_cover_image]",
             remove_label: "Remove current lesson image",
-            hint: "Lesson image (optional)"
+            hint: "Lesson image (optional) — recommended 728 × 320 px",
+            crop_size: [ 728, 320 ]
 
   .flex.w-full.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"

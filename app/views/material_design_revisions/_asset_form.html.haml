@@ -1,4 +1,4 @@
-= form_with model: asset, url: course_lesson_lesson_material_material_design_assets_path(course, lesson, lesson_material), multipart: true, class: "space-y-4", data: { controller: "screen-capture file-preview", file_preview_type_value: "image" } do |f|
+= form_with model: asset, url: course_lesson_lesson_material_material_design_assets_path(course, lesson, lesson_material), multipart: true, class: "space-y-4", data: { controller: "screen-capture file-preview image-crop", file_preview_type_value: "image" } do |f|
   - if local_assigns[:return_to].present?
     = hidden_field_tag :return_to, return_to
   - if local_assigns[:parent_revision_id].present?
@@ -29,7 +29,7 @@
         Capture
   .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { screen_capture_target: "browsePanel" } }
     = f.label :file, "Choose an image", class: "block text-sm font-medium text-gray-700 mb-2"
-    = f.file_field :file, accept: MaterialDesignAsset::IMAGE_CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", action: "change->file-preview#update change->screen-capture#fileChanged" }
+    = f.file_field :file, accept: MaterialDesignAsset::IMAGE_CONTENT_TYPES.join(","), class: "w-full text-sm", required: true, data: { file_preview_target: "input", image_crop_target: "input", action: "change->file-preview#update change->image-crop#fileChanged change->screen-capture#fileChanged" }
   .hidden.rounded-lg.border.border-gray-200.bg-gray-50.p-3{ data: { screen_capture_target: "capturePanel" } }
     %h3.text-sm.font-semibold.text-gray-900 Capture a screen, window, or tab
     .mt-3.flex.flex-wrap.items-end.gap-3
@@ -65,6 +65,20 @@
     %p.mb-2.text-xs.font-medium.text-gray-700 Selected image
     %img.mx-auto.max-h-64.max-w-full.rounded.object-contain{ alt: "Selected image preview", data: { file_preview_target: "preview" } }
     %p.mt-2.truncate.text-center.text-xs.text-gray-600{ data: { file_preview_target: "filename" } }
+  .mt-2.flex.justify-center
+    %button.hidden.inline-flex.items-center.rounded.border.border-indigo-200.bg-indigo-50.px-3.py-1.5.text-xs.font-medium.text-indigo-700.hover:bg-indigo-100{ type: "button", data: { image_crop_target: "adjustButton", action: "image-crop#open" } } Adjust image
+  %dialog.m-0.h-dvh.w-screen.max-w-none.max-h-none.border-0.bg-slate-950.p-0.text-white{ class: "backdrop:bg-black/70", aria: { label: "Adjust image" }, data: { image_crop_target: "dialog", action: "cancel->image-crop#cancel" } }
+    .flex.h-full.min-h-0.flex-col
+      .flex.shrink-0.flex-wrap.items-center.justify-between.gap-3.border-b.border-slate-700.bg-slate-900.px-4.py-3
+        %div
+          %h2.text-base.font-semibold Adjust image
+          %p.text-xs.text-slate-300 Zoom and crop, then use the selected area.
+        .flex.flex-wrap.items-center.gap-2
+          %button.rounded.border.border-slate-500.bg-slate-800.px-3.py-2.text-sm.font-medium.text-white.hover:bg-slate-700{ type: "button", data: { action: "image-crop#cancel" } } Cancel
+          %button.rounded.bg-indigo-600.px-3.py-2.text-sm.font-medium.text-white.hover:bg-indigo-500{ type: "button", data: { action: "image-crop#use" } } Use cropped image
+      .flex.min-h-0.flex-1.items-center.justify-center.overflow-hidden.p-4
+        %img.block.max-h-full.max-w-full{ alt: "Image to crop", data: { image_crop_target: "image" } }
+      %p.shrink-0.px-4.pb-3.text-xs.text-gray-500{ role: "status", data: { image_crop_target: "status" } }
   .flex.items-center.justify-end.gap-2.pt-2
     %button.px-4.py-2.rounded-lg.bg-gray-100.text-gray-700.text-sm.font-medium.hover:bg-gray-200.cursor-pointer{ type: "button", data: { action: "click->dialog#close" } } Cancel
     = f.submit "Upload asset", disabled: true, class: "px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50", data: { screen_capture_target: "submitButton" }

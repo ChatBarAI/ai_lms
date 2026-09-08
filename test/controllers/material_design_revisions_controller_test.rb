@@ -145,10 +145,12 @@ class MaterialDesignRevisionsControllerTest < ActionDispatch::IntegrationTest
       assert_select "[data-design-asset-drop-target='status'][aria-live='polite'].hidden", count: 1
     end
     assert_select ".design-request-grid .design-model-field", count: 1
-    assert_select "form[data-controller~='screen-capture'][data-controller~='file-preview']" do
-      assert_select "input[type='file'][data-action~='change->file-preview#update']", count: 1
+    assert_select "form[data-controller~='screen-capture'][data-controller~='file-preview'][data-controller~='image-crop']" do
+      assert_select "input[type='file'][data-action~='change->file-preview#update'][data-action~='change->image-crop#fileChanged']", count: 1
       assert_select "[data-file-preview-target='previewContainer'].hidden img[data-file-preview-target='preview']", count: 1
       assert_select "[data-file-preview-target='filename']", count: 1
+      assert_select "button[data-image-crop-target='adjustButton'].hidden", text: /Adjust image/
+      assert_select "dialog[data-image-crop-target='dialog'] img[data-image-crop-target='image']", count: 1
     end
     assert_select "#add-video-asset-dialog" do
       assert_select "form[data-controller~='file-preview']"

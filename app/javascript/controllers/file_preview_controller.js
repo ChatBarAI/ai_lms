@@ -53,9 +53,8 @@ export default class extends Controller {
       const dt = new DataTransfer()
       dt.items.add(files[0])
       this.inputTarget.files = dt.files
+      this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
     } catch (_) { /* DataTransfer not supported in this browser */ }
-
-    this._processFile(files[0])
   }
 
   // Handle file selected via the native picker

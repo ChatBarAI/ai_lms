@@ -43,7 +43,8 @@
         current_attachment: course.cover_image,
         remove_name: "course[remove_cover_image]",
         remove_label: "Remove current cover image",
-        hint: "Cover image (optional)"
+        hint: "Cover image (optional) — recommended 728 × 320 px",
+        crop_size: [ 728, 320 ]
 
   %div
     = render "shared/tag_picker", f: f, record: course

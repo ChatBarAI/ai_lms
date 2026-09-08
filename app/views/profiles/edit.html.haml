@@ -30,7 +30,8 @@
           label: t(".avatar_upload"),
           accept: "image/png,image/jpeg,image/gif,image/webp",
           current_attachment: (current_user.avatar.attached? ? current_user.avatar : nil),
-          preview_class: "h-24 w-24 rounded-full object-cover border border-gray-200"
+          preview_class: "h-24 w-24 rounded-full object-cover border border-gray-200",
+          crop_size: [ 256, 256 ]
 
     .flex.items-center.gap-3
       = f.submit t(".save"), class: "w-full px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer"
