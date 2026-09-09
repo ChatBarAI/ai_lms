@@ -839,6 +839,34 @@ uses the PostgreSQL 16 client matching the deployed database.
 
 #### Restore locally without Docker
 
+For a native production installation copied with `bin/sync-source`, pull its
+database and uploads directly into your existing development checkout:
+
+```bash
+# Stop Rails and background workers on both machines first.
+NATIVE_WRITES_STOPPED=1 SSH_PORT=22 \
+  bin/pull-production --force bl@example.com /home/bl/ai_lms
+bin/dev
+```
+
+This keeps your code, `Gemfile.lock`, gems, environment files, and Rails keys.
+It downloads a production snapshot over SSH/SCP, backs up existing development
+data, restores locally, and runs your checkout's migrations in development mode.
+Both snapshots are retained in `tmp/production-pulls/`. Restart production
+services once the download completes; the script does not manage services.
+`--force` acknowledges replacing local data. The destination must be local and
+its database name must end in `_development`; unset `DATABASE_URL` for this
+command. Production must have `deploy/export` and `deploy/database_transfer.rb`,
+working Ruby/gems in the SSH shell, and local disk uploads in `storage/`.
+PostgreSQL clients must be compatible with the production server/dump format.
+Stored integration credentials remain, while copied `app_url` and `redis_url`
+are cleared. Run `bin/pull-production --help` for details.
+
+After a successful restore, the script creates or resets `admin@example.com`
+in development, grants it the admin role, and clears any account lockout.
+Set `SEED_ADMIN_PASSWORD` when running the pull to choose its password;
+otherwise the script generates a password and prints it once at completion.
+
 Use a separate checkout of the source release (or a compatible newer release),
 install its gems, and install PostgreSQL client tools compatible with the source
 database (the Docker source uses PostgreSQL 16). These shell scripts require

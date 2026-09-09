@@ -1,6 +1,22 @@
 require "test_helper"
 
 class ProfilesControllerTest < ActionDispatch::IntegrationTest
+  test "profile links to the password change form" do
+    sign_in users(:student)
+
+    get profile_path
+
+    assert_response :success
+    assert_select "a[href=?]", edit_user_registration_path, text: "Change password"
+
+    get edit_user_registration_path
+
+    assert_response :success
+    assert_select 'input[type="password"][name="user[password]"]'
+    assert_select 'input[type="password"][name="user[password_confirmation]"]'
+    assert_select 'input[name="user[current_password]"]', count: 0
+  end
+
   test "updates profile language" do
     user = users(:student)
     sign_in user

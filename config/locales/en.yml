@@ -97,6 +97,7 @@ en:
       language: "Language: %{language}"
       course_languages: "Course languages: %{languages}"
       edit: "Edit profile"
+      change_password: "Change password"
     edit:
       title: "Edit profile"
       heading: "Edit profile"

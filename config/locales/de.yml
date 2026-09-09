@@ -98,6 +98,7 @@ de:
       language: "Sprache: %{language}"
       course_languages: "Kurssprachen: %{languages}"
       edit: "Profil bearbeiten"
+      change_password: "Passwort ändern"
     edit:
       title: "Profil bearbeiten"
       heading: "Profil bearbeiten"

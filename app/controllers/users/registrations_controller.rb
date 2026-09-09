@@ -3,6 +3,16 @@ class Users::RegistrationsController < Devise::RegistrationsController
 
   private
 
+  def update_resource(resource, params)
+    attributes = params.except(:current_password)
+    if attributes[:password].blank?
+      attributes.delete(:password)
+      attributes.delete(:password_confirmation) if attributes[:password_confirmation].blank?
+    end
+
+    resource.update(attributes)
+  end
+
   def ensure_self_service_sign_up_enabled!
     return if SiteSetting.current.self_service_sign_up_enabled?
 

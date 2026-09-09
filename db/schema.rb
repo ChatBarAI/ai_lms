@@ -213,7 +213,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_01_000000) do
     t.index ["created_by_id"], name: "index_material_design_revisions_on_created_by_id"
     t.index ["lesson_material_id", "created_at"], name: "idx_on_lesson_material_id_created_at_651b1cbdce"
     t.index ["lesson_material_id"], name: "index_material_design_revisions_on_lesson_material_id"
-    t.index ["lesson_material_id"], name: "index_one_active_design_revision_per_material", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'generating'::character varying])::text[]))"
+    t.index ["lesson_material_id"], name: "index_one_active_design_revision_per_material", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('generating'::character varying)::text]))"
     t.index ["parent_revision_id"], name: "index_material_design_revisions_on_parent_revision_id"
   end
 

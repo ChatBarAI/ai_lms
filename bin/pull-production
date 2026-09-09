@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+
+usage() {
+  cat <<'USAGE'
+Usage: bin/pull-production --force USER@HOST /ABSOLUTE/REMOTE/APP
+
+Pull a native production database and local ActiveStorage uploads into this
+checkout's development environment, then run its migrations. Code, Gemfile.lock,
+environment files and Rails keys are not copied. No Docker or bundle install.
+
+Stop Rails and background workers on BOTH machines first, then run:
+  NATIVE_WRITES_STOPPED=1 bin/pull-production --force bl@example.com /home/bl/ai_lms
+  SSH_PORT=2222 NATIVE_WRITES_STOPPED=1 bin/pull-production --force bl@example.com /srv/ai_lms
+
+--force acknowledges replacing local development data. A local backup and the
+downloaded production snapshot are retained under tmp/production-pulls/.
+Restart production after the download and local bin/dev after success.
+Services are never stopped or started automatically, including on failure.
+
+Requires SSH/SCP, local PostgreSQL clients, installed local gems, and remote
+deploy/export + deploy/database_transfer.rb (included by bin/sync-source).
+The remote login must have the app's Ruby and production environment available
+in its noninteractive SSH shell. Remote pg_dump and local pg_restore must be
+compatible with the production PostgreSQL version. Uses remote APP/storage.
+Only a local database with a name ending in _development is accepted.
+Copied integration credentials remain; app_url and redis_url are cleared.
+After restoring, admin@example.com is created or reset as an unlocked admin.
+Set SEED_ADMIN_PASSWORD for a repeatable local password; otherwise a generated
+password is printed after the reset. This only changes the local development DB.
+USAGE
+}
+
+if [[ ${1:-} == --help ]]; then usage; exit 0; fi
+[[ $# -eq 3 && $1 == --force ]] || { usage >&2; exit 2; }
+target=$2
+remote_app=$3
+ssh_port=${SSH_PORT:-22}
+[[ $target =~ ^[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+$ ]] || {
+  echo 'Target must have the form USER@HOST.' >&2; exit 2;
+}
+[[ $remote_app =~ ^/[A-Za-z0-9._/-]+$ && $remote_app != / &&
+   ! $remote_app =~ (^|/)\.\.?(/|$) ]] || {
+  echo 'Provide a safe absolute remote application path.' >&2; exit 2;
+}
+[[ $ssh_port =~ ^[0-9]+$ && $ssh_port -ge 1 && $ssh_port -le 65535 ]] || {
+  echo 'SSH_PORT must be between 1 and 65535.' >&2; exit 2;
+}
+[[ ${NATIVE_WRITES_STOPPED:-0} == 1 ]] || {
+  echo 'Stop Rails and background workers on both machines, then set NATIVE_WRITES_STOPPED=1.' >&2
+  exit 1
+}
+for command in ssh scp pg_dump pg_restore; do
+  command -v "$command" >/dev/null || { echo "$command is required." >&2; exit 1; }
+done
+
+app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+cd "$app_root"
+export RAILS_ENV=development DEPLOY_MODE=native
+export STORAGE_PATH="$app_root/storage" PRESERVE_INSTANCE_SETTINGS=0
+# Reject connection overrides before any database operation, including db:create.
+[[ -z ${DATABASE_URL:-} && -z ${PGSERVICE:-} && -z ${PGHOSTADDR:-} ]] || {
+  echo 'Unset DATABASE_URL, PGSERVICE and PGHOSTADDR for this local import.' >&2; exit 1;
+}
+bin/rails runner '
+  c = ActiveRecord::Base.connection_db_config.configuration_hash
+  host = (c[:host] || ENV["PGHOST"]).to_s
+  abort "Destination must be local" unless host.empty? || host.start_with?("/") || %w[localhost 127.0.0.1 ::1].include?(host)
+  abort "Destination must end in _development" unless c.fetch(:database).end_with?("_development")
+  abort "Expected development Rails environment" unless Rails.env.development?
+  puts "Local destination: #{c.fetch(:database)}"
+'
+
+mkdir -p "$app_root/tmp/production-pulls"
+local_stage=$(mktemp -d "$app_root/tmp/production-pulls/pull.XXXXXXXX")
+remote_stage=
+downloaded=false
+ssh_args=(-p "$ssh_port" -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
+scp_args=(-P "$ssh_port")
+cleanup() {
+  status=$?
+  if [[ $remote_stage =~ ^/tmp/ai_lms-pull\.[A-Za-z0-9]+$ ]]; then
+    if $downloaded; then
+      ssh "${ssh_args[@]}" "$target" "rm -f '$remote_stage/production.tar.gz'; rmdir '$remote_stage'" || true
+    else
+      echo "Remote snapshot staging retained: $target:$remote_stage" >&2
+    fi
+  fi
+  echo "Local snapshots retained at: $local_stage"
+  echo 'Remember to restart the production services.'
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+remote_stage=$(ssh "${ssh_args[@]}" "$target" 'umask 077; mktemp -d /tmp/ai_lms-pull.XXXXXXXX')
+[[ $remote_stage =~ ^/tmp/ai_lms-pull\.[A-Za-z0-9]+$ ]] || {
+  echo 'Server returned an unsafe staging path.' >&2; exit 1;
+}
+echo 'Creating production database and uploads snapshot...'
+ssh "${ssh_args[@]}" "$target" \
+  "cd '$remote_app' && DEPLOY_MODE=native RAILS_ENV=production NATIVE_WRITES_STOPPED=1 STORAGE_PATH='$remote_app/storage' bash deploy/export '$remote_stage/production.tar.gz'"
+scp "${scp_args[@]}" "$target:$remote_stage/production.tar.gz" "$local_stage/production.tar.gz.part"
+mv "$local_stage/production.tar.gz.part" "$local_stage/production.tar.gz"
+downloaded=true
+echo 'Production snapshot downloaded. You can restart production services now.'
+
+bin/rails db:create
+mkdir -p "$STORAGE_PATH"
+echo 'Backing up the existing development database and uploads...'
+bash deploy/export "$local_stage/development-before.tar.gz"
+echo 'Restoring into development and running local migrations...'
+bash deploy/restore --force "$local_stage/production.tar.gz"
+echo 'Creating or resetting the local development admin...'
+bin/rails runner '
+  abort "Expected development Rails environment" unless Rails.env.development?
+  password = ENV["SEED_ADMIN_PASSWORD"].presence || SecureRandom.base58(20)
+  admin = User.find_or_initialize_by(email: "admin@example.com")
+  admin.name = "Admin" if admin.name.blank?
+  admin.assign_attributes(
+    role: :admin, password: password, password_confirmation: password,
+    failed_attempts: 0, locked_at: nil, unlock_token: nil,
+    reset_password_token: nil, reset_password_sent_at: nil,
+    remember_created_at: nil
+  )
+  admin.save!
+  puts "Local admin: admin@example.com"
+  puts ENV["SEED_ADMIN_PASSWORD"].present? ? "Password: supplied via SEED_ADMIN_PASSWORD" : "Generated password: #{password}"
+'
+echo 'Complete. Start the development app with bin/dev.'
