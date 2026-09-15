@@ -72,6 +72,8 @@
 
       .space-y-5
         %div
+          -# HELP: Branding logo upload
+          -# Upload PNG, JPG, SVG, or WebP (max 2 MB). Shown in the top navigation. SVG is preferred for sharp scaling.
           = upload_field f, :logo,
               label: "Upload logo (PNG, JPG, SVG or WebP, max 2 MB)",
               accept: "image/png,image/jpeg,image/svg+xml,image/webp",
