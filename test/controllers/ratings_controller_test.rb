@@ -26,8 +26,33 @@ class RatingsControllerTest < ActionDispatch::IntegrationTest
   test "student can update their own rating" do
     sign_in users(:student)
     patch course_lesson_rating_path(courses(:algebra), lessons(:intro), ratings(:student_intro_rating)),
-          params: { rating: { stars: 3 } }
+          params: { rating: { stars: 3, comment: "Updated feedback" } }
+    assert_redirected_to course_lesson_path(courses(:algebra), lessons(:intro))
     assert_equal 3, ratings(:student_intro_rating).reload.stars
+    assert_equal "Updated feedback", ratings(:student_intro_rating).comment
+  end
+
+  test "existing rating renders separate update and remove forms" do
+    progresses(:student_intro).update!(status: :completed)
+    sign_in users(:student)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    rating_path = course_lesson_rating_path(courses(:algebra), lessons(:intro), ratings(:student_intro_rating))
+    assert_select "form[action=?]", rating_path, count: 2 do |forms|
+      update_form = forms.find { |form| form.at_css("input[name='_method'][value='patch']") }
+      assert update_form, "Expected a form for updating the rating"
+      assert_select update_form, "input[name='_method']", count: 1
+      assert_select update_form, "select[name='rating[stars]']", count: 1
+      assert_select update_form, "textarea[name='rating[comment]']", count: 1
+      assert_select update_form, "input[type='submit'][value='Update rating']", count: 1
+
+      remove_form = forms.find { |form| form.at_css("input[name='_method'][value='delete']") }
+      assert remove_form, "Expected a separate form for removing the rating"
+      assert_empty remove_form.ancestors("form")
+      assert_select remove_form, "button[type='submit']", text: "Remove rating"
+    end
   end
 
   test "create is blocked when lesson ratings are disabled" do
