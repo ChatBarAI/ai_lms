@@ -53,9 +53,8 @@ export default class extends Controller {
       const dt = new DataTransfer()
       dt.items.add(files[0])
       this.inputTarget.files = dt.files
+      this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
     } catch (_) { /* DataTransfer not supported in this browser */ }
-
-    this._processFile(files[0])
   }
 
   // Handle file selected via the native picker
@@ -78,6 +77,7 @@ export default class extends Controller {
     // Swap placeholder ↔ preview inside the drop zone
     if (this.hasPlaceholderTarget) this.placeholderTarget.classList.add("hidden")
     this.previewContainerTarget.classList.remove("hidden")
+    this._markDropzoneFilled(true)
 
     if (this.typeValue === "image") {
       const reader = new FileReader()
@@ -89,5 +89,12 @@ export default class extends Controller {
     } else {
       if (this.hasFilenameTarget) this.filenameTarget.textContent = file.name
     }
+  }
+
+  _markDropzoneFilled(filled) {
+    if (!this.hasDropzoneTarget) return
+    this.dropzoneTarget.classList.toggle("border-indigo-400", filled)
+    this.dropzoneTarget.classList.toggle("bg-indigo-50/30", filled)
+    this.dropzoneTarget.classList.toggle("border-gray-300", !filled)
   }
 }

@@ -50,11 +50,12 @@
             .mb-3.bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
               = f.object.errors.where(:poster_image).map(&:full_message).join(", ")
           = upload_field f, :poster_image,
-              hint: "Poster image (optional)",
+              hint: "Poster image (optional) — recommended 1280 × 720 px",
               label: "PNG, JPEG, WEBP or GIF — max 5 MB",
               accept: "image/png,image/jpeg,image/webp,image/gif",
               current_attachment: @lesson.poster_image,
-              preview_class: "max-w-xs rounded border border-gray-200"
+              preview_class: "max-w-xs rounded border border-gray-200",
+              crop_size: [ 1280, 720 ]
           .flex.items-center.gap-2.mt-3
             = f.submit (@lesson.poster_image.attached? ? "Replace poster" : "Upload poster"), class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-sm"
             - if @lesson.poster_image.attached?

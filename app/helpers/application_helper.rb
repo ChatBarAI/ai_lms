@@ -61,6 +61,8 @@ module ApplicationHelper
   #   remove_label:        Label text for the remove checkbox.
   #   preview_class:       CSS classes for the current and preview <img> elements.
   #   required:            Whether the file input is required.
+  #   crop_size:           Optional [width, height] from the LMS image sizes guide. Enables
+  #                        Cropper.js zoom/crop for raster images; omit for free-aspect crop.
   def upload_field(f, attribute, label:, accept:,
                    hint: nil,
                    preview_type: :image,
@@ -71,9 +73,11 @@ module ApplicationHelper
                    remove_label: "Remove current file",
                    remove_actions: nil,
                    preview_class: "h-24 w-auto rounded border border-gray-200 object-cover",
-                   required: false)
+                   required: false,
+                   crop_size: nil)
     parts = []
     has_current_attachment = current_attachment&.attached?
+    croppable = preview_type == :image
 
     initial_preview_src = nil
     initial_filename = nil
@@ -91,6 +95,12 @@ module ApplicationHelper
     end
 
     show_initial_preview = initial_preview_src.present? || initial_filename.present?
+    crop_source_url = croppable && has_current_attachment && !current_attachment.content_type.to_s.include?("svg") ? initial_preview_src : nil
+
+    input_actions = [ "change->file-preview#update" ]
+    input_actions << "change->image-crop#fileChanged" if croppable
+    input_data = { "file-preview-target": "input", action: input_actions.join(" ") }
+    input_data["image-crop-target"] = "input" if croppable
 
     # ── Hidden native file input (screen-reader accessible; JS triggers .click()) ──
     parts << content_tag(:p, hint, class: "text-sm font-medium mb-2") if hint.present?
@@ -99,16 +109,14 @@ module ApplicationHelper
                           accept: accept,
                           required: required,
                           class: "sr-only",
-                          data: {
-                            "file-preview-target": "input",
-                            action: "change->file-preview#update"
-                          })
+                          data: input_data)
 
     # ── Styled drop zone (contains placeholder ↔ preview) ──────────────────
+    # Layout matches Brod's PR #49 mock: preview + Adjust/Replace inside dashed box.
     parts << content_tag(:div,
       class: [
-        "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
-        "border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/40",
+        "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+        show_initial_preview ? "border-indigo-400 bg-indigo-50/30" : "border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/40",
         "dark:border-gray-600 dark:hover:border-indigo-400 dark:hover:bg-indigo-950/20",
         "data-[dragging]:border-indigo-500 data-[dragging]:bg-indigo-50/60",
         "dark:data-[dragging]:bg-indigo-950/30"
@@ -130,40 +138,61 @@ module ApplicationHelper
         safe_join([
           # ── Placeholder (shown when no file is selected) ──────────────────
           content_tag(:div, class: [ "py-4", ("hidden" if show_initial_preview) ].compact.join(" "), data: { "file-preview-target": "placeholder" }) do
-            upload_field_icon
+            safe_join([
+              upload_field_icon,
+              content_tag(:p, class: "mt-3 text-sm text-gray-700 dark:text-gray-300 pointer-events-none") {
+                safe_join([
+                  content_tag(:span, "Browse files", class: "font-semibold text-indigo-600 dark:text-indigo-400"),
+                  " or drag and drop"
+                ])
+              },
+              content_tag(:p, label, class: "mt-1 text-xs text-gray-400 dark:text-gray-500 pointer-events-none")
+            ])
           end,
 
-          # ── Selection preview (hidden until a file is picked or dropped) ───
+          # ── Selection / current preview ───────────────────────────────────
           content_tag(:div, class: [ ("hidden" unless show_initial_preview) ].compact.join(" "), data: { "file-preview-target": "previewContainer" }) do
             nodes = []
             if preview_type == :image
-              nodes << content_tag(:div,
-                                   class: "mx-auto w-fit rounded-lg border border-gray-200 bg-gradient-to-br from-slate-50 via-white to-indigo-50 p-2 shadow-sm dark:border-gray-600 dark:from-gray-700 dark:via-gray-800 dark:to-indigo-950/40") do
-                image_tag(initial_preview_src.to_s, alt: "Preview",
-                          class: "max-h-24 max-w-full mx-auto rounded object-contain pointer-events-none",
-                          data: { "file-preview-target": "preview" })
-              end
+              preview_data = { "file-preview-target": "preview" }
+              preview_data["image-crop-target"] = "preview" if croppable
+              nodes << image_tag(initial_preview_src.to_s, alt: "Preview",
+                        class: "max-h-28 max-w-full mx-auto rounded object-contain pointer-events-none",
+                        data: preview_data)
             end
             nodes << content_tag(:p, initial_filename.to_s, class: "text-xs text-gray-600 dark:text-gray-400 mt-2 font-mono pointer-events-none",
                                          data: { "file-preview-target": "filename" })
-            safe_join(nodes)
-          end,
 
-          # ── Persistent helper text (always visible) ───────────────────────
-          content_tag(:div, class: "mt-3 pointer-events-none") do
-            safe_join([
-              content_tag(:p, class: "text-sm text-gray-700 dark:text-gray-300") {
+            if croppable
+              nodes << content_tag(:div, class: "mt-3 flex flex-wrap items-center justify-center gap-2") do
                 safe_join([
-                  content_tag(:span, "Browse files", class: "font-semibold text-indigo-600 dark:text-indigo-400"),
-                  "  or drag and drop"
+                  tag.button("Adjust image",
+                             type: "button",
+                             class: "hidden inline-flex items-center rounded border border-indigo-300 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50",
+                             data: { "image-crop-target": "adjustButton", action: "click->image-crop#open:stop" }),
+                  tag.button("Replace image",
+                             type: "button",
+                             class: "inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50",
+                             data: { action: "click->file-preview#openPicker:stop" })
                 ])
-              },
-              content_tag(:p, label, class: "mt-1 text-xs text-gray-400 dark:text-gray-500"),
-              content_tag(:p, "Click or drag to replace", class: "mt-1 text-xs text-gray-400")
-            ])
+              end
+            else
+              nodes << content_tag(:div, class: "mt-3") do
+                tag.button("Replace file",
+                           type: "button",
+                           class: "inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50",
+                           data: { action: "click->file-preview#openPicker:stop" })
+              end
+            end
+
+            nodes << content_tag(:p, "or drag and drop to replace", class: "mt-2 text-xs text-gray-500 pointer-events-none")
+            nodes << content_tag(:p, label, class: "mt-1 text-xs text-gray-400 dark:text-gray-500 pointer-events-none")
+            safe_join(nodes)
           end
         ])
     end
+
+    parts << image_crop_dialog if croppable
 
     # ── Remove checkbox ─────────────────────────────────────────────────────
     if remove_name.present? && has_current_attachment
@@ -182,12 +211,17 @@ module ApplicationHelper
                            class: "mt-2 flex flex-wrap items-center gap-3")
     end
 
-    content_tag(:div,
-                safe_join(parts),
-                data: {
-                  controller: "file-preview",
-                  "file-preview-type-value": preview_type.to_s
-                })
+    wrapper_data = {
+      controller: croppable ? "file-preview image-crop" : "file-preview",
+      "file-preview-type-value": preview_type.to_s
+    }
+    if croppable && crop_size.is_a?(Array) && crop_size.size == 2
+      wrapper_data["image-crop-width-value"] = crop_size[0]
+      wrapper_data["image-crop-height-value"] = crop_size[1]
+    end
+    wrapper_data["image-crop-source-url-value"] = crop_source_url if crop_source_url.present?
+
+    content_tag(:div, safe_join(parts), data: wrapper_data)
   end
 
   # Renders a SiteSetting hero_content field, returning nil when blank.
@@ -219,6 +253,49 @@ module ApplicationHelper
   end
 
   private
+
+  # Cropper.js dialog for image upload_field wrappers (Adjust button lives in the drop zone).
+  def image_crop_dialog
+    tag.dialog(
+      class: "m-0 h-dvh w-screen max-w-none max-h-none border-0 bg-slate-950 p-0 text-white backdrop:bg-black/70",
+      aria: { label: "Adjust image" },
+      data: { "image-crop-target": "dialog", action: "cancel->image-crop#cancel" }
+    ) do
+      content_tag(:div, class: "flex h-full min-h-0 flex-col") do
+        safe_join([
+          content_tag(:div, class: "flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-700 bg-slate-900 px-4 py-3") do
+            safe_join([
+              content_tag(:div) do
+                safe_join([
+                  content_tag(:h2, "Adjust image", class: "text-base font-semibold"),
+                  content_tag(:p, "Zoom and crop, then use the selected area.", class: "text-xs text-slate-300")
+                ])
+              end,
+              content_tag(:div, class: "flex flex-wrap items-center gap-2") do
+                safe_join([
+                  tag.button("Cancel", type: "button",
+                             class: "rounded border border-slate-500 bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700",
+                             data: { action: "image-crop#cancel" }),
+                  tag.button("Use cropped image", type: "button",
+                             class: "rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500",
+                             data: { action: "image-crop#use" })
+                ])
+              end
+            ])
+          end,
+          content_tag(:div, class: "flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4") do
+            tag.img(alt: "Image to crop",
+                    class: "block max-h-full max-w-full",
+                    data: { "image-crop-target": "image" })
+          end,
+          content_tag(:p, "",
+                      role: "status",
+                      class: "shrink-0 px-4 pb-3 text-xs text-gray-500",
+                      data: { "image-crop-target": "status" })
+        ])
+      end
+    end
+  end
 
   def upload_field_icon
     # cloud-arrow-up (Heroicons outline)

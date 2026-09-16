@@ -46,8 +46,9 @@
               default_image_note: "(built-in default)",
               remove_name: "site_setting[remove_default_meta_card_image]",
               remove_label: "Remove and revert to built-in default",
-              hint: "Default card image (optional)",
-              preview_class: "h-20 w-auto rounded border border-gray-200 object-cover"
+              hint: "Default card image (optional) — recommended 728 × 320 px",
+              preview_class: "h-20 w-auto rounded border border-gray-200 object-cover",
+              crop_size: [ 728, 320 ]
 
         %div
           = upload_field f, :pwa_screenshot_mobile,
@@ -56,8 +57,9 @@
               current_attachment: @site_setting.pwa_screenshot_mobile,
               remove_name: "site_setting[remove_pwa_screenshot_mobile]",
               remove_label: "Remove current mobile install preview",
-              hint: "Manifest screenshot (mobile, narrow)",
-              preview_class: "h-24 w-auto rounded border border-gray-200 object-contain"
+              hint: "Manifest screenshot (mobile) — recommended 1080 × 1920 px",
+              preview_class: "h-24 w-auto rounded border border-gray-200 object-contain",
+              crop_size: [ 1080, 1920 ]
 
         %div
           = upload_field f, :pwa_screenshot_desktop,
@@ -66,8 +68,9 @@
               current_attachment: @site_setting.pwa_screenshot_desktop,
               remove_name: "site_setting[remove_pwa_screenshot_desktop]",
               remove_label: "Remove current desktop install preview",
-              hint: "Manifest screenshot (desktop, wide)",
-              preview_class: "h-24 w-auto rounded border border-gray-200 object-contain"
+              hint: "Manifest screenshot (desktop) — recommended 1920 × 1080 px",
+              preview_class: "h-24 w-auto rounded border border-gray-200 object-contain",
+              crop_size: [ 1920, 1080 ]
 
 
       .space-y-5
@@ -91,7 +94,8 @@
               default_image_note: "(default ChatBar AI favicon)",
               remove_name: "site_setting[remove_favicon]",
               remove_label: "Remove current favicon and revert to default",
-              preview_class: "h-8 w-8 bg-gray-100 rounded p-1 border border-gray-200"
+              preview_class: "h-8 w-8 bg-gray-100 rounded p-1 border border-gray-200",
+              crop_size: [ 512, 512 ]
 
         .rounded-lg.border.border-gray-200.p-4{ style: "background-color: color-mix(in srgb, var(--card-bg) 92%, #ffffff 8%);" }
           %h3.text-sm.font-semibold.text-gray-900 PWA icon preview
