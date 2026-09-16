@@ -22,6 +22,7 @@ class LessonMaterial < ApplicationRecord
   has_one_attached :audio_file
   has_one_attached :image_file
   has_one_attached :video_file
+  has_one_attached :poster_image
   has_many_attached :imported_assets
 
   attr_accessor :google_doc_zip
@@ -124,6 +125,7 @@ class LessonMaterial < ApplicationRecord
   validates :position, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :chatbar_token, presence: true, if: :chatbar?
   validates :chatbar_prompt, length: { maximum: 1500 }, allow_blank: true
+  validates :chatbar_layout, inclusion: { in: %w[stacked columns] }
   validate :content_matches_kind
   validates :document, content_type: "application/pdf",
                        size: { less_than: 25.megabytes },
@@ -140,6 +142,10 @@ class LessonMaterial < ApplicationRecord
             content_type: VIDEO_CONTENT_TYPES,
             size: { less_than: 100.megabytes },
             if: -> { video_file.attached? }
+  validates :poster_image,
+            content_type: IMAGE_CONTENT_TYPES,
+            size: { less_than: 5.megabytes },
+            if: -> { poster_image.attached? }
 
   before_validation :assign_position, on: :create
   before_validation :sanitize_raw_html

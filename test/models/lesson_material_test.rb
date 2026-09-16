@@ -69,6 +69,37 @@ class LessonMaterialTest < ActiveSupport::TestCase
     assert material.valid?
   end
 
+  test "conversation layout defaults to stacked and accepts only supported layouts" do
+    material = LessonMaterial.new(lesson: @lesson, title: "Text", kind: :html, body: "Read me")
+    assert_equal "stacked", material.chatbar_layout
+    material.chatbar_layout = "columns"
+    assert material.valid?
+    material.chatbar_layout = "unknown"
+    assert_not material.valid?
+    assert material.errors[:chatbar_layout].any?
+  end
+
+  test "ChatBar poster rejects non-images and oversized images" do
+    material = LessonMaterial.new(
+      lesson: @lesson, title: "Role play", kind: :chatbar,
+      chatbar_token: "role-play", chatbar_prompt: "Begin the interview"
+    )
+    material.poster_image = Rack::Test::UploadedFile.new(
+      Rails.root.join("test/fixtures/files/clip.mp4"), "video/mp4", true
+    )
+    assert_not material.valid?
+    assert material.errors[:poster_image].any?
+
+    material.poster_image = Rack::Test::UploadedFile.new(
+      Rails.root.join("test/fixtures/files/poster.png"), "image/png"
+    )
+    assert material.valid?, material.errors.full_messages.to_sentence
+
+    material.poster_image.blob.byte_size = 5.megabytes
+    assert_not material.valid?
+    assert material.errors[:poster_image].any?
+  end
+
   test "google doc material requires imported content" do
     material = LessonMaterial.new(lesson: @lesson, title: "Imported", kind: :google_doc)
 

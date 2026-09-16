@@ -194,7 +194,13 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip, :chatbar_token, :chatbar_prompt)
+    attributes = params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip, :chatbar_token, :chatbar_prompt, :chatbar_layout, :poster_image, :remove_poster_image)
+    remove_poster = ActiveModel::Type::Boolean.new.cast(attributes.delete(:remove_poster_image))
+    # An empty file input means keep the poster; Active Storage treats "" as removal.
+    attributes.delete(:poster_image) if attributes[:poster_image].blank?
+    # Apply removal on save so a failed validation keeps the existing poster.
+    attributes[:poster_image] = nil if remove_poster && !attributes.key?(:poster_image)
+    attributes
   end
 
   def starting_ai_design?

@@ -114,6 +114,20 @@
       = f.label :chatbar_prompt, "Conversation starting prompt", class: "block text-sm font-medium mb-1"
       = f.text_area :chatbar_prompt, rows: 6, maxlength: 1500, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "Ask the learner a question or begin a guided conversation about this lesson…"
       %p.text-xs.text-gray-500.mt-1 This prompt is stored directly on the material and sent to the selected ChatBar when the learner starts the conversation. Maximum 1,500 characters.
+      .mt-4
+        = f.label :chatbar_layout, "Conversation layout", class: "block text-sm font-medium mb-1"
+        = f.select :chatbar_layout, [["Standard", "stacked"], ["Two columns — text left, conversation right", "columns"]], {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+        %p.text-xs.text-gray-500.mt-1 Two columns places the material description beside the poster and start button. On small screens, the text appears above the conversation.
+      .mt-4
+        = upload_field f, :poster_image,
+            hint: "Conversation poster (optional)",
+            label: "PNG, JPEG, WEBP or GIF — max 5 MB",
+            accept: LessonMaterial::IMAGE_CONTENT_TYPES.join(","),
+            current_attachment: (material.poster_image if material.poster_image.blob&.persisted?),
+            remove_name: "lesson_material[remove_poster_image]",
+            remove_label: "Remove poster",
+            crop_size: [ 1280, 720 ]
+        %p.text-xs.text-gray-500.mt-1 The Start conversation button appears over this image. Use Adjust image to crop to 1280 × 720 (16:9) for the interactive video session.
 
     - unless material.persisted?
       .fixed.inset-0.z-50.hidden{ id: "copy-material-dialog", data: { controller: "dialog", dialog_open_value: "false", material_kind_target: "copy" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "copy-material-dialog-title", "aria-hidden": "true" }

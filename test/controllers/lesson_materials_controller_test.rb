@@ -53,7 +53,126 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#cbai_launcher_#{@lesson.id}", count: 0
     assert_select "#material-#{material.id} [data-controller='chatbar-material'][data-chatbar-material-token-value=?][data-chatbar-material-prompt-value=?]", material.chatbar_token, material.chatbar_prompt
     assert_select "button[data-action='click->chatbar-material#start']", text: /Start conversation/
+    assert_select "[data-chatbar-material-target='intro'] .aspect-video", count: 0
     assert_select "#material-#{material.id} .hidden[data-chatbar-material-target='mount']", count: 1
+  end
+
+  test "ChatBar poster contains the start button on the material and lesson pages" do
+    material = create_chatbar_with_poster
+
+    [ course_lesson_lesson_material_path(@course, @lesson, material), course_lesson_path(@course, @lesson) ].each do |path|
+      get path
+
+      assert_response :success
+      assert_select "#material-#{material.id} [data-chatbar-material-target='intro'] .relative.aspect-video" do
+        assert_select "img.object-cover[src=?]", rails_blob_url(material.poster_image)
+        assert_select ".absolute.inset-0 button[data-chatbar-material-target='startButton']", text: /Start conversation/, count: 1
+      end
+    end
+  end
+
+  test "instructor selects columns with description first and poster second" do
+    material = create_chatbar_with_poster
+    sign_in users(:instructor)
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material), params: {
+      lesson_material: { chatbar_layout: "columns", body: "Prepare for the interview" }
+    }
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal "columns", material.reload.chatbar_layout
+
+    get edit_course_lesson_lesson_material_path(@course, @lesson, material)
+    assert_select "select[name='lesson_material[chatbar_layout]'] option[value='columns'][selected]"
+
+    [ course_lesson_lesson_material_path(@course, @lesson, material), course_lesson_path(@course, @lesson) ].each do |path|
+      get path
+      assert_response :success
+      assert_select "#material-#{material.id} [data-chatbar-material-target='intro'].grid.grid-cols-1[class~='md:grid-cols-2']" do
+        assert_select "> div:first-child", text: /Prepare for the interview/
+        assert_select "> div:nth-child(2).aspect-video" do
+          assert_select "img.object-cover"
+          assert_select "button[data-chatbar-material-target='startButton']", text: /Start conversation/
+        end
+      end
+    end
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material),
+          params: { lesson_material: { chatbar_layout: "stacked" } }
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    get course_lesson_lesson_material_path(@course, @lesson, material)
+    assert_select "[data-chatbar-material-target='intro'].space-y-4"
+  end
+
+  test "instructor can upload and replace a ChatBar poster" do
+    sign_in users(:instructor)
+    post course_lesson_lesson_materials_path(@course, @lesson), params: {
+      lesson_material: { title: "Role play", kind: "chatbar", chatbar_token: "role-play",
+                         chatbar_prompt: "Begin the interview", poster_image: poster_upload }
+    }
+
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    material = @lesson.lesson_materials.order(:id).last
+    assert material.poster_image.attached?
+    original_blob_id = material.poster_image.blob_id
+
+    get edit_course_lesson_lesson_material_path(@course, @lesson, material)
+    assert_response :success
+    assert_select "input[type='file'][name='lesson_material[poster_image]']"
+    assert_select "input[type='checkbox'][name='lesson_material[remove_poster_image]']"
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material), params: {
+      lesson_material: { poster_image: poster_upload, remove_poster_image: "1" }
+    }
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_not_equal original_blob_id, material.reload.poster_image.blob_id
+  end
+
+  test "poster is retained on normal edits and failed removal then removed on a valid save" do
+    material = create_chatbar_with_poster
+    original_blob_id = material.poster_image.blob_id
+    sign_in users(:instructor)
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material),
+          params: { lesson_material: { title: "Updated role play", poster_image: "" } }
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal original_blob_id, material.reload.poster_image.blob_id
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material),
+          params: { lesson_material: { title: "", remove_poster_image: "1" } }
+    assert_response :unprocessable_entity
+    assert_equal original_blob_id, material.reload.poster_image.blob_id
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material),
+          params: { lesson_material: { remove_poster_image: "1" } }
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_not material.reload.poster_image.attached?
+  end
+
+  test "invalid poster upload renders errors and preserves the saved poster" do
+    material = create_chatbar_with_poster
+    original_blob_id = material.poster_image.blob_id
+    sign_in users(:instructor)
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material), params: {
+      lesson_material: { poster_image: Rack::Test::UploadedFile.new(
+        Rails.root.join("test/fixtures/files/clip.mp4"), "video/mp4", true
+      ) }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "li", text: /Poster image/
+    assert_equal original_blob_id, material.reload.poster_image.blob_id
+  end
+
+  test "another instructor cannot remove a ChatBar poster" do
+    material = create_chatbar_with_poster
+    sign_in users(:other_instructor)
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material),
+          params: { lesson_material: { remove_poster_image: "1" } }
+
+    assert_redirected_to root_path
+    assert material.reload.poster_image.attached?
   end
 
   test "guest can view a published Google document with restrictive headers" do
@@ -601,5 +720,18 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to course_lesson_path(@course, @lesson)
     follow_redirect!
     assert_match "Complete the required materials", flash[:alert].to_s + @response.body
+  end
+
+  private
+
+  def poster_upload
+    Rack::Test::UploadedFile.new(Rails.root.join("test/fixtures/files/poster.png"), "image/png")
+  end
+
+  def create_chatbar_with_poster
+    @lesson.lesson_materials.create!(
+      title: "Role play", kind: :chatbar, chatbar_token: "role-play",
+      chatbar_prompt: "Begin the interview", poster_image: poster_upload
+    )
   end
 end

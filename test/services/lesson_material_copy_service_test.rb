@@ -96,11 +96,15 @@ class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
     assert_empty copy.material_design_revisions
   end
 
-  test "copies a ChatBar prompt as material data" do
+  test "copies a ChatBar prompt and an independent poster" do
     source = LessonMaterial.create!(
       lesson: lessons(:intro), title: "Discussion", kind: :chatbar,
       chatbar_token: "discussion-chatbar",
-      chatbar_prompt: "Compare these two approaches"
+      chatbar_prompt: "Compare these two approaches",
+      chatbar_layout: "columns",
+      poster_image: Rack::Test::UploadedFile.new(
+        Rails.root.join("test/fixtures/files/poster.png"), "image/png"
+      )
     )
 
     copy = copy_material(source)
@@ -108,6 +112,10 @@ class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
     assert copy.chatbar?
     assert_equal source.chatbar_token, copy.chatbar_token
     assert_equal source.chatbar_prompt, copy.chatbar_prompt
+    assert_equal "columns", copy.chatbar_layout
+    assert copy.poster_image.attached?
+    assert_not_equal source.poster_image.blob_id, copy.poster_image.blob_id
+    assert_equal source.poster_image.download, copy.poster_image.download
   end
 
   private

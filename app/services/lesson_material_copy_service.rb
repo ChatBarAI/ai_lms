@@ -1,7 +1,7 @@
 class LessonMaterialCopyService
   class CopyError < StandardError; end
 
-  DIRECT_ATTACHMENTS = %i[document audio_file image_file video_file].freeze
+  DIRECT_ATTACHMENTS = %i[document audio_file image_file video_file poster_image].freeze
 
   def initialize(source:, destination_lesson:, copied_by:, copy_settings: true)
     @source = source
@@ -43,6 +43,7 @@ class LessonMaterialCopyService
       url: source.url,
       chatbar_token: source.chatbar_token,
       chatbar_prompt: source.chatbar_prompt,
+      chatbar_layout: source.chatbar_layout,
       required: copy_settings ? source.required : true,
       open_by_default: copy_settings ? source.open_by_default : false,
       source_material: source,

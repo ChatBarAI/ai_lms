@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_01_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -152,6 +152,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_01_000000) do
     t.bigint "copied_by_id"
     t.string "chatbar_token"
     t.text "chatbar_prompt"
+    t.string "chatbar_layout", default: "stacked", null: false
     t.index ["copied_by_id"], name: "index_lesson_materials_on_copied_by_id"
     t.index ["lesson_id", "position"], name: "index_lesson_materials_on_lesson_id_and_position"
     t.index ["lesson_id"], name: "index_lesson_materials_on_lesson_id"
