@@ -21,8 +21,30 @@ class ApplicationHelperUploadFieldTest < ActionView::TestCase
     assert_includes html, 'data-image-crop-height-value="320"'
     assert_includes html, 'data-image-crop-target="adjustButton"'
     assert_includes html, "Adjust image"
+    assert_includes html, "Replace image"
+    assert_includes html, "or drag and drop to replace"
     assert_match(/<dialog[^>]*data-image-crop-target="dialog"/, html)
     assert_includes html, 'change-&gt;image-crop#fileChanged'
+  end
+
+  test "image upload_field with current attachment exposes crop source url" do
+    @course.cover_image.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/poster.png")),
+      filename: "poster.png",
+      content_type: "image/png"
+    )
+
+    html = form_with(model: @course, url: "/courses") do |f|
+      upload_field f, :cover_image,
+                   label: "Upload cover",
+                   accept: "image/png",
+                   current_attachment: @course.cover_image,
+                   crop_size: [ 728, 320 ]
+    end
+
+    assert_includes html, "data-image-crop-source-url-value="
+    assert_includes html, "Adjust image"
+    assert_includes html, "Replace image"
   end
 
   test "image upload_field without crop_size still enables free crop" do

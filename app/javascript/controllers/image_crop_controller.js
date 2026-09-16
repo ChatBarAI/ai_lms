@@ -5,10 +5,11 @@ import Cropper from "cropperjs"
 // Compose with file-preview on the same wrapper:
 //   data-controller="file-preview image-crop"
 //   data-image-crop-width-value / height-value — guide pixel size (omit for free crop)
+//   data-image-crop-source-url-value — existing attachment URL (edit forms)
 
 export default class extends Controller {
-  static targets = ["input", "adjustButton", "dialog", "image", "status"]
-  static values = { width: Number, height: Number }
+  static targets = ["input", "adjustButton", "dialog", "image", "status", "preview"]
+  static values = { width: Number, height: Number, sourceUrl: String }
 
   connect() {
     this.syncAdjustButton()
@@ -22,20 +23,34 @@ export default class extends Controller {
     this.syncAdjustButton()
   }
 
-  open(event) {
+  async open(event) {
     event?.preventDefault()
-    const file = this.selectedFile()
-    if (!file) return
-
+    event?.stopPropagation?.()
     this.teardown()
-    this.objectUrl = URL.createObjectURL(file)
-    this.imageTarget.src = this.objectUrl
-    this.clearStatus()
-
+    this.setStatus("Loading image…")
     if (!this.dialogTarget.open) this.dialogTarget.showModal()
 
-    this.imageTarget.onload = () => {
-      this.cropper = new Cropper(this.imageTarget, this.cropperOptions())
+    const request = new AbortController()
+    this.sourceRequest = request
+
+    try {
+      const file = await this.loadSourceFile(request.signal)
+      if (request.signal.aborted) return
+
+      this.cropFile = file
+      this.objectUrl = URL.createObjectURL(file)
+      const image = this.imageTarget
+      image.src = this.objectUrl
+      await image.decode()
+      if (request.signal.aborted) return
+
+      this.cropper = new Cropper(image, this.cropperOptions())
+      this.clearStatus()
+    } catch (_error) {
+      // A previous operation must not clear a newer dialog's state or status.
+      if (request.signal.aborted || this.sourceRequest !== request) return
+      this.teardown()
+      this.setStatus("Could not load this image. Please select the file again.", true)
     }
   }
 
@@ -43,8 +58,11 @@ export default class extends Controller {
     event?.preventDefault()
     if (!this.cropper) return
 
-    const file = this.selectedFile()
-    if (!file) return
+    const file = this.cropFile || this.selectedFile()
+    if (!file) {
+      this.setStatus("Could not create cropped image.", true)
+      return
+    }
 
     const mime = this.outputMime(file.type)
     const canvas = this.cropper.getCroppedCanvas(this.canvasOptions())
@@ -69,11 +87,54 @@ export default class extends Controller {
   }
 
   close() {
+    if (this.sourceRequest) {
+      this.sourceRequest.abort()
+      this.sourceRequest = null
+    }
     this.teardown()
     if (this.hasDialogTarget && this.dialogTarget.open) this.dialogTarget.close()
   }
 
   // ── Private ─────────────────────────────────────────────────────────────
+
+  async loadSourceFile(signal) {
+    const selected = this.selectedFile()
+    if (selected) return selected
+
+    const url = this.resolveSourceUrl()
+    if (!url) throw new Error("no image source")
+
+    const response = await fetch(url, { signal, credentials: "same-origin" })
+    if (!response.ok) throw new Error(`fetch ${response.status}`)
+
+    const blob = await response.blob()
+    if (signal?.aborted) throw new Error("aborted")
+    if (!blob.type.startsWith("image/") || blob.type === "image/svg+xml") {
+      throw new Error("not a croppable image")
+    }
+
+    const name = this.filenameFromUrl(url) || "image.png"
+    return new File([ blob ], name, { type: blob.type || "image/png" })
+  }
+
+  resolveSourceUrl() {
+    if (this.hasSourceUrlValue && this.sourceUrlValue) return this.sourceUrlValue
+    if (this.hasPreviewTarget) {
+      const src = this.previewTarget.currentSrc || this.previewTarget.src
+      if (src) return src
+    }
+    return null
+  }
+
+  filenameFromUrl(url) {
+    try {
+      const path = new URL(url, window.location.origin).pathname
+      const base = path.split("/").pop()
+      return base && /\./.test(base) ? decodeURIComponent(base) : null
+    } catch (_) {
+      return null
+    }
+  }
 
   selectedFile() {
     const file = this.inputTarget.files?.[0]
@@ -86,7 +147,8 @@ export default class extends Controller {
 
   syncAdjustButton() {
     if (!this.hasAdjustButtonTarget) return
-    this.adjustButtonTarget.classList.toggle("hidden", !this.selectedFile())
+    const canCrop = !!(this.selectedFile() || this.resolveSourceUrl())
+    this.adjustButtonTarget.classList.toggle("hidden", !canCrop)
   }
 
   cropperOptions() {
@@ -118,6 +180,7 @@ export default class extends Controller {
       transfer.items.add(cropped)
       this.inputTarget.files = transfer.files
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
+      this.syncAdjustButton()
     } catch (_) {
       this.setStatus("This browser cannot replace the upload with the crop.", true)
     }
@@ -126,6 +189,7 @@ export default class extends Controller {
   teardown() {
     this.cropper?.destroy()
     this.cropper = null
+    this.cropFile = null
     if (this.objectUrl) {
       URL.revokeObjectURL(this.objectUrl)
       this.objectUrl = null
