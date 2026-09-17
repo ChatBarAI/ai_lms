@@ -3,9 +3,32 @@
     = hidden_field_tag :section, "integration"
 
     %h2.text-lg.font-semibold.text-gray-900 Integration and jobs
-    %p.text-sm.text-gray-500 App callback URL, email delivery, Redis connection, and queue visibility.
+    %p.text-sm.text-gray-500 App callback URL, email delivery, Redis, Ask Us help bot, and queue visibility.
 
     = render "section_errors", section: "integration"
+
+    .mt-5.rounded-lg.border.border-indigo-100.p-4{ class: "bg-indigo-50/40" }
+      -# HELP: Ask Us help bot setup
+      -# Create a help ChatBar (Cbai) on the dashboard, seed it with manuals (rake help:export_guides / help:generate),
+      -# sync chunks to the AI search server, then paste the bot token here and enable Ask Us.
+      -# This LMS only stores the token — vectors live on ai_search after dashboard sync.
+      %h3.font-semibold.text-gray-900 Ask Us help
+      %p.mt-1.text-xs.text-gray-600
+        Uses a ChatBar help bot created on the dashboard. Chunks sync to the AI search server there —
+        this LMS only stores the token and shows the panel.
+      .mt-4
+        = toggle_switch_field f, :help_enabled, label: "Enable Ask Us in admin (and instructor when token is set)"
+      .mt-4.grid.gap-4.md:grid-cols-2
+        %div
+          = f.label :help_admin_token, "Admin help ChatBar token", class: "block text-sm font-medium mb-1"
+          = f.text_field :help_admin_token, placeholder: "help-lms-admin", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm", autocomplete: "off"
+        %div
+          = f.label :help_instructor_token, "Instructor help ChatBar token (optional)", class: "block text-sm font-medium mb-1"
+          = f.text_field :help_instructor_token, placeholder: "help-lms-instructor", class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm", autocomplete: "off"
+      %p.mt-2.text-xs.text-gray-500
+        Create the bot on dashboard.chatbar-ai.com, seed it with manuals
+        %code.text-xs rake help:export_guides
+        , sync to the AI server, then paste the token here.
 
     .mt-5
       = f.label :app_url, "App URL", class: "block text-sm font-medium mb-1"

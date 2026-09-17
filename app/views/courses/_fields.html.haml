@@ -37,6 +37,9 @@
           title: "Published #{terms[:courses_l]} with public access can be viewed by people who are not signed in, including their #{terms[:lessons_l]} and uploaded content."
 
   %div
+    -# HELP: Course cover image
+    -# Upload a PNG, JPG, or WebP cover (max 5 MB) on the course create/edit form.
+    -# The cover appears on course cards and the public course page. Leave blank to use the site default card image.
     = upload_field f, :cover_image,
         label: "Upload cover image (PNG, JPG or WebP, max 5 MB)",
         accept: "image/png,image/jpeg,image/webp",
