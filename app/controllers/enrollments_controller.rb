@@ -6,7 +6,7 @@ class EnrollmentsController < ApplicationController
     enrollment = Enrollment.find_or_initialize_by(user: current_user, course: course)
     enrollment.role ||= :student
     authorize! :create, enrollment
-    if enrollment.save
+    if enrollment.persisted? || enrollment.save
       redirect_to course_path(course), notice: t("enrollments.flash.enrolled")
     else
       redirect_to course_path(course), alert: enrollment.errors.full_messages.to_sentence

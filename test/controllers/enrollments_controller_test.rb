@@ -27,4 +27,14 @@ class EnrollmentsControllerTest < ActionDispatch::IntegrationTest
       delete course_enrollment_path(courses(:algebra), enrollments(:student_in_algebra))
     end
   end
+
+  test "student cannot enrol when prerequisites unmet" do
+    CoursePrerequisite.create!(course: courses(:other_owner_course), prerequisite_course: courses(:algebra))
+    sign_in users(:other_student)
+    assert_no_difference -> { Enrollment.count } do
+      post course_enrollments_path(courses(:other_owner_course))
+    end
+    assert_redirected_to course_path(courses(:other_owner_course))
+    assert_match(/Complete these courses first/, flash[:alert])
+  end
 end
