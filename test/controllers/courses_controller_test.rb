@@ -122,6 +122,16 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal "Hacked", courses(:other_owner_course).reload.description
   end
 
+  test "owner setting a circular prerequisite re-renders edit instead of crashing" do
+    CoursePrerequisite.create!(course: courses(:other_owner_course), prerequisite_course: courses(:algebra))
+    sign_in users(:instructor)
+
+    patch course_path(courses(:algebra)), params: { course: { prerequisite_course_ids: [ courses(:other_owner_course).id ] } }
+
+    assert_response :unprocessable_entity
+    assert_match "circular dependency", response.body
+  end
+
   test "admin can publish and unpublish a course" do
     sign_in users(:admin)
     post publish_course_path(courses(:draft_course))

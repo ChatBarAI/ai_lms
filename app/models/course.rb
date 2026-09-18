@@ -124,12 +124,12 @@ class Course < ApplicationRecord
     missing_prerequisites_for(user).empty?
   end
 
-  def self.prerequisite_options_for(user, except: nil)
-    scope = order(:title)
+  # Draft courses are excluded even for admins/owners: a course that never
+  # gets published would permanently block students from meeting the gate.
+  def self.prerequisite_options_for(except: nil)
+    scope = published.order(:title)
     scope = scope.where.not(id: except.id) if except
-    return scope if user&.admin?
-
-    scope.where("published_at <= ? OR owner_id = ?", Time.current, user&.id)
+    scope
   end
 
   def to_param

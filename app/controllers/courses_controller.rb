@@ -48,8 +48,13 @@ class CoursesController < ApplicationController
     if @course.update(course_params)
       redirect_to @course, notice: t("courses.flash.updated")
     else
+      @lessons = @course.lessons.order(:position)
       render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordInvalid => e
+    @course.errors.merge!(e.record.errors)
+    @lessons = @course.lessons.order(:position)
+    render :edit, status: :unprocessable_entity
   end
 
   def certificate_layout
@@ -107,7 +112,7 @@ class CoursesController < ApplicationController
   def filter_prerequisite_course_ids!(permitted)
     return unless permitted.key?(:prerequisite_course_ids)
 
-    allowed = Course.prerequisite_options_for(current_user, except: @course).pluck(:id).map(&:to_s)
+    allowed = Course.prerequisite_options_for(except: @course).pluck(:id).map(&:to_s)
     permitted[:prerequisite_course_ids] = Array(permitted[:prerequisite_course_ids]).reject(&:blank?) & allowed
   end
 end

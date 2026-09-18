@@ -29,4 +29,9 @@ class CoursePrerequisiteTest < ActiveSupport::TestCase
 
     assert courses(:other_owner_course).prerequisites_met_by?(users(:student))
   end
+
+  test "prerequisite_options_for excludes draft courses even for their owner" do
+    options = Course.prerequisite_options_for(except: courses(:algebra))
+    assert_not_includes options, courses(:draft_course)
+  end
 end
