@@ -1,0 +1,9 @@
+.fixed.inset-0.z-50.hidden{ id: "course-prerequisites-dialog", data: { controller: "dialog", dialog_open_value: "false" }, role: "dialog", "aria-modal": "true", "aria-labelledby": "course-prerequisites-title", "aria-hidden": "true" }
+  .absolute.inset-0{ style: "background:rgba(17,24,39,0.5);backdrop-filter:blur(2px)", data: { action: "click->dialog#close" } }
+  .absolute.bg-white.rounded-xl.shadow-2xl.border.border-indigo-200.overflow-y-auto{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,32rem);max-height:92vh", tabindex: "-1", data: { dialog_target: "panel" } }
+    .p-6
+      %h2.text-lg.font-semibold.text-gray-900.mb-3{ id: "course-prerequisites-title" } Before you enrol
+      .text-sm
+        = render "courses/prerequisite_list", missing: missing
+      .flex.justify-end.mt-6
+        %button.inline-flex.items-center.px-3.py-1.5.rounded-full.text-sm.font-medium.bg-gray-100.text-gray-800.hover:bg-gray-200.border.border-gray-200.cursor-pointer.transition-colors{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" } } Close

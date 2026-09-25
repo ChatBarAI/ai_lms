@@ -1,5 +1,4 @@
-- heading_class = local_assigns.fetch(:heading_class, "text-amber-900")
-%p.font-medium.mb-1{ class: heading_class } Complete these courses first
-%ul.list-disc.pl-5.space-y-1
+%p.mb-4.text-gray-700= "To enrol in this course, please first complete the following #{'course'.pluralize(missing.size)}:"
+%ul.flex.flex-wrap.gap-2.list-none
   - missing.each do |prereq|
-    %li= link_to prereq.title, course_path(prereq), class: "text-indigo-700 hover:underline"
+    %li= link_to prereq.title, course_path(prereq), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
