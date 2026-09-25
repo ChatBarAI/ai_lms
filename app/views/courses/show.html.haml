@@ -43,9 +43,13 @@
             = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
           = button_to t(".unenrol"), course_enrollment_path(@course, @enrollment), method: :delete, data: { turbo_confirm: t(".unenrol_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer transition-colors"
       - else
-        .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
+        - missing_prerequisites = @course.missing_prerequisites_for(current_user)
+        - gated = missing_prerequisites.any?
+        .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3{ data: { controller: "status-modal", status_modal_dialog_id_value: "course-prerequisites-dialog" } }
           %p.flex-1= t(".enrol_prompt", **terms)
-          = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
+          = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, form: { data: { action: gated ? "submit->status-modal#open" : nil } }, aria: { haspopup: gated ? "dialog" : nil, controls: gated ? "course-prerequisites-dialog" : nil }, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
+        - if gated
+          = render "prerequisite_dialog", missing: missing_prerequisites
     - else
       .bg-blue-50.border.border-blue-200.text-blue-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
         %p.flex-1= t(".signin_prompt", **terms)

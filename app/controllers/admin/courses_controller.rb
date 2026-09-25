@@ -47,8 +47,13 @@ class Admin::CoursesController < Admin::BaseController
     if @course.update(course_params)
       redirect_to admin_courses_path, notice: "#{Course.model_name.human} updated."
     else
+      @lessons = @course.lessons.order(:position)
       render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordInvalid => e
+    @course.errors.merge!(e.record.errors)
+    @lessons = @course.lessons.order(:position)
+    render :edit, status: :unprocessable_entity
   end
 
   def destroy
@@ -125,6 +130,15 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def course_params
-    params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [])
+    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    filter_prerequisite_course_ids!(permitted)
+    permitted
+  end
+
+  def filter_prerequisite_course_ids!(permitted)
+    return unless permitted.key?(:prerequisite_course_ids)
+
+    allowed = Course.prerequisite_options_for(except: @course).pluck(:id).map(&:to_s)
+    permitted[:prerequisite_course_ids] = Array(permitted[:prerequisite_course_ids]).reject(&:blank?) & allowed
   end
 end

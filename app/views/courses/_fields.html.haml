@@ -48,3 +48,21 @@
 
   %div
     = render "shared/tag_picker", f: f, record: course
+
+  - options = Course.prerequisite_options_for(except: course)
+  - if options.any?
+    %div
+      %p.block.text-sm.font-medium.mb-1 Complete these courses first (milestones)
+      %p.text-xs.text-gray-500.mb-2 Students must finish every selected course before they can enrol here.
+      = hidden_field_tag "course[prerequisite_course_ids][]", ""
+      %fieldset
+        %legend.sr-only Complete these courses first
+        .flex.flex-wrap.gap-3
+          - options.each do |option|
+            = toggle_switch_tag "course[prerequisite_course_ids][]",
+                label: option.title,
+                value: option.id,
+                checked: course.prerequisite_course_ids.include?(option.id),
+                include_hidden: false,
+                id: "course_prerequisite_course_ids_#{option.id}",
+                wrapper_class: "inline-flex items-center gap-2"

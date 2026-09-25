@@ -71,6 +71,9 @@
       .font-semibold.mb-2 Force-enrol in course
       = form_with url: enroll_admin_user_path(@user), method: :post, local: true, class: "space-y-2" do
         = select_tag :course_id, options_from_collection_for_select(@enrollable_courses, :id, :title), class: "w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white"
+        %label.flex.items-center.gap-2.text-xs.text-gray-600
+          = check_box_tag :force, "1", false, class: "rounded border-gray-300"
+          %span Skip prerequisite check (force)
         = submit_tag "Enrol", class: "w-full px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer"
 
     .bg-white.border.border-gray-200.rounded.p-4.text-sm.text-gray-600
