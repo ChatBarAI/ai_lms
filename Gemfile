@@ -89,7 +89,11 @@ gem "rubyzip", require: false
 gem "kinde_sdk"
 
 # Active Storage
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0", ">= 2.0.3"
+# ImageProcessing 2 makes its backends optional; PWA icons use MiniMagick
+# directly, and Active Storage uses libvips by default.
+gem "mini_magick", "~> 5.3", require: false
+gem "ruby-vips", "~> 2.3", require: false
 gem "active_storage_validations"
 
 # Stdlib gems being removed from default Ruby
