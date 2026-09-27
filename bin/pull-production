@@ -27,6 +27,7 @@ compatible with the production PostgreSQL version. Uses remote APP/storage.
 Only a local database with a name ending in _development is accepted.
 Copied integration credentials remain; app_url and redis_url are cleared.
 After restoring, admin@example.com is created or reset as an unlocked admin.
+Set SEED_ADMIN_EMAIL to choose a different account.
 Set SEED_ADMIN_PASSWORD for a repeatable local password; otherwise a generated
 password is printed after the reset. This only changes the local development DB.
 USAGE
@@ -114,19 +115,5 @@ bash deploy/export "$local_stage/development-before.tar.gz"
 echo 'Restoring into development and running local migrations...'
 bash deploy/restore --force "$local_stage/production.tar.gz"
 echo 'Creating or resetting the local development admin...'
-bin/rails runner '
-  abort "Expected development Rails environment" unless Rails.env.development?
-  password = ENV["SEED_ADMIN_PASSWORD"].presence || SecureRandom.base58(20)
-  admin = User.find_or_initialize_by(email: "admin@example.com")
-  admin.name = "Admin" if admin.name.blank?
-  admin.assign_attributes(
-    role: :admin, password: password, password_confirmation: password,
-    failed_attempts: 0, locked_at: nil, unlock_token: nil,
-    reset_password_token: nil, reset_password_sent_at: nil,
-    remember_created_at: nil
-  )
-  admin.save!
-  puts "Local admin: admin@example.com"
-  puts ENV["SEED_ADMIN_PASSWORD"].present? ? "Password: supplied via SEED_ADMIN_PASSWORD" : "Generated password: #{password}"
-'
+bin/rails runner deploy/local_admin.rb --create
 echo 'Complete. Start the development app with bin/dev.'

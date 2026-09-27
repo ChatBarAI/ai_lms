@@ -12,9 +12,9 @@ class PullProductionTest < Minitest::Test
       scripts = {
         "tools/ssh" => 'echo "ssh $*" >> "$CALL_LOG"; [[ $* != *mktemp* ]] || echo /tmp/ai_lms-pull.ABC12345',
         "tools/scp" => 'echo scp >> "$CALL_LOG"; [[ $FAIL_DOWNLOAD != 1 ]] || exit 1; touch "${@: -1}"',
-        "tools/pg_dump" => 'exit 0',
-        "tools/pg_restore" => 'exit 0',
-        "bin/rails" => 'echo "rails $1 env=$RAILS_ENV" >> "$CALL_LOG"',
+        "tools/pg_dump" => "exit 0",
+        "tools/pg_restore" => "exit 0",
+        "bin/rails" => 'echo "rails $1 env=$RAILS_ENV $*" >> "$CALL_LOG"',
         "deploy/export" => 'echo "backup env=$RAILS_ENV mode=$DEPLOY_MODE" >> "$CALL_LOG"; touch "$1"',
         "deploy/restore" => 'echo "restore env=$RAILS_ENV mode=$DEPLOY_MODE $1" >> "$CALL_LOG"; [[ $FAIL_RESTORE != 1 ]]'
       }
@@ -42,6 +42,7 @@ class PullProductionTest < Minitest::Test
       assert_operator calls.index("backup env="), :<, calls.index("restore env=")
       assert_operator calls.index("restore env="), :<, calls.rindex("rails runner env=development")
       assert_equal 2, calls.scan("rails runner env=development").length
+      assert_includes calls, "runner deploy/local_admin.rb --create"
       assert_equal 1, Dir.glob("#{root}/tmp/production-pulls/*/development-before.tar.gz").length
     end
   end
@@ -67,6 +68,7 @@ class PullProductionTest < Minitest::Test
     run_pull(fail_restore: true) do |status, _, calls, _|
       refute status.success?
       assert_equal 1, calls.scan("rails runner env=development").length
+      refute_includes calls, "deploy/local_admin.rb"
     end
   end
 end

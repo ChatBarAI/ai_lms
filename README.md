@@ -654,14 +654,14 @@ The `bin/` commands connect over SSH, like `bin/deploy`. Updated scripts must
 already be deployed on the remote Docker instance:
 
 ```bash
-SSH_PORT=51760 bin/backup root@148.72.159.88
+SSH_PORT=2222 bin/backup root@SERVER_IP
 ```
 
 This creates a remote snapshot and downloads a single timestamped
 `ai-lms-clone-*.tar.gz` into your current directory. To choose the local filename:
 
 ```bash
-SSH_PORT=51760 bin/backup root@148.72.159.88 ./ai-lms-clone-craig.tar.gz
+SSH_PORT=2222 bin/backup root@SERVER_IP ./ai-lms-clone.tar.gz
 ```
 
 `bin/export HOST [LOCAL_OUTPUT.tar.gz]` does the same. Both wrappers call
@@ -674,7 +674,7 @@ staging path for recovery. Existing local files are never overwritten.
 To restore onto another **already deployed** Docker server:
 
 ```bash
-SSH_PORT=22 bin/restore --force root@NEW_SERVER ./ai-lms-clone-craig.tar.gz
+SSH_PORT=22 bin/restore --force root@NEW_SERVER ./ai-lms-clone.tar.gz
 ```
 
 This uploads the archive and replaces the destination data. To restore on
@@ -864,7 +864,7 @@ are cleared. Run `bin/pull-production --help` for details.
 
 After a successful restore, the script creates or resets `admin@example.com`
 in development, grants it the admin role, and clears any account lockout.
-Set `SEED_ADMIN_PASSWORD` when running the pull to choose its password;
+Set `SEED_ADMIN_EMAIL` to use a different account, or `SEED_ADMIN_PASSWORD` to choose its password;
 otherwise the script generates a password and prints it once at completion.
 
 Use a separate checkout of the source release (or a compatible newer release),
@@ -883,17 +883,54 @@ DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
 bin/dev
 ```
 
-This replaces the configured development database contents and the checkout's
-`storage/` files, then runs migrations. `RAILS_ENV` defaults to `production`
+This drops and recreates only the configured development database, replaces the
+checkout's `storage/` files, then runs migrations. Recreating the database also
+removes tables added since the backup, so their foreign keys cannot block the
+restore. The database role must own the destination database and have `CREATEDB`.
+Before replacing the database, the restore checks that the dump is readable
+and that no other PostgreSQL sessions are connected. Blocking sessions are
+listed with their PostgreSQL PID, database user, application name, and state;
+idle connections block restores too. VS Code's Ruby LSP Rails helper can keep
+such a connection open after `bin/dev` stops. Close VS Code temporarily and
+rerun the restore from a separate terminal if its helper is blocking it.
+The restore's own connection is excluded, and other sessions are never
+terminated automatically. If a restore fails, keep Rails/workers stopped,
+resolve the error, and rerun it.
+`RAILS_ENV` defaults to `production`
 when omitted. Set `STORAGE_PATH` only if the destination uses a custom Disk
 storage root. The restore clears source `app_url` and `redis_url` settings by
 default; other source settings, users, and integration credentials remain.
 Review those integrations before using the clone with external services.
 
+To offer local admin setup after the restore succeeds, add `--ask-admin`:
+
+```bash
+DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
+  deploy/restore --force --ask-admin /absolute/path/to/ai-lms-clone.tar.gz
+```
+
+It asks `Create or reset local admin admin@example.com? [y/N]`. Answering yes
+creates that account or resets its password if it already exists, grants the
+admin role, and clears lockout and password-reset tokens. A generated password
+is printed once after saving. Set `SEED_ADMIN_EMAIL` for a different account or
+`SEED_ADMIN_PASSWORD` for a chosen password (a supplied password is not printed).
+Enter, no, or end-of-input skips account changes. This option requires a native
+development restore targeting a local database named `*_development`; it is
+rejected for production and Docker deployment restores before replacing data.
+
+If the data was already restored, run only the admin prompt:
+
+```bash
+RAILS_ENV=development bin/rails runner deploy/local_admin.rb --ask
+```
+
 Standalone backup script checks (no Rails boot or database access):
 
 ```bash
 ruby test/deploy/backup_test.rb
+ruby test/deploy/database_transfer_test.rb
+ruby test/deploy/restore_test.rb
+ruby test/deploy/local_admin_test.rb
 ruby test/deploy/remote_transfer_test.rb
 ruby test/deploy/local_clone_test.rb
 ruby test/deploy/unpack_bundle_test.rb

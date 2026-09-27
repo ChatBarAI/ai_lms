@@ -5,7 +5,7 @@ umask 077
 usage() {
   cat <<'USAGE'
 Usage:
-  deploy/restore --force CLONE_BUNDLE
+  deploy/restore --force [--ask-admin] CLONE_BUNDLE
 
 This completely replaces the target database and Active Storage files.
 Accepts the single .tar.gz archive produced by deploy/backup or deploy/export.
@@ -19,8 +19,18 @@ with the source database (the Docker deployment uses PostgreSQL 16).
 Docker: stops web/worker/proxy, restores data, migrates, then restarts them.
 If restore fails after stopping services, they remain stopped for inspection.
 Native: stop Rails/background workers before running; restart after success.
+The native database role must own the destination database and have CREATEDB.
+Restore checks for other PostgreSQL sessions before replacing the database,
+including idle connections from consoles, database tools, and VS Code Ruby LSP.
+It reports blocking sessions so you can close them and retry.
 By default, clears copied app_url and redis_url settings for the destination.
 Other copied settings and integration credentials remain; review before use.
+
+--ask-admin prompts after a successful native development restore to create or
+reset a local admin account (default: admin@example.com). Enter/no skips it.
+The database must be local and its name must end in _development.
+Yes grants admin access, clears lockout, and prints a generated password once.
+Set SEED_ADMIN_EMAIL or SEED_ADMIN_PASSWORD to choose the account or password.
 
 Environment:
   DEPLOY_MODE=auto|docker|native
@@ -33,7 +43,7 @@ Environment:
 Local development example (Rails and background workers must be stopped):
   RAILS_ENV=development bin/rails db:create
   DEPLOY_MODE=native RAILS_ENV=development NATIVE_WRITES_STOPPED=1 \
-    deploy/restore --force /absolute/path/to/ai-lms-clone.tar.gz
+    deploy/restore --force --ask-admin /absolute/path/to/ai-lms-clone.tar.gz
   bin/dev
 
 Docker destination example (deploy application code first):
@@ -50,10 +60,17 @@ if [[ ${1:-} == --help ]]; then
   exit 0
 fi
 
-[[ ${1:-} == --force && $# -eq 2 ]] || { usage >&2; exit 2; }
+[[ ${1:-} == --force ]] || { usage >&2; exit 2; }
+shift
+ask_admin=false
+if [[ ${1:-} == --ask-admin ]]; then
+  ask_admin=true
+  shift
+fi
+[[ $# -eq 1 ]] || { usage >&2; exit 2; }
 
-bundle=$(readlink -f "$2")
-[[ -f $bundle ]] || { echo "Clone bundle not found: $2" >&2; exit 1; }
+bundle=$(readlink -f "$1")
+[[ -f $bundle ]] || { echo "Clone bundle not found: $1" >&2; exit 1; }
 
 app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 mode=${DEPLOY_MODE:-auto}
@@ -86,6 +103,11 @@ if [[ $mode == auto ]]; then
   fi
 fi
 
+if $ask_admin && [[ $mode != native || ${RAILS_ENV:-production} != development ]]; then
+  echo '--ask-admin is only supported for native restores with RAILS_ENV=development.' >&2
+  exit 2
+fi
+
 case "$mode" in
   docker)
     docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
@@ -97,10 +119,28 @@ case "$mode" in
     docker_stopped=true
     "${compose[@]}" up -d db redis
 
-    echo "Replacing PostgreSQL data..."
+    echo "Checking PostgreSQL restore prerequisites..."
     "${compose[@]}" exec -T db \
-      pg_restore --clean --if-exists --no-owner --no-privileges \
-      --exit-on-error -U ai_lms -d ai_lms_production < "$work_dir/database.dump"
+      pg_restore --list < "$work_dir/database.dump" >/dev/null
+    sessions=$("${compose[@]}" exec -T db psql -X --set=ON_ERROR_STOP=1 --tuples-only --no-align \
+      -U ai_lms -d postgres --command \
+      "SELECT format('PostgreSQL PID %s: user=%L, application=%L, state=%L', pid, usename, application_name, state)
+       FROM pg_stat_activity
+       WHERE datname = 'ai_lms_production' AND pid <> pg_backend_pid()
+       ORDER BY pid")
+    if [[ -n $sessions ]]; then
+      echo 'Restore blocked: ai_lms_production still has other PostgreSQL sessions.' >&2
+      printf '%s\n' "$sessions" >&2
+      echo 'Close the listed connections (including consoles, database tools, or Rails editor helpers) and retry.' >&2
+      echo 'No database or uploaded files have been replaced. Docker application services remain stopped.' >&2
+      exit 1
+    fi
+    echo "Replacing PostgreSQL data..."
+    "${compose[@]}" exec -T db dropdb --if-exists -U ai_lms ai_lms_production
+    "${compose[@]}" exec -T db createdb --template=template0 -U ai_lms ai_lms_production
+    "${compose[@]}" exec -T db \
+      pg_restore --no-owner --no-privileges --exit-on-error --single-transaction \
+      -U ai_lms -d ai_lms_production < "$work_dir/database.dump"
 
     echo "Replacing Active Storage files..."
     docker run --rm \
@@ -136,8 +176,14 @@ case "$mode" in
       echo "Stop Puma and Sidekiq, then run with NATIVE_WRITES_STOPPED=1." >&2
       exit 1
     }
+    if $ask_admin; then
+      (
+        cd "$app_root"
+        RAILS_ENV=development bin/rails runner deploy/local_admin.rb --check
+      )
+    fi
 
-    echo "Replacing PostgreSQL data..."
+    echo "Checking PostgreSQL restore prerequisites..."
     (
       cd "$app_root"
       RAILS_ENV=${RAILS_ENV:-production} bin/rails runner \
@@ -174,6 +220,16 @@ case "$mode" in
 esac
 
 echo "Clone restored successfully."
+if $ask_admin; then
+  if ! (
+    cd "$app_root"
+    RAILS_ENV=development bin/rails runner deploy/local_admin.rb --ask
+  ); then
+    echo 'The restore completed, but local admin setup failed. Retry without restoring again:' >&2
+    echo '  RAILS_ENV=development bin/rails runner deploy/local_admin.rb --ask' >&2
+    exit 1
+  fi
+fi
 if [[ $mode == native ]]; then
   echo "Restart the native Puma and Sidekiq services now."
 fi
