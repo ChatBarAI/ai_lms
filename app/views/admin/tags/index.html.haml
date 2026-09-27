@@ -17,4 +17,4 @@
           %span.text-xs.font-mono.text-gray-400= tag.color
         .flex.items-center.gap-2
           = link_to "Edit", edit_admin_tag_path(tag), class: "text-sm text-indigo-600 hover:text-indigo-800"
-          = button_to "Delete", admin_tag_path(tag), method: :delete, data: { turbo_confirm: "Delete tag \"#{tag.name}\"? It will be removed from all courses and lessons." }, class: "text-sm text-red-600 hover:text-red-800 bg-transparent border-0 cursor-pointer p-0"
+          = button_to "Delete", admin_tag_path(tag), method: :delete, data: { turbo_confirm: t("catalog_ui.delete_tag", **terms, name: tag.name) }, class: "text-sm text-red-600 hover:text-red-800 bg-transparent border-0 cursor-pointer p-0"

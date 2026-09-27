@@ -8,8 +8,8 @@
     = f.label :user_email_or_user_name_cont, "Search", class: "text-xs text-gray-500"
     = f.search_field :user_email_or_user_name_cont, placeholder: "name or email", class: "border border-gray-300 rounded px-2 py-1 text-sm"
   .flex.flex-col
-    = f.label :course_title_cont, "Course", class: "text-xs text-gray-500"
-    = f.search_field :course_title_cont, placeholder: "course title", class: "border border-gray-300 rounded px-2 py-1 text-sm"
+    = f.label :course_title_cont, terms[:course], class: "text-xs text-gray-500"
+    = f.search_field :course_title_cont, placeholder: t("catalog_ui.course_title_placeholder", **terms), class: "border border-gray-300 rounded px-2 py-1 text-sm"
   .flex.gap-2
     = f.submit "Apply", class: "px-3 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 cursor-pointer"
     = link_to "Reset", admin_certificates_path, class: "px-3 py-1.5 rounded bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 border border-gray-200"
@@ -19,7 +19,7 @@
     %thead.bg-gray-50
       %tr
         %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Recipient
-        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Course
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= terms[:course]
         %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= sort_link @q, :issued_at, "Issued"
         %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Token
         %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2

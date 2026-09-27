@@ -3,8 +3,8 @@
 .flex.items-center.justify-between.mb-4
   %div
     %h1.text-2xl.font-bold #{@course.title}
-    .text-sm.text-gray-500 Course report
-  = link_to "Back to course", admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
+    .text-sm.text-gray-500= t("catalog_ui.course_report", **terms)
+  = link_to t("catalog_ui.back_to_course_without_arrow", **terms), admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
 
 .grid.grid-cols-2.md:grid-cols-5.gap-3.mb-6
   - tiles = [ [ "Enrolments", @enrollment_count ], [ "Active learners", @active_learners ], [ "Completion rate", "#{@completion_rate}%" ], [ "Avg score", @average_score&.round(1) || "—" ], [ "Avg rating", @average_rating&.round(2) || "—" ] ]
@@ -48,11 +48,11 @@
     .px-4.py-3.text-sm.text-gray-500 No enrolments yet.
 
 .bg-white.border.border-gray-200.rounded
-  .px-4.py-2.border-b.border-gray-100.font-semibold Per-lesson summary
+  .px-4.py-2.border-b.border-gray-100.font-semibold= t("catalog_ui.per_lesson_summary", **terms)
   %table.w-full.text-sm
     %thead.bg-gray-50
       %tr
-        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Lesson
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= terms[:lesson]
         %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Attempts
         %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Completions
         %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Avg score

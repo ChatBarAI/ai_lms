@@ -110,7 +110,7 @@ module LessonsHelper
     body = strip_tags(lesson.body.to_s).squish
     body_section =
       if body.blank?
-        "(no lesson body provided — rely on indexed lesson materials)"
+        "(no #{terms[:lesson_l]} body provided — rely on indexed #{terms[:lesson_l]} materials)"
       elsif body.length > PROMPT_BODY_CHAR_LIMIT
         "#{body[0, PROMPT_BODY_CHAR_LIMIT]}…[truncated]"
       else
@@ -132,23 +132,23 @@ module LessonsHelper
       elsif focus.present?
         "Instructor focus: #{focus}"
       else
-        "Instructor focus: (none — cover the lesson broadly)"
+        "Instructor focus: (none — cover the #{terms[:lesson_l]} broadly)"
       end
 
     count_str = count.nil? ? "{count}" : count.to_s
 
     <<~PROMPT
-      You are an expert lesson planner. Generate quiz questions based ONLY on the
+      You are an expert learning designer. Generate quiz questions based ONLY on the
       SOURCE MATERIAL that is appended after the final marker line at the very
       bottom of this prompt.
 
-      === LESSON METADATA (context only — NEVER a source for questions) ===
+      === #{terms[:lesson].upcase} METADATA (context only — NEVER a source for questions) ===
       Title: #{lesson.title}
       Description: #{body_section}
       === END METADATA ===
 
       IMPORTANT — READ CAREFULLY:
-      - The Lesson Title and Description above is METADATA ONLY. It exists to give you context.
+      - The #{terms[:lesson]} Title and Description above is METADATA ONLY. It exists to give you context.
         You MUST NOT write any questions based solely on the title.
       - The ONLY text you may use to write questions is the SOURCE MATERIAL that
         appears below the final marker line at the bottom of this prompt.

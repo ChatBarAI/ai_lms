@@ -2,17 +2,17 @@
 
 %div
   .mb-4
-    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+    = link_to t("catalog_ui.back_to_lesson_edit", **terms), edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
   %h1.text-2xl.font-bold.mb-2 Intro video — Synthesia download
   %p.text-sm.text-gray-500.mb-4
-    Provide a Synthesia API key, then choose a completed video to attach as this lesson's intro video.
+    = t("catalog_ui.synthesia_hint", **terms)
 
   = form_with model: @lesson, url: video_synthesia_course_lesson_path(@course, @lesson), method: :get, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6 mb-4" do |f|
     = hidden_field_tag :fetch, "1"
     %div
       = f.label :synthesia_api_key, "Synthesia API key", class: "block text-sm font-medium mb-1"
       = f.password_field :synthesia_api_key, value: @lesson.synthesia_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2"
-      %p.text-xs.text-gray-500.mt-1 Stored on the lesson so future imports work without re-entering it.
+      %p.text-xs.text-gray-500.mt-1= t("catalog_ui.stored_on_lesson", **terms)
     .flex.w-full.gap-2
       = f.submit "Save & fetch videos", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
 

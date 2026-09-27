@@ -1,6 +1,6 @@
 .mt-3.space-y-3
   %p.text-xs.text-gray-500
-    Upload a blank certificate image for this course. Once uploaded, click "Position certificate fields" to choose where the student name, course title, date and certificate number appear.
+    = t("catalog_ui.certificate_hint", **terms)
 
   = form_with model: course, class: "space-y-3" do |f|
     = upload_field f, :certificate_template,

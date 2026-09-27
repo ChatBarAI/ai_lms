@@ -4,7 +4,7 @@
   %h1.text-2xl.font-bold= "Questions · #{@lesson.title}"
   .flex.items-center.gap-2
     = link_to course_lesson_path(@course, @lesson), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
-      ← View lesson
+      = t("catalog_ui.view_lesson", **terms)
     = link_to "New question", new_course_lesson_question_path(@course, @lesson), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
 
 = render "ai_generate", lesson: @lesson

@@ -12,7 +12,7 @@
         %dt.text-gray-500 Recipient
         %dd.font-medium.text-gray-900= @user.name.presence || @user.email
       %div.flex.justify-between.py-2
-        %dt.text-gray-500 Course
+        %dt.text-gray-500= terms[:course]
         %dd.font-medium.text-gray-900= @course.title
       %div.flex.justify-between.py-2
         %dt.text-gray-500 Issued on

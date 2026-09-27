@@ -1,6 +1,6 @@
-%fieldset.rounded-lg.border.border-gray-200.p-4{ data: { controller: "lesson-section-order", lesson_section_order_default_order_value: Lesson::DEFAULT_SECTION_ORDER.to_json, lesson_section_order_moved_message_value: t("lessons.section_order.moved"), lesson_section_order_reset_message_value: t("lessons.section_order.reset_done"), action: "pointerup@window->lesson-section-order#disarmDrag pointercancel@window->lesson-section-order#disarmDrag" } }
+%fieldset.rounded-lg.border.border-gray-200.p-4{ data: { controller: "lesson-section-order", lesson_section_order_default_order_value: Lesson::DEFAULT_SECTION_ORDER.to_json, lesson_section_order_moved_message_value: t("lessons.section_order.moved"), lesson_section_order_reset_message_value: t("lessons.section_order.reset_done", **terms), action: "pointerup@window->lesson-section-order#disarmDrag pointercancel@window->lesson-section-order#disarmDrag" } }
   %legend.px-1.text-base.font-semibold= t("lessons.section_order.title")
-  %p.mb-3.text-sm.text-gray-500= t("lessons.section_order.hint")
+  %p.mb-3.text-sm.text-gray-500= t("lessons.section_order.hint", **terms)
   %ol.space-y-2{ data: { lesson_section_order_target: "list", action: "dragstart->lesson-section-order#startDrag dragover->lesson-section-order#dragOver drop->lesson-section-order#drop dragend->lesson-section-order#endDrag" } }
     - lesson.effective_section_order.each_with_index do |section, index|
       - label = t("lessons.section_order.sections.#{section}", **terms)

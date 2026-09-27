@@ -4,7 +4,7 @@ module Admin::SiteSettingsHelper
     [ "branding", "Branding", "Logo, favicon, brand name" ],
     [ "theme", "Theme", "Mode and base palette" ],
     [ "buttons", "Buttons", "Primary, success, danger" ],
-    [ "terminology", "Terminology", "Rename lesson/course/subject" ],
+    [ "terminology", "Terminology", "Rename catalogue items" ],
     [ "hero", "Home hero", "Homepage banner content" ],
     [ "certificates", "Certificates", "Default template and signer" ],
     [ "integration", "Integration", "App URL, email, Redis, jobs" ]

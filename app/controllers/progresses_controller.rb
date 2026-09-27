@@ -6,7 +6,7 @@ class ProgressesController < ApplicationController
     authorize! :read, @progress
 
     unless manual_completion_allowed?
-      redirect_back fallback_location: root_path, alert: t("progresses.flash.cannot_mark_complete")
+      redirect_back fallback_location: root_path, alert: t("progresses.flash.cannot_mark_complete", **helpers.terms)
       return
     end
 

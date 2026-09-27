@@ -1,4 +1,5 @@
-%p.mb-4.text-gray-700= "To enrol in this course, please first complete the following #{'course'.pluralize(missing.size)}:"
+- prerequisite_label = Course.model_name.human(count: missing.size)
+%p.mb-4.text-gray-700= t("catalog_ui.prerequisites", **terms, prerequisites: prerequisite_label, prerequisites_l: prerequisite_label.downcase)
 %ul.flex.flex-wrap.gap-2.list-none
   - missing.each do |prereq|
     %li= link_to prereq.title, course_path(prereq), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"

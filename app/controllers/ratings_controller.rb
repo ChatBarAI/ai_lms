@@ -44,6 +44,6 @@ class RatingsController < ApplicationController
   def ensure_ratings_enabled!
     return if @lesson.ratings_enabled?
 
-    redirect_to course_lesson_path(@lesson.course, @lesson), alert: t("ratings.flash.disabled")
+    redirect_to course_lesson_path(@lesson.course, @lesson), alert: t("ratings.flash.disabled", **helpers.terms)
   end
 end

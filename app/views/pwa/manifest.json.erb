@@ -3,7 +3,7 @@
   "name": "<%= site_brand_name %>",
   "short_name": "<%= truncate(site_brand_name, length: 12, omission: "") %>",
   "description": "<%= site_brand_name %> learning platform",
-  "lang": "en",
+  "lang": <%= raw(I18n.locale.to_s.to_json) %>,
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -34,8 +34,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Browse Courses",
-      "short_name": "Courses",
+      "name": <%= raw(t("catalog_ui.browse_courses", **terms).to_json) %>,
+      "short_name": <%= raw(terms[:courses].to_json) %>,
       "url": "/courses"
     },
     {

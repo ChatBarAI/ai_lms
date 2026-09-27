@@ -4,7 +4,7 @@ module ApplicationHelper
   def preview_text_for(field, course)
     case field
     when "name"           then "Student Name"
-    when "course_title"   then course&.title.presence || "Course Title"
+    when "course_title"   then course&.title.presence || t("catalog_ui.course_title", **terms)
     when "date"           then I18n.l(Date.current, format: :long)
     when "certificate_no" then "Certificate No: XXXX-XXXX-XXXX"
     else field.to_s.humanize

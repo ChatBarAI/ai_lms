@@ -7,7 +7,7 @@ class CertificatesController < ApplicationController
 
     unless @enrollment&.fully_completed?
       redirect_to course_path(@course),
-                  alert: "Complete all lessons to earn your certificate."
+                  alert: t("catalog_ui.certificate_incomplete", **helpers.terms)
       return
     end
 

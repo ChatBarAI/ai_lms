@@ -9,12 +9,12 @@
     .mt-5.grid.grid-cols-1.gap-5.lg:grid-cols-2
       .space-y-4
         = toggle_switch_field f, :subjects_enabled,
-            label: "Enable Subjects (group courses under subjects)"
+            label: t("catalog_ui.enable_subjects", **terms)
 
         %div
           = f.label :pass_mark, "Default pass mark (%)", class: "block text-sm font-medium mb-1"
           = f.number_field :pass_mark, min: 0, max: 100, class: "w-32 border border-gray-300 rounded px-3 py-2"
-          %p.text-xs.text-gray-500.mt-1 Individual lessons can override this.
+          %p.text-xs.text-gray-500.mt-1= t("catalog_ui.lesson_overrides", **terms)
 
       .space-y-4
         %h3.text-sm.font-semibold.text-gray-700 Authentication policy (Kinde)

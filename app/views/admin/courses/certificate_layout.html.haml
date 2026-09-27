@@ -7,15 +7,15 @@
 .flex.items-center.justify-between.mb-4
   %h1.text-2xl.font-bold Certificate layout · #{@course.title}
   .flex.items-center.gap-2
-    = link_to "← Back to course", edit_admin_course_path(@course), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    = link_to t("catalog_ui.back_to_course", **terms), edit_admin_course_path(@course), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
 
 %p.text-sm.text-gray-500.mb-4
   Click on the preview to position the selected field. Adjust the size, alignment and weight in the side panel. Layout coordinates are stored as percentages of the page, so they remain accurate at any rendered size.
 
 - unless template_url
   .mb-4.bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-3.text-sm
-    No certificate template uploaded for this course or as a site default. Showing a plain background — upload a template image on the
-    = link_to "course edit page", edit_admin_course_path(@course), class: "underline"
+    = t("catalog_ui.no_certificate_template", **terms)
+    = link_to t("catalog_ui.course_edit_page", **terms), edit_admin_course_path(@course), class: "underline"
     \ or in
     = link_to "site settings", edit_admin_site_setting_path, class: "underline"
     \.
@@ -48,7 +48,7 @@
           .flex.items-center.justify-between.mb-2
             %label.inline-flex.items-center.gap-2.text-sm.font-semibold.cursor-pointer
               %input.field-select{ type: "radio", name: "selected_field", value: field, checked: idx == 0 }
-              %span= field.humanize
+              %span= (field == "course_title" ? t("catalog_ui.course_title", **terms) : field.humanize)
 
           .grid.grid-cols-4.gap-2.text-xs
             %label.flex.flex-col

@@ -7,7 +7,7 @@
 
     = render "section_errors", section: "terminology"
 
-    - terminology_groups = [["Lesson", "lesson_one", "lesson_other", Lesson], ["Course", "course_one", "course_other", Course], ["Subject", "subject_one", "subject_other", Subject], ["Quiz", "quiz_one", "quiz_other", nil]]
+    - terminology_groups = [["lesson_one", "lesson_other", Lesson], ["course_one", "course_other", Course], ["subject_one", "subject_other", Subject], ["quiz_one", "quiz_other", nil]]
     .mt-5.space-y-8
       - I18n.available_locales.each do |locale|
         - locale = locale.to_s
@@ -16,11 +16,11 @@
           %h3.text-base.font-semibold.text-gray-900= User::SUPPORTED_LOCALES.fetch(locale, locale.upcase)
           %p.text-xs.text-gray-500 Leave blank to use the #{locale.upcase} translation file defaults.
           .mt-4.grid.grid-cols-1.sm:grid-cols-2.gap-x-10.gap-y-4
-            - terminology_groups.each do |group_label, sing_key, plur_key, model|
+            - terminology_groups.each do |sing_key, plur_key, model|
               - sing_default = I18n.with_locale(locale) { model ? model.model_name.human(count: 1) : I18n.t("activerecord.models.quiz.one") }
               - plur_default = I18n.with_locale(locale) { model ? model.model_name.human(count: 2) : I18n.t("activerecord.models.quiz.other") }
               %div
-                %div.text-sm.font-medium.mb-1= group_label
+                %div.text-sm.font-medium.mb-1= sing_default
                 .flex.items-center.gap-3
                   %label.flex.flex-1.flex-col.gap-1.text-xs.text-gray-600
                     %span Singular

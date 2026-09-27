@@ -2,16 +2,16 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["course", "lesson", "material", "lessonGroup", "materialGroup", "submit"]
-  static values = { catalog: Array }
+  static values = { catalog: Array, prompts: Object }
 
   courseChanged() {
     const course = this.catalogValue.find((entry) => String(entry.id) === this.courseTarget.value)
     this.replaceOptions(
       this.lessonTarget,
       course?.lessons || [],
-      course ? "Choose a lesson…" : "Choose a course first…"
+      course ? this.promptsValue.lesson : this.promptsValue.courseFirst
     )
-    this.replaceOptions(this.materialTarget, [], "Choose a lesson first…")
+    this.replaceOptions(this.materialTarget, [], this.promptsValue.lessonFirst)
     this.lessonGroupTarget.classList.toggle("hidden", !course)
     this.materialGroupTarget.classList.add("hidden")
     this.submitTarget.disabled = true
@@ -23,7 +23,7 @@ export default class extends Controller {
     this.replaceOptions(
       this.materialTarget,
       lesson?.materials || [],
-      lesson ? "Choose a material…" : "Choose a lesson first…",
+      lesson ? this.promptsValue.material : this.promptsValue.lessonFirst,
       true
     )
     this.materialGroupTarget.classList.toggle("hidden", !lesson)

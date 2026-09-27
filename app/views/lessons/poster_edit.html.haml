@@ -1,8 +1,8 @@
-- content_for :title, "Lesson poster image"
+- content_for :title, t("catalog_ui.lesson_poster", **terms)
 
 %div
   .mb-4
-    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+    = link_to t("catalog_ui.back_to_lesson_edit", **terms), edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
   %h1.text-2xl.font-bold.mb-2 Poster image
   %p.text-sm.text-gray-500.mb-4 Shown as a thumbnail for the intro video. Learners click the poster to start the video. PNG, JPEG, WEBP or GIF, max 5 MB.
 

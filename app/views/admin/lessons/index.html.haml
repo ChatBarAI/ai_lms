@@ -1,15 +1,15 @@
-- content_for :title, "Lessons — #{@course.title}"
+- content_for :title, t("catalog_ui.lessons_title", **terms, title: @course.title)
 
 .flex.items-center.justify-between.mb-4
   .flex.items-baseline.gap-4
-    %h1.text-2xl.font-bold Lessons
+    %h1.text-2xl.font-bold= terms[:lessons]
     %p.text-sm.text-gray-500.mt-1
-      Course:
+      = t("catalog_ui.course_label", **terms)
       = link_to @course.title, admin_courses_path, class: "text-indigo-600 hover:underline"
-  = link_to "Add lesson", new_course_lesson_path(@course), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+  = link_to t("catalog_ui.add_lesson", **terms), new_course_lesson_path(@course), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
 
 - if @lessons.empty?
-  %p.text-gray-500.text-sm This course has no lessons yet.
+  %p.text-gray-500.text-sm= t("catalog_ui.no_lessons", **terms)
 - else
   %table.w-full.bg-white.border.border-gray-200.rounded
     %thead.bg-gray-50

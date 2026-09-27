@@ -6,7 +6,7 @@ class QuestionGenerationTasksController < ApplicationController
   def create
     if @lesson.cbai_api_key.blank?
       redirect_to course_lesson_questions_path(@course, @lesson),
-                  alert: "Set a ChatBar AI API key on this lesson first."
+                  alert: t("catalog_ui.question_api_key_required", **helpers.terms)
       return
     end
 
@@ -147,7 +147,7 @@ class QuestionGenerationTasksController < ApplicationController
     end
 
     payload = {
-      name: "LMS question generation · lesson #{@lesson.id} · #{Time.current.utc.iso8601}",
+      name: "LMS question generation · #{helpers.terms[:lesson_l]} #{@lesson.id} · #{Time.current.utc.iso8601}",
       strategy: strategy,
       description: helpers.question_generation_prompt(@lesson, focus: task.prompt, count: count, kind: kind)
     }

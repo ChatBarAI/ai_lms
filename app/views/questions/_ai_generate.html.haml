@@ -2,7 +2,7 @@
 
 - recent_tasks = lesson.question_generation_tasks.recent.limit(5)
 
-- title_attr  = "The lesson title and body are sent to ChatBar AI automatically. "
+- title_attr  = t("catalog_ui.question_context_hint", **terms)
 - title_attr += "Optionally add a focus below to narrow the questions to a specific topic or section. "
 - title_attr += "Generated questions arrive asynchronously and will appear in the list below."
 
@@ -18,7 +18,7 @@
       %div
         = f.label :prompt, "Focus (optional)", class: "block text-sm font-medium text-gray-700"
         = f.text_area :prompt, rows: 2,
-                       placeholder: "e.g. focus on the section about compound interest — leave blank to cover the whole lesson",
+                       placeholder: t("catalog_ui.question_focus_hint", **terms),
                        class: "w-full border border-gray-300 rounded px-3 py-2 text-sm"
 
       .grid.grid-cols-1.sm:grid-cols-3.gap-3

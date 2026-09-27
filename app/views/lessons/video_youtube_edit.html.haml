@@ -2,7 +2,7 @@
 
 %div
   .mb-4
-    = link_to "← Back to lesson edit", edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
+    = link_to t("catalog_ui.back_to_lesson_edit", **terms), edit_course_lesson_path(@course, @lesson), class: "text-sm text-gray-500 hover:text-gray-700"
   %h1.text-2xl.font-bold.mb-2 Intro video — YouTube / URL
   %p.text-sm.text-gray-500.mb-4 Paste the full URL of a YouTube or Vimeo video, or a direct mp4/webm/ogg file. The player is embedded at the top of the lesson.
 

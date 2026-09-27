@@ -48,4 +48,4 @@
         .self-center.ml-auto
           = form_with model: @progress, url: progress_path(@progress.id), method: :patch, local: true do |f|
             = f.hidden_field :status, value: "completed"
-            = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
+            = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete", **terms) }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"

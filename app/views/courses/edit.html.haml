@@ -1,6 +1,6 @@
-- content_for :title, "Edit course"
+- content_for :title, t("catalog_ui.edit_course", **terms)
 
-%h1.text-2xl.font-bold.mb-4= "Edit Course · #{@course.title}"
+%h1.text-2xl.font-bold.mb-4= t("catalog_ui.edit_course_title", **terms, title: @course.title)
 
 .mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
@@ -12,8 +12,8 @@
 .mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
     .flex.items-center.gap-2
-      Lessons in this course
-      = link_to "Add lesson", new_course_lesson_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+      = t("catalog_ui.lessons_in_course", **terms)
+      = link_to t("catalog_ui.add_lesson", **terms), new_course_lesson_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
     = collapsible_icon_badge
   %div{data: { collapsible_target: "content" }}
     - if @lessons.any?
@@ -23,7 +23,7 @@
             .min-w-0
               .text-sm.font-medium.truncate= lesson.title
               .text-xs.text-gray-500
-                = "Lesson #{index + 1}"
+                = t("catalog_ui.lesson_number", **terms, number: index + 1)
                 - unless lesson.published?
                   = " · draft"
             .flex.flex-wrap.gap-2.items-center
@@ -31,7 +31,7 @@
               = link_to "Edit", edit_course_lesson_path(@course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
     - else
       .mt-3.bg-gray-50.border.border-gray-200.rounded.p-4.text-sm.text-gray-500
-        No lessons yet. Add the first lesson for this course.
+        = t("catalog_ui.no_lessons_add_first", **terms)
 
 .bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}

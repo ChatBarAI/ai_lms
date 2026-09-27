@@ -7,7 +7,7 @@
     .min-w-0.flex-1
       .flex.flex-wrap.items-baseline.gap-x-3.gap-y-0.5
         %h3.font-semibold.shrink-0 AI tutor
-        %p.text-sm.text-gray-500.flex-none.max-w-full Talk to the lesson avatar.
+        %p.text-sm.text-gray-500.flex-none.max-w-full= t("catalog_ui.lesson_avatar", **terms)
       %p.text-xs.text-red-600.mt-2.hidden{ data: { anam_embed_target: "micStatus" } }
     %button.inline-flex.items-center.gap-2.px-3.py-1.5.rounded.bg-indigo-600.text-white.hover:bg-indigo-700.cursor-pointer.text-sm.shrink-0{ type: "button", data: { action: "click->anam-embed#openWithMicGate", anam_embed_target: "openButton" } }
       = image_tag "anam-icon.png", alt: "Anam", class: "w-4 h-4"

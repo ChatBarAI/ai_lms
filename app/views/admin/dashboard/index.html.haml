@@ -16,14 +16,14 @@
         data: { action: "change->auto-submit#submit" }
 
 .grid.grid-cols-2.md:grid-cols-3.lg:grid-cols-6.gap-3.mb-6
-  - tiles = [ [ "Users", @total_users ], [ "Active (#{@range_days}d)", @active_users ], [ "Enrolments", @total_enrollments ], [ "Completions (MTD)", @completions_this_month ], [ "Avg completion %", @avg_completion ], [ "Courses · Lessons", "#{@total_courses} · #{@total_lessons}" ] ]
+  - tiles = [ [ "Users", @total_users ], [ "Active (#{@range_days}d)", @active_users ], [ "Enrolments", @total_enrollments ], [ "Completions (MTD)", @completions_this_month ], [ "Avg completion %", @avg_completion ], [ t("catalog_ui.catalog_totals", **terms), "#{@total_courses} · #{@total_lessons}" ] ]
   - tiles.each_with_index do |(label, value), idx|
     .bg-white.border.border-gray-200.rounded.p-3
       .text-xs.uppercase.tracking-wide.text-gray-500= label
       - if idx == tiles.size - 1 && @pending_marking_lessons_count.positive?
         .mt-1.flex.items-center.gap-2
           .text-2xl.font-semibold= value
-          = link_to @pending_marking_lessons_count, admin_marking_queue_path, title: "Lessons needing marking", class: "inline-flex min-w-8 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-lg font-semibold text-amber-700 hover:bg-amber-100"
+          = link_to @pending_marking_lessons_count, admin_marking_queue_path, title: t("catalog_ui.needs_marking", **terms), class: "inline-flex min-w-8 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-lg font-semibold text-amber-700 hover:bg-amber-100"
       - else
         .text-2xl.font-semibold.mt-1= value
 
@@ -35,14 +35,14 @@
     %h2.font-semibold.mb-2 Enrolments per week (last #{@range_days} days)
     = svg_chart @enrollments_per_week, type: :column, color: "#0ea5e9"
   .bg-white.border.border-gray-200.rounded.p-4
-    %h2.font-semibold.mb-2 Lesson completions per week (last #{@range_days} days)
+    %h2.font-semibold.mb-2= t("catalog_ui.weekly_completions", **terms, days: @range_days)
     = svg_chart @completions_per_week, type: :column, color: "#16a34a"
   .bg-white.border.border-gray-200.rounded.p-4
-    %h2.font-semibold.mb-2 Top courses by enrolment
+    %h2.font-semibold.mb-2= t("catalog_ui.top_courses", **terms)
     = svg_chart @top_courses_by_enrollment, type: :bar, color: "#f59e0b"
 
 .bg-white.border.border-gray-200.rounded.p-4
-  %h2.font-semibold.mb-2 Top-rated lessons
+  %h2.font-semibold.mb-2= t("catalog_ui.top_lessons", **terms)
   - if @top_rated_lessons.any?
     = svg_chart @top_rated_lessons.transform_values { |v| v.to_f.round(2) }, type: :bar, color: "#ef4444", max: 5
   - else

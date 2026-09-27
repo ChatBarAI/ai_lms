@@ -86,7 +86,7 @@ class LessonsController < ApplicationController
     @lesson.course = @course
     @lesson.position ||= @course.lessons.maximum(:position).to_i + 1
     if assign_lesson_form_attributes && @lesson.save
-      redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.created")
+      redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.created", **helpers.terms)
     else
       render :new, status: :unprocessable_entity
     end
@@ -98,7 +98,7 @@ class LessonsController < ApplicationController
   def update
     @lesson.cover_image.purge if ActiveModel::Type::Boolean.new.cast(params.dig(:lesson, :remove_cover_image))
     if assign_lesson_form_attributes && @lesson.save
-      redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.updated")
+      redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.updated", **helpers.terms)
     else
       render :edit, status: :unprocessable_entity
     end
@@ -106,17 +106,17 @@ class LessonsController < ApplicationController
 
   def destroy
     @lesson.destroy
-    redirect_to course_path(@course), notice: t("lessons.flash.deleted"), status: :see_other
+    redirect_to course_path(@course), notice: t("lessons.flash.deleted", **helpers.terms), status: :see_other
   end
 
   def publish
     @lesson.update(published_at: Time.current)
-    redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.published")
+    redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.published", **helpers.terms)
   end
 
   def unpublish
     @lesson.update(published_at: nil)
-    redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.unpublished")
+    redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.unpublished", **helpers.terms)
   end
 
   def video_youtube_edit
@@ -257,7 +257,7 @@ class LessonsController < ApplicationController
 
     t("lessons.flash.answers_scored",
       score: result[:score],
-      message: progress.completed? ? t("lessons.flash.lesson_marked_complete") : t("lessons.flash.keep_practising", pass_mark: @lesson.effective_pass_mark))
+      message: progress.completed? ? t("lessons.flash.lesson_marked_complete", **helpers.terms) : t("lessons.flash.keep_practising", pass_mark: @lesson.effective_pass_mark))
   end
 
   def fail_scoring!(progress, enrollment, lesson)

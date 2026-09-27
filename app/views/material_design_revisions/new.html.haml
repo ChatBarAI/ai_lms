@@ -19,7 +19,7 @@
         = f.collection_select :ai_model_configuration_id, AiModelConfiguration.enabled, :id, :name, {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white", required: true
       %div
         = f.label :request, "Design request", class: "block text-sm font-medium mb-1"
-        = f.text_area :request, rows: 8, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "Create a clear, modern lesson page…", required: true
+        = f.text_area :request, rows: 8, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: t("catalog_ui.design_request_hint", **terms), required: true
     %aside.design-assets-panel.relative.bg-gray-50.border.border-gray-200.rounded-lg{
       class: "dark:bg-gray-800 dark:border-gray-700",
       data: {

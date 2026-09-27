@@ -12,7 +12,8 @@ class CoursePrerequisite < ApplicationRecord
     return if course_id.blank? || prerequisite_course_id.blank?
     return unless course_id == prerequisite_course_id
 
-    errors.add(:prerequisite_course_id, "can't be the same as the course")
+    label = Course.model_name.human(count: 1)
+    errors.add(:prerequisite_course_id, I18n.t("catalog_ui.same_prerequisite", course: label, course_l: label.downcase))
   end
 
   # Adding B→requires→A is a cycle if A already requires B (transitively).

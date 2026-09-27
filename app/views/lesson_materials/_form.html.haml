@@ -34,7 +34,7 @@
         %div
           = toggle_switch_field f, :required,
               label: "Required before #{terms[:quiz_l]}"
-        %div{ title: "Display this material open by default when the lesson is shown." }
+        %div{ title: t("catalog_ui.material_open_hint", **terms) }
           = toggle_switch_field f, :open_by_default,
               label: "Open by default"
 
@@ -111,11 +111,11 @@
       %p.text-xs.text-gray-500.mt-1 Direct link to an mp4, webm, or ogg video file.
 
     %div{ data: { material_kind_target: "chatbar" }, class: ("hidden" if material.kind != "chatbar") }
-      - token_label_title = local_assigns[:chatbar_token_prefilled] ? "Prefilled with this lesson's ChatBar token. Replace it to use a different ChatBar for this material." : nil
+      - token_label_title = local_assigns[:chatbar_token_prefilled] ? t("catalog_ui.material_token_hint", **terms) : nil
       = f.label :chatbar_token, "ChatBar instance token", class: "block text-sm font-medium mb-1", title: token_label_title
       = f.text_field :chatbar_token, class: "w-full border border-gray-300 rounded px-3 py-2 mb-3 font-mono", autocomplete: "off", placeholder: "ChatBar instance token"
       = f.label :chatbar_prompt, "Conversation starting prompt", class: "block text-sm font-medium mb-1"
-      = f.text_area :chatbar_prompt, rows: 6, maxlength: 1500, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: "Ask the learner a question or begin a guided conversation about this lesson…"
+      = f.text_area :chatbar_prompt, rows: 6, maxlength: 1500, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: t("catalog_ui.material_prompt_hint", **terms)
       %p.text-xs.text-gray-500.mt-1 This prompt is stored directly on the material and sent to the selected ChatBar when the learner starts the conversation. Maximum 1,500 characters.
       .mt-4
         = f.label :chatbar_layout, "Conversation layout", class: "block text-sm font-medium mb-1"
@@ -138,28 +138,28 @@
         .absolute.bg-white.rounded-xl.shadow-2xl.border.border-violet-200{ style: "top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,36rem);max-height:90vh", tabindex: "-1", data: { dialog_target: "panel" } }
           .flex.items-center.justify-between.border-b.border-gray-200.px-5.py-4
             %div
-              %h2.font-semibold.text-gray-900{ id: "copy-material-dialog-title", title: "Choose material from one of your courses." } Create from copy
+              %h2.font-semibold.text-gray-900{ id: "copy-material-dialog-title", title: t("catalog_ui.copy_material_hint", **terms) } Create from copy
             %button.text-gray-500.hover:text-gray-700.text-2xl.leading-none.cursor-pointer{ type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" }, "aria-label": "Close" } ×
-          .space-y-4.p-5.overflow-y-auto{ style: "max-height:calc(90vh - 5rem)", data: { controller: "material-copy-selector", material_copy_selector_catalog_value: copy_source_catalog.to_json } }
+          .space-y-4.p-5.overflow-y-auto{ style: "max-height:calc(90vh - 5rem)", data: { controller: "material-copy-selector", material_copy_selector_catalog_value: copy_source_catalog.to_json, material_copy_selector_prompts_value: { lesson: t("catalog_ui.choose_lesson", **terms), courseFirst: t("catalog_ui.choose_course_first", **terms), lessonFirst: t("catalog_ui.choose_lesson_first", **terms), material: t("catalog_ui.choose_material", **terms) }.to_json } }
             %div
               - if copy_source_catalog.any?
                 .space-y-4
                   %div
-                    = label_tag :source_course_id, "Course", class: "block text-sm font-medium mb-1"
+                    = label_tag :source_course_id, terms[:course], class: "block text-sm font-medium mb-1"
                     = select_tag :source_course_id,
                       options_for_select(copy_source_catalog.map { |entry| [entry[:title], entry[:id]] }),
-                      prompt: "Choose a course…",
+                      prompt: t("catalog_ui.choose_course", **terms),
                       class: "w-full border border-gray-300 rounded px-3 py-2 bg-white",
                       data: { material_copy_selector_target: "course", action: "change->material-copy-selector#courseChanged" }
                   .hidden{ data: { material_copy_selector_target: "lessonGroup" } }
-                    = label_tag :source_lesson_id, "Lesson", class: "block text-sm font-medium mb-1"
-                    = select_tag :source_lesson_id, "", prompt: "Choose a course first…", disabled: true, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500", data: { material_copy_selector_target: "lesson", action: "change->material-copy-selector#lessonChanged" }
+                    = label_tag :source_lesson_id, terms[:lesson], class: "block text-sm font-medium mb-1"
+                    = select_tag :source_lesson_id, "", prompt: t("catalog_ui.choose_course_first", **terms), disabled: true, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500", data: { material_copy_selector_target: "lesson", action: "change->material-copy-selector#lessonChanged" }
                   .hidden{ data: { material_copy_selector_target: "materialGroup" } }
                     = label_tag :source_material_id, "Material", class: "block text-sm font-medium mb-1"
-                    = select_tag :source_material_id, "", prompt: "Choose a lesson first…", disabled: true, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500", data: { material_copy_selector_target: "material", action: "change->material-copy-selector#materialChanged" }
+                    = select_tag :source_material_id, "", prompt: t("catalog_ui.choose_lesson_first", **terms), disabled: true, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white disabled:bg-gray-100 disabled:text-gray-500", data: { material_copy_selector_target: "material", action: "change->material-copy-selector#materialChanged" }
                 %p.text-xs.text-gray-500.mt-3 The copy receives its own files and can be edited or deleted independently.
               - else
-                %p.rounded.border.border-amber-200.bg-amber-50.p-3.text-sm.text-amber-800 There are no materials in your courses to copy yet.
+                %p.rounded.border.border-amber-200.bg-amber-50.p-3.text-sm.text-amber-800= t("catalog_ui.no_copy_materials", **terms)
             .space-y-3
               %div
                 = check_box_tag :copy_settings, "1", true, id: "copy_settings"

@@ -17,7 +17,7 @@
 - mini_svg_class ||= "h-10 w-full"
 - mini_svg_width ||= nil
 - show_attempt_numbers = local_assigns.fetch(:show_attempt_numbers, false)
-- axis_label ||= "Attempt Sequence (All Lessons)"
+- axis_label ||= t("catalog_ui.attempt_sequence", **terms)
 - pass_marks = attempts.map { |attempt| attempt.lesson&.effective_pass_mark }.compact.map(&:to_f).uniq.sort
 - resolved_pass_mark = pass_marks.size == 1 ? pass_marks.first : pass_mark
 - show_shared_pass_line = pass_marks.size <= 1

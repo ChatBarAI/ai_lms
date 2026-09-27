@@ -15,7 +15,7 @@
       %p.text-xs.text-gray-500= t(".language_hint")
 
     .space-y-2
-      %p.block.text-sm.font-medium.text-gray-700= t(".course_languages")
+      %p.block.text-sm.font-medium.text-gray-700= t(".course_languages", **terms)
       .flex.flex-wrap.gap-x-5.gap-y-2
         = hidden_field_tag "user[course_locales][]", ""
         - User::SUPPORTED_LOCALES.each do |code, label|

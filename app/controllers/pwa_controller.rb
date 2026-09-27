@@ -2,7 +2,7 @@ class PwaController < ApplicationController
   skip_forgery_protection only: :service_worker
 
   def manifest
-    response.set_header("Cache-Control", "public, max-age=300")
+    response.set_header("Cache-Control", "private, max-age=300")
     render "pwa/manifest", formats: [ :json ], content_type: "application/manifest+json"
   end
 

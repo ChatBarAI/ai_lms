@@ -1,5 +1,5 @@
-- content_for :title, "New lesson"
+- content_for :title, t("catalog_ui.new_lesson", **terms)
 
-%h1.text-2xl.font-bold.mb-4 New lesson
+%h1.text-2xl.font-bold.mb-4= t("catalog_ui.new_lesson", **terms)
 .p-4.bg-white.border.border-gray-200.rounded-lg
     = render "form", lesson: @lesson, course: @course

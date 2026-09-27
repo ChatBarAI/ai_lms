@@ -3,7 +3,7 @@
 -# inside a centered modal, right-side drawer, or responsive right inline column.
 - mount_id = "cbai_lesson_tutor_#{lesson.id}"
 - root_id  = "cbai_launcher_#{lesson.id}"
-- ctx      = "Lesson: #{lesson.title}. Course: #{lesson.course.title}."
+- ctx      = "#{terms[:lesson]}: #{lesson.title}. #{terms[:course]}: #{lesson.course.title}."
 - display_mode = lesson.cbai_display_mode_or_default
 
 .bg-white.border.border-gray-200.rounded-lg.p-4.mb-6{ id: root_id, data: { controller: "cbai-embed", cbai_embed_display_mode_value: display_mode } }

@@ -21,7 +21,7 @@
 - if @lessons.any?
   %section
     %h2.text-lg.font-semibold.mb-3
-      Lessons
+      = terms[:lessons]
       %span.text-sm.font-normal.text-gray-400.ml-1= "(#{@lessons.size})"
     .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
       - @lessons.each do |lesson|

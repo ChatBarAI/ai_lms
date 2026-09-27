@@ -4,9 +4,9 @@
   %div
     %h1.text-2xl.font-bold= @lesson.title
     .text-sm.text-gray-500
-      Lesson report ·
+      = t("catalog_ui.lesson_report", **terms)
       = link_to @course.title, admin_course_path(@course), class: "text-indigo-600 hover:underline"
-  = link_to "Back to course report", report_admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
+  = link_to t("catalog_ui.back_to_course_report", **terms), report_admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
 
 .grid.grid-cols-2.md:grid-cols-5.gap-3.mb-6
   - tiles = [ [ "Attempts", @attempts ], [ "Completions", @completions ], [ "Avg score", @average_score&.round(1) || "—" ], [ "Pass rate", @pass_rate ? "#{@pass_rate}%" : "—" ], [ "Avg rating", @average_rating&.round(2) || "—" ] ]
@@ -63,7 +63,7 @@
 - if @ai_answers.any?
   .mt-4.bg-white.border.border-gray-200.rounded
     .px-4.py-2.border-b.border-gray-100.flex.items-center.justify-between
-      %span.font-semibold Free-text lesson marking
+      %span.font-semibold= t("catalog_ui.lesson_marking", **terms)
       - pending = @ai_answers.count { |a| a.ai_score.nil? }
       - if pending > 0
         .flex.items-center.gap-1.5

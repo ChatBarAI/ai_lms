@@ -8,7 +8,7 @@
 .mb-4.flex.items-center.justify-end{ data: { controller: "lesson-show" } }
   .flex.flex-wrap.gap-2.items-center
     = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
-      ← Course
+      = "← #{terms[:course]}"
     - if can?(:update, @lesson)
       - if @lesson.published?
         = button_to t("common.unpublish"), unpublish_course_lesson_path(@course, @lesson), method: :post, data: { turbo_confirm: t(".unpublish_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer transition-colors"

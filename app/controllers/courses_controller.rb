@@ -31,7 +31,7 @@ class CoursesController < ApplicationController
   def create
     @course.owner = current_user
     if @course.save
-      redirect_to @course, notice: t("courses.flash.created")
+      redirect_to @course, notice: t("courses.flash.created", **helpers.terms)
     else
       render :new, status: :unprocessable_entity
     end
@@ -46,7 +46,7 @@ class CoursesController < ApplicationController
     @course.cover_image.purge if bool.cast(params.dig(:course, :remove_cover_image))
     @course.certificate_template.purge if bool.cast(params.dig(:course, :remove_certificate_template))
     if @course.update(course_params)
-      redirect_to @course, notice: t("courses.flash.updated")
+      redirect_to @course, notice: t("courses.flash.updated", **helpers.terms)
     else
       @lessons = @course.lessons.order(:position)
       render :edit, status: :unprocessable_entity
@@ -88,17 +88,17 @@ class CoursesController < ApplicationController
 
   def destroy
     @course.destroy
-    redirect_to courses_path, notice: t("courses.flash.deleted"), status: :see_other
+    redirect_to courses_path, notice: t("courses.flash.deleted", **helpers.terms), status: :see_other
   end
 
   def publish
     @course.update(published_at: Time.current)
-    redirect_to @course, notice: t("courses.flash.published")
+    redirect_to @course, notice: t("courses.flash.published", **helpers.terms)
   end
 
   def unpublish
     @course.update(published_at: nil)
-    redirect_to @course, notice: t("courses.flash.unpublished")
+    redirect_to @course, notice: t("courses.flash.unpublished", **helpers.terms)
   end
 
   private

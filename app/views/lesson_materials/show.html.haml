@@ -1,5 +1,5 @@
 - content_for :title, @lesson_material.title
 .flex.items-center.justify-between.gap-4.mb-4
   %h1.text-2xl.font-bold= @lesson_material.title
-  = link_to "← Back to lesson", course_lesson_path(@course, @lesson), class: "inline-flex shrink-0 items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
+  = link_to t("catalog_ui.back_to_lesson", **terms), course_lesson_path(@course, @lesson), class: "inline-flex shrink-0 items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
 = render "material", material: @lesson_material, course: @course, lesson: @lesson, enrollment: current_user&.enrollments&.find_by(course_id: @course.id), collapsed: false
