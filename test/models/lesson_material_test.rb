@@ -144,6 +144,21 @@ class LessonMaterialTest < ActiveSupport::TestCase
     assert_includes material.raw_html_content, "Safe text"
   end
 
+  test "raw HTML materials retain responsive card styles when saved and edited" do
+    style = "background:#FFFFFF;border:1px solid rgba(18,23,42,0.08);border-radius:20px;padding:clamp(28px,5vw,48px);box-shadow:0 8px 24px rgba(18,23,42,0.10);"
+
+    [ :raw_html, :raw_html_iframe ].each do |kind|
+      material = LessonMaterial.create!(
+        lesson: @lesson, title: "Story", kind: kind,
+        raw_html_content: %(<div id="story" style="#{style}">Story content</div>)
+      )
+
+      assert_equal style, Nokogiri::HTML5.parse(material.reload.raw_html_content).at_css("#story")["style"]
+      material.update!(title: "Updated story")
+      assert_equal style, Nokogiri::HTML5.parse(material.reload.raw_html_content).at_css("#story")["style"]
+    end
+  end
+
   test "isolated raw html preserves sanitized stylesheet blocks" do
     material = LessonMaterial.create!(
       lesson: @lesson,

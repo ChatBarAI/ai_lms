@@ -210,6 +210,49 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, '<p class="card">Hello</p>'
   end
 
+  test "switching an iframe material to inline reapplies the inline policy" do
+    sign_in users(:instructor)
+    safe_style = "padding:clamp(28px,5vw,48px);box-shadow:0 8px 24px rgba(18,23,42,0.10);"
+
+    [ false, true ].each do |resubmit_html|
+      material = LessonMaterial.create!(
+        lesson: @lesson, title: "Switch modes", kind: :raw_html_iframe,
+        raw_html_content: <<~HTML
+          <html><head><style>body { position: fixed; } .card { color: red; }</style></head>
+          <body><div class="card" style="#{safe_style}">Story</div></body></html>
+        HTML
+      )
+      assert_includes material.reload.raw_html_content, "position: fixed"
+
+      attributes = { kind: "raw_html" }
+      if resubmit_html
+        attributes[:raw_html_content] = material.raw_html_content + <<~HTML
+          <script>alert(1)</script><iframe src="https://tracker.example"></iframe>
+          <p onclick="alert(1)" style="position:fixed;background:url(https://tracker.example/pixel)">Added text</p>
+        HTML
+      end
+
+      patch course_lesson_lesson_material_path(@course, @lesson, material),
+            params: { lesson_material: attributes }
+
+      assert_redirected_to edit_course_lesson_path(@course, @lesson)
+      assert material.reload.raw_html?
+      fragment = Nokogiri::HTML5.fragment(material.raw_html_content)
+      assert_empty fragment.css("style, script, iframe, [onclick]")
+      assert_not_includes material.raw_html_content, "position"
+      assert_not_includes material.raw_html_content, "tracker.example"
+      assert_equal safe_style, fragment.at_css(".card")["style"]
+
+      get course_lesson_lesson_material_path(@course, @lesson, material)
+
+      assert_response :success
+      assert_select "#material-#{material.id}" do
+        assert_select "style, script, iframe, [onclick]", count: 0
+        assert_select ".card[style=?]", safe_style, text: "Story"
+      end
+    end
+  end
+
   test "guest can view a published web-page snapshot through the document endpoint" do
     material = LessonMaterial.create!(
       lesson: @lesson,

@@ -199,6 +199,8 @@ class LessonMaterial < ApplicationRecord
   end
 
   def sanitize_raw_html
+    # Always use the current kind, even when only the kind changed. HTML saved
+    # for an isolated iframe must pass the inline policy before rendering inline.
     self.raw_html_content = SafeHtmlPolicy.sanitize_fragment(raw_html_content) if raw_html?
     if raw_html_iframe?
       self.raw_html_content = SafeHtmlPolicy.sanitize_isolated_document(

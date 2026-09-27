@@ -1,4 +1,6 @@
 require "cgi"
+require "crass"
+require "rails-html-sanitizer"
 
 module SafeHtmlPolicy
   ALLOWED_TAGS = %w[
@@ -12,6 +14,28 @@ module SafeHtmlPolicy
   ].freeze
   VIDEO_TAGS = %w[video source].freeze
   VIDEO_ATTRIBUTES = %w[aria-label controls preload playsinline muted loop].freeze
+
+  # Keep these additions local to material HTML; changing Loofah's global lists
+  # would also change sanitization of rich text elsewhere in the application.
+  INLINE_CSS_PROPERTIES = (Loofah::HTML5::SafeList::ALLOWED_CSS_PROPERTIES + %w[
+    box-shadow box-sizing column-gap gap row-gap
+    grid-template-columns grid-template-rows grid-template-areas
+    grid-auto-columns grid-auto-rows grid-auto-flow
+    grid-column grid-column-start grid-column-end grid-row grid-row-start grid-row-end grid-area
+    text-transform -webkit-font-smoothing
+  ]).freeze
+  INLINE_CSS_FUNCTIONS = (Loofah::HTML5::SafeList::ALLOWED_CSS_FUNCTIONS + %w[
+    clamp min max minmax repeat fit-content
+  ]).freeze
+
+  class MaterialScrubber < Rails::HTML::PermitScrubber
+    protected
+
+    def scrub_css_attribute(node)
+      style = node.attributes["style"]
+      style.value = SafeHtmlPolicy.sanitize_inline_css(style.value) if style
+    end
+  end
 
   SYSTEM_FONT_STACKS = {
     sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif',
@@ -42,10 +66,11 @@ module SafeHtmlPolicy
   def sanitize_fragment(html, video_urls: [])
     source = Nokogiri::HTML5.fragment(html.to_s)
     source.css("script, style, form, iframe, object, embed").remove
+    scrubber = MaterialScrubber.new
+    scrubber.tags = ALLOWED_TAGS + (video_urls.any? ? VIDEO_TAGS : [])
+    scrubber.attributes = ALLOWED_ATTRIBUTES + (video_urls.any? ? VIDEO_ATTRIBUTES : [])
     sanitized = Rails::HTML::SafeListSanitizer.new.sanitize(
-      source.to_html,
-      tags: ALLOWED_TAGS + (video_urls.any? ? VIDEO_TAGS : []),
-      attributes: ALLOWED_ATTRIBUTES + (video_urls.any? ? VIDEO_ATTRIBUTES : [])
+      source.to_html, scrubber: scrubber
     )
     fragment = Nokogiri::HTML5.fragment(sanitized)
     restrict_video_sources(fragment, video_urls) if video_urls.any?
@@ -104,6 +129,42 @@ module SafeHtmlPolicy
     map_font_families(cleaned)
   end
 
+  def sanitize_inline_css(css)
+    Crass.parse_properties(css.to_s).filter_map do |property|
+      next unless property[:node] == :property
+
+      name = property[:name].downcase
+      next unless INLINE_CSS_PROPERTIES.include?(name) ||
+        Loofah::HTML5::SafeList::ALLOWED_SVG_PROPERTIES.include?(name) ||
+        Loofah::HTML5::SafeList::SHORTHAND_CSS_PROPERTIES.include?(name.split("-").first)
+      next unless safe_css_values?(property[:children])
+
+      value = Crass::Parser.stringify(property[:children]).strip
+      next if value.empty?
+
+      "#{name}:#{value}#{' !important' if property[:important]};"
+    end.join
+  end
+
+  def safe_css_values?(nodes)
+    nodes.all? do |node|
+      case node[:node]
+      when :function
+        # Check decoded function names and nested arguments so escaped URLs or
+        # URLs inside otherwise allowed functions cannot bypass the policy.
+        INLINE_CSS_FUNCTIONS.include?(node[:name].downcase) && safe_css_values?(node[:value])
+      when :simple_block
+        [ "(", "[" ].include?(node[:start]) && safe_css_values?(node[:value])
+      when :ident, :number, :dimension, :percentage, :hash, :string, :whitespace, :comment, :comma
+        true
+      when :delim
+        %w[+ - * /].include?(node[:value])
+      else
+        false
+      end
+    end
+  end
+
   def map_inline_fonts(fragment)
     fragment.css("[style]").each do |element|
       element["style"] = map_font_families(element["style"])
@@ -123,7 +184,7 @@ module SafeHtmlPolicy
     attributes = {
       "class" => source_body["class"].to_s.scan(/[a-z0-9_-]+/i).join(" ").presence,
       "id" => source_body["id"].to_s[/\A[a-z0-9_-]+\z/i],
-      "style" => map_font_families(Rails::HTML::SafeListSanitizer.new.sanitize_css(source_body["style"].to_s)).presence,
+      "style" => map_font_families(sanitize_inline_css(source_body["style"].to_s)).presence,
       "dir" => source_body["dir"].to_s[/\A(?:ltr|rtl|auto)\z/i],
       "lang" => source_body["lang"].to_s[/\A[a-z0-9-]+\z/i]
     }.compact
