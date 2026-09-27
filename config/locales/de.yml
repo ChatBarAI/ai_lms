@@ -117,6 +117,23 @@ de:
       update_failed: "Profil konnte nicht gespeichert werden."
 
   lessons:
+    section_order:
+      title: "Reihenfolge der Abschnitte"
+      hint: "Verschiebe die Abschnitte per Ziehen oder mit den Pfeilen und speichere anschließend die Lektion. Abschnitte erscheinen nur, wenn sie für Lernende verfügbar sind."
+      drag: "Zum Sortieren ziehen"
+      move_up: "%{section} nach oben verschieben"
+      move_down: "%{section} nach unten verschieben"
+      reset: "Standardreihenfolge wiederherstellen"
+      reset_done: "Standardreihenfolge wiederhergestellt. Speichere die Lektion, um sie zu übernehmen."
+      moved: "%{section}: Position %{position} von %{count}."
+      sections:
+        introduction: "Einführung (Video, Titel und Beschreibung)"
+        ai_tutor: "KI-Tutor"
+        materials: "Materialien"
+        progress: "Fortschritt"
+        quiz_results: "%{quiz}: Antwortfeedback"
+        quiz: "%{quiz}"
+        rating: "Bewertung"
     course_sidebar:
       open: "Fortschritt"
       close: "Kursinhalte schließen"
@@ -160,6 +177,8 @@ de:
       completed: "✓ abgeschlossen"
       enrol_prompt: "Schreibe dich in diesen Kurs ein, um deinen Fortschritt zu verfolgen und %{lessons_l} zu bewerten."
       enrol_now: "Jetzt einschreiben"
+      view_required_materials: "Erforderliche Materialien ansehen"
+      complete_materials_to_continue: "und alle als abgeschlossen markieren, um das %{quiz_l} freizuschalten."
     flash:
       ai_marking_timeout: "Die KI-Bewertung hat nach 5 Minuten eine Zeitüberschreitung erreicht. Freitextantworten wurden mit 0 bewertet. Du kannst das %{quiz_l} erneut versuchen."
       complete_required_materials: "Schließe zuerst die erforderlichen Materialien ab."

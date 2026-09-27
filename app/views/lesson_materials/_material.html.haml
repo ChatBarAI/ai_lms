@@ -98,8 +98,6 @@
         %video.w-full.rounded.bg-black{ controls: true, preload: "metadata" }
           %source{ src: rails_blob_path(material.video_file, disposition: "inline"), type: material.video_file.content_type }
           %p.text-sm.p-2 Your browser does not support video playback.
-        .flex.justify-end.mt-2
-          = link_to "Download #{material.video_file.filename}", rails_blob_path(material.video_file, disposition: "attachment"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
       - else
         %p.text-sm.text-gray-500.italic No video file attached.
     - when "video_url"

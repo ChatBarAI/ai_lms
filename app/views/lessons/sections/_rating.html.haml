@@ -1,0 +1,2 @@
+- if @enrollment && @progress.completed? && @lesson.ratings_enabled?
+  = render "lessons/rating_form", lesson: @lesson, user_rating: @user_rating

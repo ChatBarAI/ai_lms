@@ -64,6 +64,39 @@ class LessonTest < ActiveSupport::TestCase
     assert_includes lesson.body.to_s, "Welcome"
   end
 
+  test "empty section order uses the existing presentation order" do
+    lesson = lessons(:intro)
+    assert_equal [], lesson.section_order
+    assert_equal %w[introduction ai_tutor materials progress quiz_results quiz rating], lesson.effective_section_order
+  end
+
+  test "section order preserves selected positions and appends missing sections" do
+    lesson = lessons(:intro)
+    lesson.section_order = %w[progress introduction ai_tutor]
+
+    assert lesson.valid?
+    assert_equal %w[progress introduction ai_tutor materials quiz_results quiz rating], lesson.effective_section_order
+    assert_equal %w[progress introduction ai_tutor], lesson.section_order
+  end
+
+  test "section order rejects duplicates unknown sections and non-array values" do
+    lesson = lessons(:intro)
+    [ %w[progress progress], [ "../admin/users" ], [ 1 ], [ nil ], { "progress" => 0 }, "progress", nil ].each do |value|
+      lesson.section_order = value
+      assert_not lesson.valid?, "expected #{value.inspect} to be invalid"
+      assert lesson.errors[:section_order].any?
+    end
+  end
+
+  test "effective section order safely renders stale or malformed saved data" do
+    lesson = lessons(:intro)
+    lesson.section_order = [ "progress", "retired_section", "progress", nil ]
+    assert_equal %w[progress introduction ai_tutor materials quiz_results quiz rating], lesson.effective_section_order
+
+    lesson.section_order = { "invalid" => true }
+    assert_equal Lesson::DEFAULT_SECTION_ORDER, lesson.effective_section_order
+  end
+
   test "cbai_display_mode validates against allowed values" do
     l = lessons(:intro)
     l.cbai_display_mode = "weird"

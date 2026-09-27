@@ -1,6 +1,20 @@
 module LessonsHelper
   YOUTUBE_VIDEO_ID_PATTERN = /\A[A-Za-z0-9_-]+\z/
 
+  LESSON_SECTION_PARTIALS = {
+    "introduction" => "lessons/sections/introduction",
+    "ai_tutor" => "lessons/sections/ai_tutor",
+    "materials" => "lessons/sections/materials",
+    "progress" => "lessons/sections/progress",
+    "quiz_results" => "lessons/sections/quiz_results",
+    "quiz" => "lessons/sections/quiz",
+    "rating" => "lessons/sections/rating"
+  }.freeze
+
+  def lesson_section_partial(section)
+    LESSON_SECTION_PARTIALS.fetch(section)
+  end
+
   def lesson_progress_ring(progress, classes: nil)
     pct = progress.completion_percentage.round
     circ = (2 * Math::PI * 20).round(2)

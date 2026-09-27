@@ -111,6 +111,8 @@
             hint: "Lesson image (optional) — recommended 728 × 320 px",
             crop_size: [ 728, 320 ]
 
+  = render "section_order", lesson: lesson
+
   .flex.w-full.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
     = link_to "Cancel", (lesson.persisted? ? course_lesson_path(course, lesson) : course_path(course)), class: "px-4 py-2 rounded border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 text-center"

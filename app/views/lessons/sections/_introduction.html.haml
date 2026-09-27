@@ -1,0 +1,18 @@
+#lesson-introduction.bg-white.border.border-gray-200.rounded-lg.p-2.sm:p-6.mb-6.flow-root
+  - poster_url = (@lesson.poster_image.attached? ? rails_blob_path(@lesson.poster_image) : nil)
+  - if @lesson.intro_video.attached?
+    %video.w-full.mb-6.rounded-lg.border.border-gray-200{ controls: true, preload: "metadata", poster: poster_url }
+      %source{ src: rails_blob_path(@lesson.intro_video, disposition: "inline"), type: @lesson.intro_video.content_type }
+  - elsif (video = lesson_video_embed(@lesson.video_url, poster_url: poster_url))
+    = video
+
+  - if @lesson.cover_image.attached?
+    = image_tag @lesson.cover_image, class: "w-full sm:float-right sm:ml-4 sm:w-auto sm:max-w-96 object-contain mb-4 sm:mb-2"
+  .flex.items-center.gap-4.mb-4
+    %h1.text-2xl.font-bold= @lesson.title
+    = render "shared/tags", record: @lesson
+
+  - if @lesson.body.present?
+    .prose.max-w-none= @lesson.body
+  - else
+    %p.text-gray-400.italic= t("lessons.show.no_content")

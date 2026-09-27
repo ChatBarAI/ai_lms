@@ -1,0 +1,2 @@
+- if @enrollment && @latest_quiz_answers.present?
+  = render "lessons/latest_quiz_results", lesson: @lesson, progress: @progress, answers: @latest_quiz_answers

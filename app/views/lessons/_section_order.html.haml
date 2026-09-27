@@ -1,0 +1,16 @@
+%fieldset.rounded-lg.border.border-gray-200.p-4{ data: { controller: "lesson-section-order", lesson_section_order_default_order_value: Lesson::DEFAULT_SECTION_ORDER.to_json, lesson_section_order_moved_message_value: t("lessons.section_order.moved"), lesson_section_order_reset_message_value: t("lessons.section_order.reset_done"), action: "pointerup@window->lesson-section-order#disarmDrag pointercancel@window->lesson-section-order#disarmDrag" } }
+  %legend.px-1.text-base.font-semibold= t("lessons.section_order.title")
+  %p.mb-3.text-sm.text-gray-500= t("lessons.section_order.hint")
+  %ol.space-y-2{ data: { lesson_section_order_target: "list", action: "dragstart->lesson-section-order#startDrag dragover->lesson-section-order#dragOver drop->lesson-section-order#drop dragend->lesson-section-order#endDrag" } }
+    - lesson.effective_section_order.each_with_index do |section, index|
+      - label = t("lessons.section_order.sections.#{section}", **terms)
+      %li.flex.items-center.gap-3.rounded.border.border-gray-200.bg-gray-50.p-2{ data: { lesson_section_order_target: "item", section_key: section, section_label: label } }
+        = hidden_field_tag "lesson[section_order][]", section, id: nil
+        %span.cursor-grab.select-none.px-1.text-lg.text-gray-400{ title: t("lessons.section_order.drag"), aria: { hidden: "true" }, data: { action: "pointerdown->lesson-section-order#armDrag" } } ⋮⋮
+        %span.w-6.text-right.font-mono.text-xs.tabular-nums.text-gray-500{ data: { section_number: true } }= "#{index + 1}."
+        %span.min-w-0.flex-1.text-sm.font-medium= label
+        .flex.shrink-0.gap-1
+          %button.rounded.border.border-gray-300.bg-white.px-2.py-1.text-sm.cursor-pointer.hover:bg-gray-100.disabled:opacity-40.disabled:cursor-not-allowed{ type: "button", disabled: index.zero?, aria: { label: t("lessons.section_order.move_up", section: label) }, data: { action: "lesson-section-order#move", direction: "up" } } ↑
+          %button.rounded.border.border-gray-300.bg-white.px-2.py-1.text-sm.cursor-pointer.hover:bg-gray-100.disabled:opacity-40.disabled:cursor-not-allowed{ type: "button", disabled: index == Lesson::DEFAULT_SECTION_ORDER.length - 1, aria: { label: t("lessons.section_order.move_down", section: label) }, data: { action: "lesson-section-order#move", direction: "down" } } ↓
+  %button.mt-3.rounded.border.border-gray-300.px-3.py-1.5.text-sm.cursor-pointer.hover:bg-gray-50{ type: "button", data: { action: "lesson-section-order#reset" } }= t("lessons.section_order.reset")
+  %p.sr-only{ role: "status", aria: { live: "polite", atomic: "true" }, data: { lesson_section_order_target: "status" } }

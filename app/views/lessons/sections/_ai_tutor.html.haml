@@ -1,0 +1,6 @@
+- if @lesson.anam_enabled? && @anam_session_token.present?
+  = render "lessons/anam_embed", lesson: @lesson, session_token: @anam_session_token
+- elsif @lesson.cbai_enabled?
+  = render "lessons/cbai_embed", lesson: @lesson
+- elsif @lesson.custom_tutor_enabled?
+  = render "lessons/custom_tutor_embed", lesson: @lesson

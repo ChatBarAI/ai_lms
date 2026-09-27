@@ -101,6 +101,9 @@
           accept: "video/mp4,video/webm,video/ogg",
           preview_type: :file,
           current_attachment: material.video_file
+      - if material.video_file.attached? && material.video_file.blob.persisted?
+        .flex.justify-end.mt-2
+          = link_to "Download #{material.video_file.filename}", rails_blob_path(material.video_file, disposition: "attachment"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
 
     %div{ data: { material_kind_target: "videourl" }, class: ("hidden" if material.kind != "video_url") }
       = f.label :url, "Video URL", class: "block text-sm font-medium mb-1"

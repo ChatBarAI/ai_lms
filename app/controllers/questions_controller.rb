@@ -1,6 +1,7 @@
 class QuestionsController < ApplicationController
   before_action :authenticate_user!
   before_action :set_course_and_lesson
+  before_action :authorize_question_management!
   load_and_authorize_resource through: :lesson
 
   def index
@@ -40,7 +41,6 @@ class QuestionsController < ApplicationController
   end
 
   def reorder
-    authorize! :manage, @lesson
     ids = Array(params[:ids]).map(&:to_i)
     questions = @lesson.questions.where(id: ids).index_by(&:id)
     Question.transaction do
@@ -56,6 +56,15 @@ class QuestionsController < ApplicationController
   def set_course_and_lesson
     @course = Course.find_by(slug: params[:course_id]) || Course.find(params[:course_id])
     @lesson = @course.lessons.find(params[:lesson_id])
+  end
+
+  def authorize_question_management!
+    # CanCanCan maps index/show to :read, which Ability grants students for
+    # questions in published lessons. These management routes expose answer keys,
+    # so require :manage on the parent lesson before loading any questions.
+    # This limits access to the owning instructor and admins; learners take
+    # quizzes through the separately authorised lesson page.
+    authorize! :manage, @lesson
   end
 
   def question_params

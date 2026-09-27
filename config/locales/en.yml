@@ -116,6 +116,23 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    section_order:
+      title: "Presentation order"
+      hint: "Drag sections or use the arrows, then save the lesson. Sections appear only when available to the learner."
+      drag: "Drag to reorder"
+      move_up: "Move %{section} up"
+      move_down: "Move %{section} down"
+      reset: "Reset to default"
+      reset_done: "Default order restored. Save the lesson to apply it."
+      moved: "%{section}: position %{position} of %{count}."
+      sections:
+        introduction: "Introduction (video, title and description)"
+        ai_tutor: "AI Tutor"
+        materials: "Materials"
+        progress: "Progress"
+        quiz_results: "%{quiz} answer feedback"
+        quiz: "%{quiz}"
+        rating: "Rating"
     course_sidebar:
       open: "Progress"
       close: "Close course contents"
@@ -159,6 +176,8 @@ en:
       completed: "✓ completed"
       enrol_prompt: "Enrol in this course to track progress and rate %{lessons_l}."
       enrol_now: "Enrol now"
+      view_required_materials: "View required materials"
+      complete_materials_to_continue: "and mark each as complete to unlock the %{quiz_l}."
     flash:
       ai_marking_timeout: "AI marking timed out after 5 minutes. Free-text answers have been scored as 0 — you can retake the %{quiz_l}."
       complete_required_materials: "Complete the required materials first."

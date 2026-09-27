@@ -102,6 +102,15 @@ class Lesson < ApplicationRecord
     MATERIAL_LAYOUTS.include?(material_layout) ? material_layout : "stacked"
   end
 
+  DEFAULT_SECTION_ORDER = %w[introduction ai_tutor materials progress quiz_results quiz rating].freeze
+  validate :section_order_is_valid
+
+  # Missing sections are appended so existing layouts pick up future additions.
+  def effective_section_order
+    stored = section_order.is_a?(Array) ? section_order : []
+    (stored & DEFAULT_SECTION_ORDER) + (DEFAULT_SECTION_ORDER - stored)
+  end
+
   def cbai_enabled?
     ai_tutor_provider_or_default == "chatbar" &&
       cbai_token.present? &&
@@ -264,6 +273,14 @@ class Lesson < ApplicationRecord
   end
 
   private
+
+  def section_order_is_valid
+    return if section_order.is_a?(Array) &&
+      (section_order - DEFAULT_SECTION_ORDER).empty? &&
+      section_order.uniq == section_order
+
+    errors.add(:section_order, :invalid)
+  end
 
   def assign_position
     return unless position.blank? && course.present?

@@ -17,7 +17,7 @@ class LessonFormAssignmentService
     :retry_incorrect_only,
     :ratings_enabled,
     :free_text_pass_level,
-    { tag_ids: [] }
+    { tag_ids: [], section_order: [] }
   ].freeze
 
   STRIPPED_OPTIONAL_ATTRIBUTES = [
