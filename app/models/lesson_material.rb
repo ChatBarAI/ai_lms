@@ -27,6 +27,8 @@ class LessonMaterial < ApplicationRecord
 
   attr_accessor :google_doc_zip
 
+  attribute :open_by_default, :boolean, default: true
+
   enum :kind, { pdf: 0, html: 1, raw_html: 2, audio_upload: 3, audio_url: 4, image_upload: 5, video_upload: 6, video_url: 7, google_doc: 8, raw_html_iframe: 9, web_page: 10, chatbar: 11 }
 
   AUDIO_CONTENT_TYPES = %w[

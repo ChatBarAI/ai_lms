@@ -35,7 +35,7 @@ de:
     stored_on_lesson: "Wird für %{lesson} gespeichert, damit künftige Importe ohne erneute Eingabe möglich sind."
     synthesia_hint: "Gib einen Synthesia-API-Schlüssel ein und wähle ein fertiges Video als Einführung für %{lesson}."
     chatbar_hint: "Gib den API-Schlüssel des Eigentümers deiner ChatBar-AI-Instanz ein und wähle eine Aufnahme als Einführung für %{lesson}."
-    material_open_hint: "Dieses Material beim Anzeigen von %{lesson} standardmäßig geöffnet darstellen."
+    material_open_hint: "Dieses Material beim Anzeigen von %{lesson} geöffnet darstellen, sofern der Benutzer in diesem Browser noch keinen geöffneten oder geschlossenen Zustand gespeichert hat."
     material_token_hint: "Mit dem ChatBar-Token für %{lesson} vorbelegt. Ersetze es, um für dieses Material einen anderen ChatBar zu verwenden."
     material_prompt_hint: "Stelle eine Frage oder beginne ein geführtes Gespräch über %{lesson}…"
     copy_material_hint: "Wähle Material aus deinen %{courses}."

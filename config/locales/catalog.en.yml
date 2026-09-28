@@ -35,7 +35,7 @@ en:
     stored_on_lesson: "Stored on the %{lesson_l} so future imports work without re-entering it."
     synthesia_hint: "Provide a Synthesia API key, then choose a completed video to attach as this %{lesson_l}'s intro video."
     chatbar_hint: "Provide your ChatBar AI instance's owner API key, then pick a recording to attach as this %{lesson_l}'s intro video."
-    material_open_hint: "Display this material open by default when the %{lesson_l} is shown."
+    material_open_hint: "Display this material open when the %{lesson_l} is shown, unless the user has saved an open or closed choice in this browser."
     material_token_hint: "Prefilled with this %{lesson_l}'s ChatBar token. Replace it to use a different ChatBar for this material."
     material_prompt_hint: "Ask the learner a question or begin a guided conversation about this %{lesson_l}…"
     copy_material_hint: "Choose material from one of your %{courses_l}."

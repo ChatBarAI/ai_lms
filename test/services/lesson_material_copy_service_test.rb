@@ -35,7 +35,7 @@ class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
   test "copies material files and imported assets into new blobs" do
     source = LessonMaterial.create!(
       lesson: lessons(:intro), title: "Illustrated handout", kind: :image_upload,
-      required: false, open_by_default: true,
+      required: false, open_by_default: false,
       image_file: Rack::Test::UploadedFile.new(
         Rails.root.join("test/fixtures/files/poster.png"), "image/png"
       )
@@ -116,6 +116,21 @@ class LessonMaterialCopyServiceTest < ActiveSupport::TestCase
     assert copy.poster_image.attached?
     assert_not_equal source.poster_image.blob_id, copy.poster_image.blob_id
     assert_equal source.poster_image.download, copy.poster_image.download
+  end
+
+  test "copy without settings uses the open default" do
+    source = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Text", kind: :html, body: "Read me",
+      open_by_default: false
+    )
+
+    copy = LessonMaterialCopyService.new(
+      source: source, destination_lesson: lessons(:physics_lesson),
+      copied_by: users(:instructor), copy_settings: false
+    ).call
+
+    assert copy.reload.open_by_default?
+    assert_not source.reload.open_by_default?
   end
 
   private

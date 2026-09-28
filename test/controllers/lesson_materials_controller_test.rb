@@ -21,6 +21,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     get course_lesson_lesson_material_path(@course, @lesson, @material)
     assert_response :success
     assert_select "#material-#{@material.id}[data-expanded='true']"
+    assert_select "#material-#{@material.id}[data-collapsible-storage-key-value='material-expanded:guest:#{@material.id}']"
   end
 
   test "guest sees a youtube video URL material as an iframe" do
@@ -305,6 +306,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:student)
     get course_lesson_lesson_material_path(@course, @lesson, @material)
     assert_response :success
+    assert_select "#material-#{@material.id}[data-collapsible-storage-key-value='material-expanded:#{users(:student).id}:#{@material.id}']"
   end
 
   test "enrolled student cannot create a material" do
@@ -362,6 +364,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:instructor)
     get new_course_lesson_lesson_material_path(@course, @lesson)
     assert_response :success
+    assert_select 'input[name="lesson_material[open_by_default]"][type="checkbox"][checked]'
     assert_select "button", text: /Insert HTML/, count: 1
     assert_select 'input[name="lesson_material[chatbar_token]"][value=?]', @lesson.cbai_token
     assert_select 'label[for="lesson_material_chatbar_token"][title=?]', "Prefilled with this lesson's ChatBar token. Replace it to use a different ChatBar for this material."
@@ -597,6 +600,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "lesson material uses its configured default display state" do
+    @material.update!(open_by_default: false)
     get course_lesson_path(@course, @lesson)
     assert_select "#material-#{@material.id}[data-expanded='false']"
 

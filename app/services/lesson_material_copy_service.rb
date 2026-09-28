@@ -45,7 +45,7 @@ class LessonMaterialCopyService
       chatbar_prompt: source.chatbar_prompt,
       chatbar_layout: source.chatbar_layout,
       required: copy_settings ? source.required : true,
-      open_by_default: copy_settings ? source.open_by_default : false,
+      open_by_default: copy_settings ? source.open_by_default : true,
       source_material: source,
       copied_by: copied_by,
       position: destination_lesson.lesson_materials.maximum(:position).to_i + 1
