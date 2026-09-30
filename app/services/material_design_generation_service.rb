@@ -67,7 +67,12 @@ class MaterialDesignGenerationService
       output_tokens: result.output_tokens, error_message: nil
     )
   rescue StandardError => error
-    revision.update_columns(status: "failed", error_message: error.message.to_s[0, 2_000], updated_at: Time.current)
+    message = if error.is_a?(ActiveRecord::Encryption::Errors::Decryption)
+      AiModelConfiguration::API_KEY_DECRYPTION_MESSAGE
+    else
+      error.message.to_s
+    end
+    revision.update_columns(status: "failed", error_message: message[0, 2_000], updated_at: Time.current)
     revision.reload.broadcast_status
     raise
   end

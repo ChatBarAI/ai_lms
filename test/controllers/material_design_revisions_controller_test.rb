@@ -27,6 +27,39 @@ class MaterialDesignRevisionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Design revision queued.", flash[:notice]
   end
 
+  test "creating a revision still enqueues generation when the cable adapter cannot load" do
+    sign_in users(:instructor)
+    material = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Designed material", kind: :raw_html_iframe,
+      raw_html_content: "<html><body>Material</body></html>"
+    )
+    configuration = AiModelConfiguration.create!(
+      name: "Test model", provider: "openai", model: "test-model",
+      base_url: "https://api.openai.com/v1", api_key: "secret"
+    )
+    broadcast_failure = ->(*) { raise Gem::LoadError, "Cannot load the Redis adapter" }
+
+    ActionCable.server.stub(:broadcast, broadcast_failure) do
+      assert_enqueued_jobs 1, only: MaterialDesignGenerationJob do
+        post course_lesson_lesson_material_material_design_revisions_path(
+          material.lesson.course, material.lesson, material
+        ), params: {
+          material_design_revision: {
+            request: "Improve the layout", ai_model_configuration_id: configuration.id
+          }
+        }
+      end
+    end
+
+    revision = material.material_design_revisions.sole
+    assert revision.queued?
+    assert_enqueued_with(job: MaterialDesignGenerationJob, args: [ revision.id ])
+    assert_redirected_to course_lesson_lesson_material_material_design_revisions_path(
+      material.lesson.course, material.lesson, material
+    )
+    assert_equal "Design revision queued.", flash[:notice]
+  end
+
   test "does not queue a second active generation for the same material" do
     sign_in users(:instructor)
     material = LessonMaterial.create!(

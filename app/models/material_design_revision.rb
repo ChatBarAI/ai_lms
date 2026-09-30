@@ -38,7 +38,9 @@ class MaterialDesignRevision < ApplicationRecord
       self.class.stream_name_for(lesson_material_id),
       self.class.broadcast_payload(self).merge(event: "status_changed")
     )
-  rescue StandardError => error
+  # Adapter loading raises LoadError (outside StandardError). Notifications must
+  # not prevent a revision from being enqueued or generated.
+  rescue StandardError, LoadError => error
     Rails.logger.warn(
       "[MaterialDesignRevision] Could not broadcast status for revision #{id}: #{error.message}"
     )

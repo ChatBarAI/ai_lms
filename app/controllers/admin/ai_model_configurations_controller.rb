@@ -27,7 +27,7 @@ class Admin::AiModelConfigurationsController < Admin::BaseController
   def update
     attributes = configuration_params
     attributes = attributes.except(:api_key) if attributes[:api_key].blank?
-    if @configuration.update(attributes)
+    if @configuration.update_with_api_key_recovery(attributes)
       redirect_to admin_ai_model_configurations_path, notice: "AI model configuration updated."
     else
       render :edit, status: :unprocessable_entity

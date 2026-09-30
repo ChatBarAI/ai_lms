@@ -16,8 +16,8 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Use Tailwind CSS [https://github.com/rails/tailwindcss-rails]
 gem "tailwindcss-rails"
-# Use Redis adapter to run Action Cable in production
-gem "redis", ">= 4.0.1"
+# Rails 7.2's Action Cable Redis adapter requires redis >= 4, < 6.
+gem "redis", ">= 4.0.1", "< 6"
 
 # Background job processing
 gem "sidekiq", "~> 7.0"

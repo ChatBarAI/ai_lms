@@ -56,6 +56,38 @@ class MaterialDesignGenerationServiceTest < ActiveSupport::TestCase
     assert_empty client.content_assets
   end
 
+  test "completes generation when the cable adapter cannot load" do
+    material = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "AI source", kind: :raw_html_iframe,
+      raw_html_content: "<html><body>Original</body></html>"
+    )
+    configuration = AiModelConfiguration.create!(
+      name: "Test model", provider: "openai", model: "test-model",
+      base_url: "https://api.openai.com/v1", api_key: "secret"
+    )
+    revision = material.material_design_revisions.create!(
+      ai_model_configuration: configuration, created_by: users(:instructor),
+      request: "Redesign it", source_html: material.raw_html_content
+    )
+    client = FakeClient.new(
+      OpenaiResponsesClient::Result.new(
+        html: "<html><body><main>Designed</main></body></html>",
+        request_id: "resp_cable_failure", input_tokens: 10, output_tokens: 20
+      )
+    )
+    broadcast_failure = ->(*) { raise Gem::LoadError, "Cannot load the Redis adapter" }
+
+    ActionCable.server.stub(:broadcast, broadcast_failure) do
+      MaterialDesignGenerationService.new(revision, client: client).call
+    end
+
+    assert revision.reload.ready?
+    assert_includes revision.sanitized_html, "Designed"
+    assert_equal "resp_cable_failure", revision.provider_request_id
+    assert_nil revision.error_message
+    assert_includes material.reload.raw_html_content, "Original"
+  end
+
   test "sends design references as vision input and excludes them from content assets" do
     material = LessonMaterial.create!(
       lesson: lessons(:intro), title: "Visual reference", kind: :raw_html_iframe,
@@ -227,6 +259,32 @@ class MaterialDesignGenerationServiceTest < ActiveSupport::TestCase
     assert_includes error.message, "Too many images"
     assert_nil client.user_prompt
     assert revision.reload.failed?
+  end
+
+  test "records recovery instructions when the provider API key cannot be decrypted" do
+    material = LessonMaterial.create!(
+      lesson: lessons(:intro), title: "Imported material", kind: :raw_html_iframe,
+      raw_html_content: "<html><body>Original</body></html>"
+    )
+    other_key_provider = ActiveRecord::Encryption::DerivedSecretKeyProvider.new("another-application-secret")
+    configuration = ActiveRecord::Encryption.with_encryption_context(key_provider: other_key_provider) do
+      AiModelConfiguration.create!(
+        name: "Imported model", provider: "openai", model: "test-model",
+        base_url: "https://api.openai.com/v1", api_key: "original-key"
+      )
+    end
+    revision = material.material_design_revisions.create!(
+      ai_model_configuration: configuration.reload, created_by: users(:instructor),
+      request: "Redesign it", source_html: material.raw_html_content
+    )
+
+    assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
+      MaterialDesignGenerationService.new(revision).call
+    end
+
+    assert revision.reload.failed?
+    assert_equal AiModelConfiguration::API_KEY_DECRYPTION_MESSAGE, revision.error_message
+    assert_includes material.reload.raw_html_content, "Original"
   end
 
   test "estimates revision cost from provider token usage" do

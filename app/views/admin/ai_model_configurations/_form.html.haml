@@ -32,6 +32,8 @@
         = f.number_field :output_cost_cents_per_million_tokens, min: 0, step: 0.000001, class: "w-full border border-gray-300 rounded px-3 py-2", required: true
     %div.md:col-span-2
       = f.label :api_key, class: "block text-sm font-medium mb-1"
+      - if configuration.api_key_status == :unreadable
+        %p.text-sm.text-red-700.mb-2{ role: "alert" }= AiModelConfiguration::API_KEY_DECRYPTION_MESSAGE
       = f.password_field :api_key, value: nil, autocomplete: "new-password", class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: (configuration.api_key_configured? ? "Key configured — leave blank to keep it" : "API key")
       %p.text-xs.text-gray-500.mt-1 Stored using Rails application-level encryption and never displayed again.
     %div.md:col-span-2

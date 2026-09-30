@@ -1,6 +1,10 @@
 require "uri"
 
 class AiModelConfiguration < ApplicationRecord
+  API_KEY_DECRYPTION_MESSAGE = "The saved AI provider API key cannot be decrypted. " \
+    "Ask an administrator to check that Rails and Sidekiq use the same application secret " \
+    "and re-enter the API key in Admin > AI model configurations."
+
   PROVIDERS = {
     "openai" => {
       label: "OpenAI",
@@ -69,7 +73,29 @@ class AiModelConfiguration < ApplicationRecord
   end
 
   def api_key_configured?
-    api_key.present?
+    api_key_status == :configured
+  end
+
+  def api_key_status
+    api_key.present? ? :configured : :missing
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    :unreadable
+  end
+
+  def update_with_api_key_recovery(attributes)
+    saved = false
+    with_lock(requires_new: true) do
+      if attributes[:api_key].present? && api_key_status == :unreadable
+        # Dirty tracking would try to decrypt the old value when saving its
+        # replacement. Clear it within this transaction; a failed validation
+        # rolls back the clear as well as the rest of the update.
+        update_columns(api_key: nil)
+      end
+
+      saved = update(attributes)
+      raise ActiveRecord::Rollback unless saved
+    end
+    saved
   end
 
   def estimated_cost_cents(input_tokens:, output_tokens:)
