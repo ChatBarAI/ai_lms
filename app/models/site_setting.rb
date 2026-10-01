@@ -41,6 +41,18 @@ class SiteSetting < ApplicationRecord
 
   validates :hero_content_format, inclusion: { in: HERO_CONTENT_FORMATS }
 
+  # Ask Us (ChatBar help bot). Token is a dashboard Cbai token; vectors live on ai_search after sync.
+  def ask_help_token_for(namespace)
+    case namespace.to_s
+    when "admin" then help_admin_token.to_s.strip.presence
+    when "instructor" then help_instructor_token.to_s.strip.presence || help_admin_token.to_s.strip.presence
+    end
+  end
+
+  def ask_help_available_for?(namespace)
+    help_enabled? && ask_help_token_for(namespace).present?
+  end
+
   THEME_MODES = %w[system light dark].freeze
   COLOR_FIELDS = %w[
     page_bg_light page_fg_light nav_bg_light nav_fg_light admin_nav_bg_light admin_nav_fg_light

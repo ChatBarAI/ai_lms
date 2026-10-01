@@ -1,0 +1,91 @@
+# Hand-maintained help pages for Ask Us (Phase 2).
+# Regenerated docs: rake help:generate[admin]
+
+courses:
+  url: "/admin/courses"
+  title: "Courses list"
+  user_tasks:
+    - Browse all courses
+    - Create a new course
+    - Open a course to edit or view the report
+  entry_files:
+    - app/controllers/admin/courses_controller.rb#index
+    - app/views/admin/courses/index.html.haml
+
+courses_new:
+  url: "/admin/courses/new"
+  title: "New course"
+  user_tasks:
+    - Fill title, description, and cover image
+    - Set enrolment and certificate options
+    - Save the course
+  entry_files:
+    - app/controllers/admin/courses_controller.rb#new
+    - app/views/admin/courses/new.html.haml
+    - app/views/admin/courses/_form.html.haml
+
+courses_edit:
+  url: "/admin/courses/:id/edit"
+  title: "Edit course"
+  user_tasks:
+    - Update course fields and cover image
+    - Adjust cover image after upload
+    - Configure certificate template
+    - Save changes
+  entry_files:
+    - app/controllers/admin/courses_controller.rb#edit
+    - app/views/admin/courses/edit.html.haml
+    - app/views/admin/courses/_form.html.haml
+    - app/views/courses/_fields.html.haml
+
+site_settings:
+  url: "/admin/site_setting/edit"
+  title: "Site settings"
+  user_tasks:
+    - Switch settings sections (branding, general, theme, integration, …)
+    - Save one section at a time
+  entry_files:
+    - app/controllers/admin/site_settings_controller.rb#edit
+    - app/views/admin/site_settings/edit.html.haml
+
+site_settings_branding:
+  url: "/admin/site_setting/edit#branding"
+  title: "Settings — Branding"
+  user_tasks:
+    - Upload logo, favicon, and default meta card image
+    - Set brand name and primary colour
+    - Adjust image crop for raster uploads
+  entry_files:
+    - app/views/admin/site_settings/_branding.html.haml
+
+site_settings_integration:
+  url: "/admin/site_setting/edit#integration"
+  title: "Settings — Integration"
+  user_tasks:
+    - Set App URL for AI callbacks
+    - Configure email / Redis / Sidekiq
+    - Enable Ask Us and paste the dashboard help ChatBar token
+  entry_files:
+    - app/views/admin/site_settings/_integration.html.haml
+
+users:
+  url: "/admin/users"
+  title: "Users"
+  user_tasks:
+    - List and search users
+    - Create or edit a user
+    - Force-enrol a student on a course
+  entry_files:
+    - app/controllers/admin/users_controller.rb#index
+    - app/views/admin/users/index.html.haml
+
+lessons_edit:
+  url: "/courses/:course_id/lessons/:id/edit"
+  title: "Edit lesson"
+  user_tasks:
+    - Update lesson title, materials, and quiz settings
+    - Attach a ChatBar tutor token if used
+    - Publish or unpublish the lesson
+  entry_files:
+    - app/controllers/lessons_controller.rb#edit
+    - app/views/lessons/edit.html.haml

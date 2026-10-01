@@ -128,10 +128,14 @@ export default class extends Controller {
     const token = this.mountTarget.dataset.cbaiToken
     if (!token) return
 
+    // Must patch before loading the CDN script — it may capture window.fetch at import time.
+    this.installConfigOriginRewrite(token)
+
     try {
       await ensureCbaiScript()
     } catch (_error) {
       if (window.console) console.warn("[ai-lms] failed to load CBAI script from " + SCRIPT_SRC)
+      this.uninstallConfigOriginRewrite()
       return
     }
 
@@ -151,8 +155,64 @@ export default class extends Controller {
     window._bl_ai_search.init(token, this.mountTarget, opts)
   }
 
+  // Local Ask Us: CDN widget still hits prod dashboard/configs. Rewrite those
+  // fetches to data-cbai-config-origin (e.g. http://127.0.0.1:3000) when set.
+  installConfigOriginRewrite(token) {
+    const origin = (this.mountTarget.dataset.cbaiConfigOrigin || "").replace(/\/$/, "")
+    if (!origin || this._cbaiFetchPatched) return
+
+    const originalFetch = window.fetch.bind(window)
+    const OriginalXHR = window.XMLHttpRequest
+    this._cbaiOriginalFetch = originalFetch
+    this._cbaiOriginalXHR = OriginalXHR
+    this._cbaiFetchPatched = true
+
+    const rewriteUrl = (url) => {
+      if (typeof url !== "string") return url
+      // Static snapshots under /ask_help/*.json (avoids live proxy + CORS).
+      if (url.includes(`/api/config/${token}`)) return `${origin}/ask_help/${token}.config.json`
+      if (url.includes(`${token}_layout.json`)) return `${origin}/ask_help/${token}.layout.json`
+      return url
+    }
+
+    window.fetch = (input, init = {}) => {
+      const raw = typeof input === "string" ? input : input?.url
+      const rewritten = rewriteUrl(raw)
+      if (rewritten !== raw) {
+        const headers = new Headers(init.headers || (typeof input === "object" && input?.headers) || {})
+        if (rewritten.includes("/api/config/") && !headers.has("Content-Type")) {
+          headers.set("Content-Type", "application/json")
+        }
+        if (!headers.has("Accept")) headers.set("Accept", "application/json")
+        return originalFetch(rewritten, { ...init, headers })
+      }
+      return originalFetch(input, init)
+    }
+
+    window.XMLHttpRequest = function PatchedXHR() {
+      const xhr = new OriginalXHR()
+      const open = xhr.open.bind(xhr)
+      xhr.open = (method, url, ...rest) => open(method, rewriteUrl(url), ...rest)
+      const setHeader = xhr.setRequestHeader.bind(xhr)
+      xhr.setRequestHeader = (name, value) => setHeader(name, value)
+      return xhr
+    }
+    window.XMLHttpRequest.prototype = OriginalXHR.prototype
+  }
+
+  uninstallConfigOriginRewrite() {
+    if (!this._cbaiFetchPatched) return
+    if (this._cbaiOriginalFetch) window.fetch = this._cbaiOriginalFetch
+    if (this._cbaiOriginalXHR) window.XMLHttpRequest = this._cbaiOriginalXHR
+    this._cbaiFetchPatched = false
+    this._cbaiOriginalFetch = null
+    this._cbaiOriginalXHR = null
+  }
+
   destroyTutor() {
     if (!this.hasMountTarget) return
+
+    this.uninstallConfigOriginRewrite()
 
     const media = this.mountTarget.querySelectorAll("audio, video")
     media.forEach((el) => {
