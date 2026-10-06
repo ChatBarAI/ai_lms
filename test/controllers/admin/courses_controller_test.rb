@@ -187,4 +187,30 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_includes slugs, "draft-course"
     refute_includes slugs, "physics-101"
   end
+
+  test "admin course show redirects to the course report" do
+    sign_in users(:admin)
+
+    get admin_course_path(courses(:algebra))
+
+    assert_redirected_to report_admin_course_path(courses(:algebra))
+  end
+
+  test "non-admin cannot reach admin course show" do
+    sign_in users(:instructor)
+
+    get admin_course_path(courses(:algebra))
+
+    assert_redirected_to root_path
+  end
+
+  test "course report links back to the course edit page" do
+    sign_in users(:admin)
+
+    get report_admin_course_path(courses(:algebra))
+
+    assert_response :success
+    assert_select "a[href=?]", edit_admin_course_path(courses(:algebra))
+    assert_select "a[href=?]", admin_course_path(courses(:algebra)), count: 0
+  end
 end
