@@ -529,4 +529,14 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert attempt.pending?
     assert_nil attempt.score
   end
+
+  test "lesson sidebar thumbnails keep the 728x320 upload shape" do
+    lessons(:intro).cover_image.attach(io: file_fixture("poster.png").open, filename: "cover.png", content_type: "image/png")
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select "#lesson-course-sidebar img[class~=?]", "aspect-[728/320]"
+    assert_select "#lesson-course-sidebar img[class~=h-28]", count: 0
+  end
 end

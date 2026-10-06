@@ -28,4 +28,14 @@ class SubjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match(/Algebra/, response.body)
   end
+
+  test "show course card images keep the 728x320 upload shape" do
+    courses(:algebra).cover_image.attach(io: file_fixture("poster.png").open, filename: "cover.png", content_type: "image/png")
+
+    get subject_path(subjects(:math))
+
+    assert_response :success
+    assert_select "img[class~=?]", "aspect-[728/320]"
+    assert_select "img[class~=h-40]", count: 0
+  end
 end
