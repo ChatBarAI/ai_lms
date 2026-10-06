@@ -147,4 +147,24 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     post unpublish_course_path(courses(:draft_course))
     assert_not courses(:draft_course).reload.published?
   end
+
+  test "index card cover images keep the 728x320 upload shape" do
+    courses(:algebra).cover_image.attach(io: file_fixture("poster.png").open, filename: "cover.png", content_type: "image/png")
+
+    get courses_path
+
+    assert_response :success
+    assert_select "img[class~=?]", "aspect-[728/320]"
+    assert_select "img[class~=h-40]", count: 0
+  end
+
+  test "show lesson card cover images keep the 728x320 upload shape" do
+    lessons(:intro).cover_image.attach(io: file_fixture("poster.png").open, filename: "cover.png", content_type: "image/png")
+
+    get course_path(courses(:algebra))
+
+    assert_response :success
+    assert_select "img[class~=?]", "aspect-[728/320]"
+    assert_select "img[class~=h-40]", count: 0
+  end
 end
