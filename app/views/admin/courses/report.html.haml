@@ -4,7 +4,7 @@
   %div
     %h1.text-2xl.font-bold #{@course.title}
     .text-sm.text-gray-500= t("catalog_ui.course_report", **terms)
-  = link_to t("catalog_ui.back_to_course_without_arrow", **terms), admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
+  = link_to t("catalog_ui.back_to_course_without_arrow", **terms), edit_admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
 
 .grid.grid-cols-2.md:grid-cols-5.gap-3.mb-6
   - tiles = [ [ "Enrolments", @enrollment_count ], [ "Active learners", @active_learners ], [ "Completion rate", "#{@completion_rate}%" ], [ "Avg score", @average_score&.round(1) || "—" ], [ "Avg rating", @average_rating&.round(2) || "—" ] ]

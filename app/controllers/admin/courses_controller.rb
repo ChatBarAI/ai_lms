@@ -21,6 +21,7 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def show
+    redirect_to report_admin_course_path(@course)
   end
 
   def new
