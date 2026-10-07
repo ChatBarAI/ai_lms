@@ -13,6 +13,41 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "admin can enable ask us help settings" do
+    sign_in users(:admin)
+    patch admin_site_setting_path, params: {
+      section: "integration",
+      site_setting: {
+        help_enabled: "1",
+        help_admin_token: "help-lms-admin",
+        help_instructor_token: "help-lms-instructor"
+      }
+    }
+    assert_redirected_to edit_admin_site_setting_path(anchor: "integration")
+    setting = SiteSetting.current.reload
+    assert setting.help_enabled?
+    assert_equal "help-lms-admin", setting.help_admin_token
+    assert_equal "help-lms-instructor", setting.help_instructor_token
+  end
+
+  test "ask us button appears in admin nav when help is configured" do
+    SiteSetting.current.update!(help_enabled: true, help_admin_token: "help-lms-admin")
+    sign_in users(:admin)
+    get admin_root_path
+    assert_response :success
+    assert_select "button", text: /Ask Us/
+    assert_select "[data-controller~='ask-help-panel']"
+    assert_select "iframe[title='Chatbar AI Help Assistant'][src*='help-lms-admin']"
+  end
+
+  test "ask us button hidden when help disabled" do
+    SiteSetting.current.update!(help_enabled: false, help_admin_token: "help-lms-admin")
+    sign_in users(:admin)
+    get admin_root_path
+    assert_response :success
+    assert_select "button", text: /Ask Us/, count: 0
+  end
+
   test "admin can update brand name" do
     sign_in users(:admin)
     patch admin_site_setting_path, params: { section: "branding", site_setting: { brand_name: "New Brand" } }
