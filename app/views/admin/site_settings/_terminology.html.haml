@@ -3,11 +3,11 @@
     = hidden_field_tag :section, "terminology"
 
     %h2.text-lg.font-semibold.text-gray-900 Terminology
-    %p.text-sm.text-gray-500 Override labels used throughout the app, separately for each supported language.
+    %p.text-sm.text-gray-500 Override labels used throughout the app, separately for each supported language. Field headings always show the original terms.
 
     = render "section_errors", section: "terminology"
 
-    - terminology_groups = [["lesson_one", "lesson_other", Lesson], ["course_one", "course_other", Course], ["subject_one", "subject_other", Subject], ["quiz_one", "quiz_other", nil]]
+    - terminology_groups = [["subject_one", "subject_other"], ["course_one", "course_other"], ["lesson_one", "lesson_other"], ["quiz_one", "quiz_other"]]
     .mt-5.space-y-8
       - I18n.available_locales.each do |locale|
         - locale = locale.to_s
@@ -16,9 +16,9 @@
           %h3.text-base.font-semibold.text-gray-900= User::SUPPORTED_LOCALES.fetch(locale, locale.upcase)
           %p.text-xs.text-gray-500 Leave blank to use the #{locale.upcase} translation file defaults.
           .mt-4.grid.grid-cols-1.sm:grid-cols-2.gap-x-10.gap-y-4
-            - terminology_groups.each do |sing_key, plur_key, model|
-              - sing_default = I18n.with_locale(locale) { model ? model.model_name.human(count: 1) : I18n.t("activerecord.models.quiz.one") }
-              - plur_default = I18n.with_locale(locale) { model ? model.model_name.human(count: 2) : I18n.t("activerecord.models.quiz.other") }
+            - terminology_groups.each do |sing_key, plur_key|
+              - sing_default = terminology_default(locale, sing_key)
+              - plur_default = terminology_default(locale, plur_key)
               %div
                 %div.text-sm.font-medium.mb-1= sing_default
                 .flex.items-center.gap-3

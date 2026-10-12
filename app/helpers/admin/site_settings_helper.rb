@@ -14,6 +14,13 @@ module Admin::SiteSettingsHelper
     SECTION_NAV_ITEMS
   end
 
+  def terminology_default(locale, key)
+    # Read translation files independently of the live backend, which includes
+    # the overrides being edited. Keep labels stable without changing app terms.
+    @terminology_defaults_backend ||= I18n::Backend::Simple.new
+    @terminology_defaults_backend.translate(locale, TerminologyApplier::OVERRIDABLE.fetch(key).join("."))
+  end
+
   def site_settings_default_sets
     column_defaults = SiteSetting.column_defaults
     theme_fields = SiteSetting::COLOR_FIELDS.reject { |field| field.start_with?("btn_") }

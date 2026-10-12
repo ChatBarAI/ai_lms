@@ -122,6 +122,40 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_admin_site_setting_path(anchor: "terminology")
   end
 
+  test "terminology editor keeps original labels and placeholders when terms are overridden" do
+    sign_in users(:admin)
+    setting = SiteSetting.current
+    original_terminology = setting.terminology.deep_dup
+    defaults = {
+      "en" => %w[Lesson Lessons Course Courses Subject Subjects Quiz Quizzes],
+      "de" => %w[Lektion Lektionen Kurs Kurse Fach Fächer Quiz Quizze]
+    }
+    overrides = defaults.keys.index_with do |locale|
+      SiteSetting::TERMINOLOGY_KEYS.index_with { |key| "Custom #{locale} #{key}" }
+    end
+    setting.update!(terminology: overrides)
+    TerminologyApplier.call
+
+    get edit_admin_site_setting_path
+    assert_response :success
+
+    defaults.each do |locale, labels|
+      SiteSetting::TERMINOLOGY_KEYS.zip(labels).each do |key, label|
+        assert_select "#terminology input[name=?]", "site_setting[terminology][#{locale}][#{key}]" do |inputs|
+          assert_equal label, inputs.first["placeholder"]
+          assert_equal overrides[locale][key], inputs.first["value"]
+          if key.end_with?("_one")
+            assert_equal label, inputs.first.ancestors("label").first.parent.previous_element.text.strip
+          end
+        end
+        assert_equal overrides[locale][key], I18n.t(TerminologyApplier::OVERRIDABLE.fetch(key).join("."), locale: locale)
+      end
+    end
+  ensure
+    setting.update!(terminology: original_terminology) if setting
+    TerminologyApplier.call
+  end
+
   test "purge helper ignores unknown attachment names" do
     controller = Admin::SiteSettingsController.new
     controller.instance_variable_set(:@site_setting, SiteSetting.current)
