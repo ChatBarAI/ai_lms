@@ -40,4 +40,37 @@ class ChatbarTokenVerifierTest < ActiveSupport::TestCase
     assert_equal "configs.chatbar-ai.com", uri.host
     assert_equal "/tok_123_layout.json", uri.path
   end
+
+  test "uses the CBAI_CONFIG_BASE_URL override for local testing" do
+    requested = nil
+    start = ->(host, port, *_args, **_opts) { requested = "#{host}:#{port}"; Net::HTTPOK.new("1.1", "200", "OK") }
+
+    with_config_base_url("http://localhost:4000") do
+      Net::HTTP.stub(:start, start) do
+        assert ChatbarTokenVerifier.verify!("tok_123")
+      end
+    end
+    assert_equal "localhost:4000", requested
+  end
+
+  test "refuses a non-allowlisted host in production" do
+    with_config_base_url("http://localhost:4000") do
+      Rails.stub(:env, ActiveSupport::EnvironmentInquirer.new("production")) do
+        Net::HTTP.stub(:start, ->(*) { flunk "should not make a request" }) do
+          error = assert_raises(ChatbarTokenVerifier::Error) { ChatbarTokenVerifier.verify!("tok_123") }
+          assert_match "non-allowlisted host localhost", error.message
+        end
+      end
+    end
+  end
+
+  private
+
+  def with_config_base_url(url)
+    previous = ENV["CBAI_CONFIG_BASE_URL"]
+    ENV["CBAI_CONFIG_BASE_URL"] = url
+    yield
+  ensure
+    ENV["CBAI_CONFIG_BASE_URL"] = previous
+  end
 end

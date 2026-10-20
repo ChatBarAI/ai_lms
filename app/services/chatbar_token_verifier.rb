@@ -6,7 +6,7 @@ require "uri"
 class ChatbarTokenVerifier
   class Error < StandardError; end
 
-  DEFAULT_BASE_URL = ENV.fetch("CBAI_CONFIG_BASE_URL", "https://configs.chatbar-ai.com").freeze
+  DEFAULT_BASE_URL = "https://configs.chatbar-ai.com".freeze
   ALLOWED_HOSTS = %w[configs.chatbar-ai.com].freeze
   # Real tokens are opaque; only reject values that cannot be a single path segment.
   TOKEN_FORMAT = %r{\A[^\s/?#%\\]{1,255}\z}
@@ -15,7 +15,12 @@ class ChatbarTokenVerifier
     new.verify!(token)
   end
 
-  def initialize(base_url: DEFAULT_BASE_URL)
+  # CBAI_CONFIG_BASE_URL points the check at a local config server outside production.
+  def self.base_url
+    ENV["CBAI_CONFIG_BASE_URL"].presence || DEFAULT_BASE_URL
+  end
+
+  def initialize(base_url: self.class.base_url)
     @base_url = base_url
   end
 
@@ -48,7 +53,7 @@ class ChatbarTokenVerifier
   def build_uri(path)
     uri = URI.parse(@base_url + path)
     unless %w[http https].include?(uri.scheme) &&
-           (ALLOWED_HOSTS.include?(uri.host) || @base_url != DEFAULT_BASE_URL)
+           (ALLOWED_HOSTS.include?(uri.host) || !Rails.env.production?)
       raise Error, "could not be verified: refusing to call non-allowlisted host #{uri.host}"
     end
     uri
