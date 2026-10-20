@@ -114,4 +114,14 @@ class LessonsHelperTest < ActionView::TestCase
     assert quiz_answer_correct?(QuestionAnswer.new(question: question, answer_text: "ok", ai_score: 9), lessons(:advanced))
     assert_not quiz_answer_correct?(QuestionAnswer.new(question: question, answer_text: "weak", ai_score: 1), lessons(:advanced))
   end
+
+  test "quiz answer helpers mark matching true/false answers correct" do
+    question = questions(:intro_q1)
+    question.update_columns(kind: Question.kinds[:true_false], correct_answer: "No", choices: nil)
+    question.reload
+
+    assert quiz_answer_correct?(QuestionAnswer.new(question: question, answer_text: "false"), lessons(:intro))
+    assert_equal "Correct", quiz_answer_result(QuestionAnswer.new(question: question, answer_text: "false"), lessons(:intro))[:label]
+    assert_equal "Incorrect", quiz_answer_result(QuestionAnswer.new(question: question, answer_text: "true"), lessons(:intro))[:label]
+  end
 end
