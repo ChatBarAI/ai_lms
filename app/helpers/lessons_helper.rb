@@ -203,7 +203,7 @@ module LessonsHelper
       else
         result_descriptor("Marked #{answer.ai_score}/10", "bg-amber-50 text-amber-700 border-amber-200")
       end
-    elsif answer.answer_text.to_s.strip.casecmp?(question.correct_answer.to_s.strip)
+    elsif question.answer_correct?(answer.answer_text)
       result_descriptor("Correct", "bg-green-50 text-green-700 border-green-200")
     else
       result_descriptor("Incorrect", "bg-red-50 text-red-700 border-red-200")
@@ -216,7 +216,7 @@ module LessonsHelper
     if question.free_text?
       answer.ai_score.present? && answer.ai_score >= lesson.free_text_pass_level
     else
-      answer.answer_text.to_s.strip.casecmp?(question.correct_answer.to_s.strip)
+      question.answer_correct?(answer.answer_text)
     end
   end
 

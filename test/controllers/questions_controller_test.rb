@@ -127,4 +127,76 @@ class QuestionsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Correct answer must exactly match one of the choices", response.body
     assert_match "2\n4", response.body
   end
+
+  test "true/false question uses a True/False dropdown and only one answer input is enabled" do
+    sign_in users(:instructor)
+    question = questions(:intro_q1)
+    question.update_columns(kind: Question.kinds[:true_false], correct_answer: "True", choices: nil)
+
+    get edit_course_lesson_question_path(courses(:algebra), lessons(:intro), question)
+
+    assert_response :success
+    assert_select "select#question_correct_answer_true_false[name='question[correct_answer]']:not([disabled])" do
+      assert_select "option[selected][value='True']"
+      assert_select "option[value='False']"
+    end
+    assert_select "input#question_correct_answer[disabled]"
+  end
+
+  test "multiple choice question keeps the text answer enabled and the dropdown disabled" do
+    sign_in users(:instructor)
+
+    get edit_course_lesson_question_path(courses(:algebra), lessons(:intro), questions(:intro_q1))
+
+    assert_select "input#question_correct_answer:not([disabled])[value='2']"
+    assert_select "select#question_correct_answer_true_false[disabled]"
+  end
+
+  test "new question form pre-fills one point" do
+    sign_in users(:instructor)
+
+    get new_course_lesson_question_path(courses(:algebra), lessons(:intro))
+
+    assert_select "input#question_points[value='1'][min='0']"
+  end
+
+  test "creating a true/false question with blank points stores True and one point" do
+    sign_in users(:instructor)
+
+    assert_difference("Question.count", 1) do
+      post course_lesson_questions_path(courses(:algebra), lessons(:intro)), params: {
+        question: { prompt: "Ruby is dynamically typed?", kind: "true_false", correct_answer: "True", points: "" }
+      }
+    end
+
+    created = Question.order(:id).last
+    assert_equal "True", created.correct_answer
+    assert_equal 1, created.points
+  end
+
+  test "question list shows real points and flags unusable true/false answers" do
+    sign_in users(:instructor)
+    questions(:intro_q1).update_columns(points: nil)
+    questions(:intro_q2).update_columns(kind: Question.kinds[:true_false], correct_answer: "Maybe", choices: nil)
+
+    get course_lesson_questions_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_match "Multiple choice · 1 pt ·", response.body
+    assert_no_match "0 pts", response.body
+    assert_match "Correct answer must be True or False", response.body
+  end
+
+  test "changing a question to true/false does not pre-select an answer the author never chose" do
+    sign_in users(:instructor)
+    @question_one.update_columns(choices: [ "0", "1" ].to_json, correct_answer: "1")
+
+    patch course_lesson_question_path(@course, @lesson, @question_one), params: {
+      question: { prompt: @question_one.prompt, kind: "true_false", correct_answer: "1", points: "1" }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "select#question_correct_answer_true_false option[selected]", count: 0
+    assert_equal "1", @question_one.reload.correct_answer
+  end
 end

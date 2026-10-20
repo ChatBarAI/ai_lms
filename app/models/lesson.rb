@@ -192,7 +192,7 @@ class Lesson < ApplicationRecord
   end
 
   # Returns the subset of questions the student still needs to redo.
-  # For multiple-choice/true-false: wrong if answer_text != correct_answer.
+  # For multiple-choice/true-false: wrong unless Question#answer_correct?.
   # For free-text: wrong if ai_score is nil (pending) or below free_text_pass_level.
   # Returns all questions when enrollment is blank or has no prior answers.
   def incorrect_questions_for(enrollment)
@@ -212,7 +212,7 @@ class Lesson < ApplicationRecord
       if q.free_text?
         qa.ai_score.nil? || qa.ai_score < free_text_pass_level
       else
-        qa.answer_text.to_s.strip.downcase != q.correct_answer.to_s.strip.downcase
+        !q.answer_correct?(qa.answer_text)
       end
     end
   end
@@ -258,15 +258,14 @@ class Lesson < ApplicationRecord
     earned_points = 0.0
 
     all_questions.each do |question|
-      weight = (question.points.presence || 1).to_f
+      weight = question.weight
       total_points += weight
       given = if answer_map.key?(question.id.to_s)
-        answer_map[question.id.to_s].to_s.strip.downcase
+        answer_map[question.id.to_s]
       else
-        stored_answers[question.id.to_s]&.answer_text.to_s.strip.downcase
+        stored_answers[question.id.to_s]&.answer_text
       end
-      expected = question.correct_answer.to_s.strip.downcase
-      earned_points += weight if expected.present? && given == expected
+      earned_points += weight if question.answer_correct?(given)
     end
 
     total_points.positive? ? ((earned_points / total_points) * 100).round(1) : 0.0
