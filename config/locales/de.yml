@@ -175,6 +175,7 @@ de:
       mark_complete: "Als abgeschlossen markieren"
       confirm_mark_complete: "%{lesson} als abgeschlossen markieren?"
       completed: "✓ abgeschlossen"
+      next_lesson: "Weiter: %{lesson} →"
       enrol_prompt: "Schreibe dich in %{course} ein, um deinen Fortschritt zu verfolgen und %{lessons} zu bewerten."
       enrol_now: "Jetzt einschreiben"
       view_required_materials: "Erforderliche Materialien ansehen"

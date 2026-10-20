@@ -42,6 +42,10 @@
       - if @progress.completed?
         .flex.flex-col.items-end.gap-2.self-center.ml-auto
           %span.text-sm.font-medium.text-green-700= t("lessons.show.completed")
+          - if @next_lesson
+            = link_to t("lessons.show.next_lesson", **terms), course_lesson_path(@course, @next_lesson), class: "inline-flex items-center px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-medium"
+          - else
+            = link_to t("lessons.course_sidebar.back", course_l: terms[:course_l]), course_path(@course), class: "inline-flex items-center px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm font-medium"
           - if @enrollment.fully_completed?
             = link_to "Download Certificate", course_certificate_path(@course), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
       - elsif @lesson.questions.none? && !@marking_pending

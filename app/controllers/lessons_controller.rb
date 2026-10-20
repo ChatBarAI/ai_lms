@@ -51,6 +51,8 @@ class LessonsController < ApplicationController
     @anam_session_token = fetch_anam_session_token if @lesson.anam_enabled?
 
     prepare_course_sidebar
+    current_lesson_index = @course_lessons.index(@lesson)
+    @next_lesson = @course_lessons[current_lesson_index + 1] if current_lesson_index
   end
 
   def start

@@ -174,6 +174,7 @@ en:
       mark_complete: "Mark complete"
       confirm_mark_complete: "Mark this %{lesson_l} as completed?"
       completed: "✓ completed"
+      next_lesson: "Next %{lesson_l} →"
       enrol_prompt: "Enrol in this %{course_l} to track progress and rate %{lessons_l}."
       enrol_now: "Enrol now"
       view_required_materials: "View required materials"

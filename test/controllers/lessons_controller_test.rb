@@ -51,6 +51,34 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#lesson-status span.text-green-700", count: 0
+    assert_select "#lesson-status a[href=?]", course_lesson_path(courses(:algebra), lessons(:advanced)), count: 0
+  end
+
+  test "completed lesson links to the next published lesson in course order" do
+    progresses(:student_intro).update!(status: :completed)
+    lessons(:draft_lesson).update!(position: 2)
+    lessons(:advanced).update!(position: 3)
+    sign_in users(:student)
+
+    get course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select "#lesson-status a[href=?]", course_lesson_path(courses(:algebra), lessons(:advanced)), text: /Next lesson/
+    assert_select "#lesson-status a[href=?]", course_lesson_path(courses(:algebra), lessons(:draft_lesson)), count: 0
+  end
+
+  test "last completed published lesson links back to the course" do
+    enrollment = enrollments(:student_in_algebra)
+    progresses(:student_intro).update!(status: :completed)
+    enrollment.progresses.create!(lesson: lessons(:advanced), status: :completed)
+    sign_in users(:student)
+
+    get course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "#lesson-status a[href=?]", course_path(courses(:algebra))
+    assert_select "#lesson-status a[href=?]", course_certificate_path(courses(:algebra)), text: "Download Certificate"
+    assert_select "#lesson-status a[href=?]", course_lesson_path(courses(:algebra), lessons(:draft_lesson)), count: 0
   end
 
   test "show private course lesson redirects anonymous user" do
