@@ -62,10 +62,21 @@ class LessonFormAssignmentService
 
       attrs[attribute.to_s] = lesson_input[attribute].to_s.strip.presence
     end
-    SECRET_ATTRIBUTES.each { |attribute| attrs.delete(attribute) if attrs.key?(attribute) && attrs[attribute].nil? }
+    SECRET_ATTRIBUTES.each do |attribute|
+      if remove_secret?(attribute) && attrs[attribute].nil?
+        attrs[attribute] = nil
+      elsif attrs.key?(attribute) && attrs[attribute].nil?
+        attrs.delete(attribute)
+      end
+    end
 
     clear_inactive_custom_tutor_embed(attrs)
     attrs
+  end
+
+  # The form's "Remove saved key" box; a newly entered key still wins.
+  def remove_secret?(attribute)
+    ActiveModel::Type::Boolean.new.cast(lesson_input[:"remove_#{attribute}"]) == true
   end
 
   def lesson_params

@@ -228,6 +228,27 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "saved-anam-secret"
   end
 
+  test "edit form offers to remove saved keys only when a key is saved" do
+    lessons(:intro).update!(cbai_api_key: "saved-cbai-secret", anam_api_key: nil)
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_select 'input[type="checkbox"][name="lesson[remove_cbai_api_key]"]'
+    assert_select 'input[type="checkbox"][name="lesson[remove_anam_api_key]"]', count: 0
+  end
+
+  test "instructor can remove the saved ChatBar key to turn off AI marking" do
+    lessons(:intro).update!(cbai_api_key: "saved-cbai-secret")
+    sign_in users(:instructor)
+
+    patch course_lesson_path(courses(:algebra), lessons(:intro)),
+          params: { lesson: { ai_tutor_provider: "none", cbai_api_key: "", remove_cbai_api_key: "1" } }
+
+    assert_redirected_to course_lesson_path(courses(:algebra), lessons(:intro))
+    assert_nil lessons(:intro).reload.cbai_api_key
+  end
+
   test "create with invalid cbai api key shows an error" do
     sign_in users(:instructor)
 

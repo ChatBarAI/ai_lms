@@ -162,4 +162,51 @@ class LessonFormAssignmentServiceTest < ActiveSupport::TestCase
       assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
     end
   end
+
+  test "removes the saved ChatBar key when asked so AI marking turns off" do
+    lesson = lessons(:intro)
+    lesson.update!(cbai_api_key: "saved-key")
+    params = ActionController::Parameters.new(
+      lesson: { ai_tutor_provider: "none", cbai_api_key: "", remove_cbai_api_key: "1" }
+    )
+
+    assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
+
+    assert_nil lesson.cbai_api_key
+    assert_equal :manual, lesson.pending_marking_mode
+  end
+
+  test "removes the saved Anam key when asked" do
+    lesson = lessons(:intro)
+    lesson.update!(anam_api_key: "saved-anam-key")
+    params = ActionController::Parameters.new(
+      lesson: { ai_tutor_provider: "none", anam_api_key: "", remove_anam_api_key: "1" }
+    )
+
+    assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
+
+    assert_nil lesson.anam_api_key
+  end
+
+  test "keeps the saved key when the remove box is left unticked" do
+    lesson = lessons(:intro)
+    lesson.update!(cbai_api_key: "saved-key")
+    params = ActionController::Parameters.new(lesson: { cbai_api_key: "", remove_cbai_api_key: "0" })
+
+    assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
+
+    assert_equal "saved-key", lesson.cbai_api_key
+  end
+
+  test "a newly entered key replaces the saved one even when remove is ticked" do
+    lesson = lessons(:intro)
+    lesson.update!(cbai_api_key: "saved-key")
+    params = ActionController::Parameters.new(lesson: { cbai_api_key: "new-key", remove_cbai_api_key: "1" })
+
+    CbaiClient.stub(:new, ->(**) { Struct.new(:details).new({ "token" => "tok_new" }) }) do
+      assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
+    end
+
+    assert_equal "new-key", lesson.cbai_api_key
+  end
 end
