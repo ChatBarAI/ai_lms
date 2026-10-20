@@ -4,6 +4,8 @@ require "uri"
 
 class AnamClient
   class Error < StandardError; end
+  class InvalidApiKey < Error; end
+  class InvalidPersona < Error; end
 
   DEFAULT_BASE_URL = ENV.fetch("ANAM_BASE_URL", "https://api.anam.ai").freeze
   ALLOWED_HOSTS = %w[api.anam.ai].freeze
@@ -34,6 +36,34 @@ class AnamClient
     token
   rescue JSON::ParserError => e
     raise Error, "Invalid JSON from Anam: #{e.message}"
+  end
+
+  # Confirms the API key is accepted and can read the given persona, without
+  # starting a session. Returns true or raises Error.
+  def verify_persona!(persona_id)
+    persona_id = persona_id.to_s.strip
+    raise Error, "Missing Anam persona id" if persona_id.empty?
+
+    uri = build_uri("/v1/personas/#{ERB::Util.url_encode(persona_id)}")
+    res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 30) do |http|
+      req = Net::HTTP::Get.new(uri.request_uri)
+      req["Authorization"] = "Bearer #{@api_key}"
+      req["Accept"] = "application/json"
+      http.request(req)
+    end
+
+    case res
+    when Net::HTTPSuccess
+      true
+    when Net::HTTPUnauthorized, Net::HTTPForbidden
+      raise InvalidApiKey, "Anam rejected the API key"
+    when Net::HTTPNotFound, Net::HTTPBadRequest, Net::HTTPUnprocessableEntity
+      raise InvalidPersona, "Anam could not find that persona for this API key"
+    else
+      raise Error, "Anam API error #{res.code}: #{res.body.to_s[0, 200]}"
+    end
+  rescue SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Net::OpenTimeout, Net::ReadTimeout => e
+    raise Error, "Anam API network error: #{e.class}: #{e.message}"
   end
 
   private
