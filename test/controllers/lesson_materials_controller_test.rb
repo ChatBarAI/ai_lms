@@ -608,6 +608,76 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "not-a-real-token"
   end
 
+  test "retrying a failed ChatBar material save keeps the token that was entered" do
+    sign_in users(:instructor)
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { true }) do
+      assert_no_difference("LessonMaterial.count") do
+        post course_lesson_lesson_materials_path(@course, @lesson),
+             params: { lesson_material: { title: "", kind: "chatbar", chatbar_token: "other-chatbar", chatbar_prompt: "Hi" } }
+      end
+    end
+    assert_response :unprocessable_entity
+    assert_not_includes response.body, "other-chatbar"
+    assert_select 'input[name="lesson_material[chatbar_token]"][placeholder=?]', "Token entered — leave blank to keep it"
+    pending = css_select('input[type="hidden"][name="lesson_material[pending_chatbar_token]"]').first
+    assert pending, "expected the entered token to be carried forward"
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { true }) do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: "", chatbar_prompt: "Hi",
+                                        pending_chatbar_token: pending["value"] } }
+    end
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal "other-chatbar", LessonMaterial.order(:created_at).last.chatbar_token
+  end
+
+  test "retrying a failed ChatBar material edit keeps the new token instead of the saved one" do
+    material = @lesson.lesson_materials.create!(title: "Role play", kind: :chatbar, chatbar_token: "saved-token", chatbar_prompt: "Hi")
+    sign_in users(:instructor)
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { true }) do
+      patch course_lesson_lesson_material_path(@course, @lesson, material),
+            params: { lesson_material: { title: "", chatbar_token: "replacement-token" } }
+    end
+    assert_response :unprocessable_entity
+    pending = css_select('input[type="hidden"][name="lesson_material[pending_chatbar_token]"]').first
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { true }) do
+      patch course_lesson_lesson_material_path(@course, @lesson, material),
+            params: { lesson_material: { title: "Role play", chatbar_token: "", pending_chatbar_token: pending["value"] } }
+    end
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal "replacement-token", material.reload.chatbar_token
+  end
+
+  test "a pending token from another material is ignored" do
+    other = @lesson.lesson_materials.create!(title: "Other", kind: :chatbar, chatbar_token: "other-saved", chatbar_prompt: "Hi")
+    material = @lesson.lesson_materials.create!(title: "Role play", kind: :chatbar, chatbar_token: "saved-token", chatbar_prompt: "Hi")
+    sign_in users(:instructor)
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { true }) do
+      patch course_lesson_lesson_material_path(@course, @lesson, other),
+            params: { lesson_material: { title: "", chatbar_token: "leaked-token" } }
+    end
+    pending = css_select('input[type="hidden"][name="lesson_material[pending_chatbar_token]"]').first
+
+    patch course_lesson_lesson_material_path(@course, @lesson, material),
+          params: { lesson_material: { title: "Renamed", chatbar_token: "", pending_chatbar_token: pending["value"] } }
+    assert_equal "saved-token", material.reload.chatbar_token
+  end
+
+  test "a rejected token is not carried forward" do
+    sign_in users(:instructor)
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { raise ChatbarTokenVerifier::Error, "was not recognised by ChatBar AI. Check the token and try again" }) do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: "bad-token", chatbar_prompt: "Hi" } }
+    end
+    assert_response :unprocessable_entity
+    assert_select 'input[name="lesson_material[pending_chatbar_token]"]', count: 0
+  end
+
   test "editing a ChatBar material masks the saved token and keeps it when left blank" do
     material = @lesson.lesson_materials.create!(title: "Role play", kind: :chatbar, chatbar_token: "saved-secret-token", chatbar_prompt: "Hi")
     sign_in users(:instructor)

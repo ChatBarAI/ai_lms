@@ -113,8 +113,10 @@
     %div{ data: { material_kind_target: "chatbar" }, class: ("hidden" if material.kind != "chatbar") }
       - token_label_title = local_assigns[:chatbar_token_prefilled] ? t("catalog_ui.material_token_hint", **terms) : nil
       = f.label :chatbar_token, "ChatBar instance token", class: "block text-sm font-medium mb-1", title: token_label_title
-      - token_placeholder = if material.chatbar_token_in_database.present? then "Token saved — leave blank to keep it" elsif local_assigns[:chatbar_token_prefilled] then "Leave blank to use this lesson's ChatBar token" else "ChatBar instance token" end
+      - token_placeholder = if local_assigns[:pending_chatbar_token].present? then "Token entered — leave blank to keep it" elsif material.chatbar_token_in_database.present? then "Token saved — leave blank to keep it" elsif local_assigns[:chatbar_token_prefilled] then "Leave blank to use this lesson's ChatBar token" else "ChatBar instance token" end
       = f.password_field :chatbar_token, value: nil, class: "w-full border border-gray-300 rounded px-3 py-2 mb-3 font-mono", autocomplete: "new-password", spellcheck: false, autocapitalize: "none", autocorrect: "off", placeholder: token_placeholder
+      - if local_assigns[:pending_chatbar_token].present?
+        = hidden_field_tag "lesson_material[pending_chatbar_token]", local_assigns[:pending_chatbar_token], id: nil
       = f.label :chatbar_prompt, "Conversation starting prompt", class: "block text-sm font-medium mb-1"
       = f.text_area :chatbar_prompt, rows: 6, maxlength: 1500, class: "w-full border border-gray-300 rounded px-3 py-2", placeholder: t("catalog_ui.material_prompt_hint", **terms)
       %p.text-xs.text-gray-500.mt-1 This prompt is stored directly on the material and sent to the selected ChatBar when the learner starts the conversation. Maximum 1,500 characters.
