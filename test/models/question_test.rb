@@ -69,8 +69,8 @@ class QuestionTest < ActiveSupport::TestCase
   end
 
   test "true_false_value maps common spellings and rejects anything else" do
-    %w[true True TRUE t yes Y correct 1 True.].each { |v| assert_equal "True", Question.true_false_value(v), v }
-    %w[false FALSE f no N incorrect 0 false!].each { |v| assert_equal "False", Question.true_false_value(v), v }
+    %w[true True TRUE t yes Y correct True.].each { |v| assert_equal "True", Question.true_false_value(v), v }
+    %w[false FALSE f no N incorrect false!].each { |v| assert_equal "False", Question.true_false_value(v), v }
     [ nil, "", "maybe", "truth" ].each { |v| assert_nil Question.true_false_value(v), v.inspect }
   end
 
@@ -128,5 +128,15 @@ class QuestionTest < ActiveSupport::TestCase
 
   test "answer_correct? is false for free text" do
     assert_not questions(:intro_q_free).answer_correct?("Addition order does not change the sum.")
+  end
+
+  test "numeric answers are not treated as True/False" do
+    assert_nil Question.true_false_value("1")
+    assert_nil Question.true_false_value("0")
+
+    q = questions(:intro_q1)
+    q.kind = :true_false
+    assert_not q.valid?, "a multiple-choice answer of 2 must not silently become True or False"
+    assert_includes q.errors[:correct_answer], "must be True or False"
   end
 end

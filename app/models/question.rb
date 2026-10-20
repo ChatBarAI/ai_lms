@@ -1,8 +1,8 @@
 class Question < ApplicationRecord
   DEFAULT_POINTS = 1
   TRUE_FALSE_SYNONYMS = {
-    "True" => %w[true t yes y correct 1],
-    "False" => %w[false f no n incorrect 0]
+    "True" => %w[true t yes y correct],
+    "False" => %w[false f no n incorrect]
   }.freeze
 
   belongs_to :lesson
