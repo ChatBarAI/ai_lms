@@ -37,4 +37,21 @@ class AnamClientTest < ActiveSupport::TestCase
     assert_raises(AnamClient::Error) { client.session_token_for_persona(nil) }
     assert_raises(AnamClient::Error) { client.session_token_for_persona("  ") }
   end
+
+  test "verify_persona! accepts a readable persona" do
+    Net::HTTP.stub(:start, ->(*) { Net::HTTPOK.new("1.1", "200", "OK") }) do
+      assert AnamClient.new(api_key: "key").verify_persona!("persona-1")
+    end
+  end
+
+  test "verify_persona! distinguishes a rejected key from a missing persona" do
+    client = AnamClient.new(api_key: "key")
+
+    Net::HTTP.stub(:start, ->(*) { Net::HTTPUnauthorized.new("1.1", "401", "Unauthorized") }) do
+      assert_raises(AnamClient::InvalidApiKey) { client.verify_persona!("persona-1") }
+    end
+    Net::HTTP.stub(:start, ->(*) { Net::HTTPNotFound.new("1.1", "404", "Not Found") }) do
+      assert_raises(AnamClient::InvalidPersona) { client.verify_persona!("persona-1") }
+    end
+  end
 end

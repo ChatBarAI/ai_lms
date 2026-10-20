@@ -215,6 +215,19 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 4, created.position
   end
 
+  test "edit form masks saved ChatBar and Anam keys" do
+    lessons(:intro).update!(cbai_api_key: "saved-cbai-secret", anam_api_key: "saved-anam-secret")
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+
+    assert_response :success
+    assert_select 'input[name="lesson[cbai_api_key]"][type="password"][placeholder=?]', "Key saved — leave blank to keep it"
+    assert_select 'input[name="lesson[anam_api_key]"][type="password"][placeholder=?]', "Key saved — leave blank to keep it"
+    assert_not_includes response.body, "saved-cbai-secret"
+    assert_not_includes response.body, "saved-anam-secret"
+  end
+
   test "create with invalid cbai api key shows an error" do
     sign_in users(:instructor)
 

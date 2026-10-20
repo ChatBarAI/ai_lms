@@ -106,10 +106,12 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
 
   test "instructor can upload and replace a ChatBar poster" do
     sign_in users(:instructor)
-    post course_lesson_lesson_materials_path(@course, @lesson), params: {
-      lesson_material: { title: "Role play", kind: "chatbar", chatbar_token: "role-play",
-                         chatbar_prompt: "Begin the interview", poster_image: poster_upload }
-    }
+    ChatbarTokenVerifier.stub(:verify!, true) do
+      post course_lesson_lesson_materials_path(@course, @lesson), params: {
+        lesson_material: { title: "Role play", kind: "chatbar", chatbar_token: "role-play",
+                           chatbar_prompt: "Begin the interview", poster_image: poster_upload }
+      }
+    end
 
     assert_redirected_to edit_course_lesson_path(@course, @lesson)
     material = @lesson.lesson_materials.order(:id).last
@@ -366,7 +368,9 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'input[name="lesson_material[open_by_default]"][type="checkbox"][checked]'
     assert_select "button", text: /Insert HTML/, count: 1
-    assert_select 'input[name="lesson_material[chatbar_token]"][value=?]', @lesson.cbai_token
+    assert_select 'input[name="lesson_material[chatbar_token]"][type="password"][placeholder=?]', "Leave blank to use this lesson's ChatBar token"
+    assert_select 'input[name="lesson_material[chatbar_token]"][value]', count: 0
+    assert_not_includes response.body, @lesson.cbai_token
     assert_select 'label[for="lesson_material_chatbar_token"][title=?]', "Prefilled with this lesson's ChatBar token. Replace it to use a different ChatBar for this material."
   end
 
@@ -560,10 +564,14 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
   test "instructor creates a ChatBar material with a separate prompt" do
     sign_in users(:instructor)
 
-    assert_difference("LessonMaterial.count", 1) do
-      post course_lesson_lesson_materials_path(@course, @lesson),
-           params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: "different-chatbar", chatbar_prompt: "Start with a worked example" } }
+    verified = []
+    ChatbarTokenVerifier.stub(:verify!, ->(token) { verified << token; true }) do
+      assert_difference("LessonMaterial.count", 1) do
+        post course_lesson_lesson_materials_path(@course, @lesson),
+             params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: " different-chatbar ", chatbar_prompt: "Start with a worked example" } }
+      end
     end
+    assert_equal [ "different-chatbar" ], verified
 
     material = LessonMaterial.order(:created_at).last
     assert_redirected_to edit_course_lesson_path(@course, @lesson)
@@ -571,6 +579,51 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "different-chatbar", material.chatbar_token
     assert_equal "Start with a worked example", material.chatbar_prompt
     assert_nil material.url
+  end
+
+  test "ChatBar material uses the lesson token when the masked field is left blank" do
+    sign_in users(:instructor)
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { flunk "lesson token should not need verification" }) do
+      post course_lesson_lesson_materials_path(@course, @lesson),
+           params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: "", chatbar_prompt: "Hi" } }
+    end
+
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal @lesson.cbai_token, LessonMaterial.order(:created_at).last.chatbar_token
+  end
+
+  test "ChatBar material with an unrecognised token is not saved" do
+    sign_in users(:instructor)
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { raise ChatbarTokenVerifier::Error, "was not recognised by ChatBar AI. Check the token and try again" }) do
+      assert_no_difference("LessonMaterial.count") do
+        post course_lesson_lesson_materials_path(@course, @lesson),
+             params: { lesson_material: { title: "Discuss", kind: "chatbar", chatbar_token: "not-a-real-token", chatbar_prompt: "Hi" } }
+      end
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "was not recognised by ChatBar AI", response.body
+    assert_not_includes response.body, "not-a-real-token"
+  end
+
+  test "editing a ChatBar material masks the saved token and keeps it when left blank" do
+    material = @lesson.lesson_materials.create!(title: "Role play", kind: :chatbar, chatbar_token: "saved-secret-token", chatbar_prompt: "Hi")
+    sign_in users(:instructor)
+
+    get edit_course_lesson_lesson_material_path(@course, @lesson, material)
+    assert_response :success
+    assert_select 'input[name="lesson_material[chatbar_token]"][type="password"][placeholder=?]', "Token saved — leave blank to keep it"
+    assert_not_includes response.body, "saved-secret-token"
+
+    ChatbarTokenVerifier.stub(:verify!, ->(*) { flunk "unchanged token should not be re-verified" }) do
+      patch course_lesson_lesson_material_path(@course, @lesson, material),
+            params: { lesson_material: { title: "Renamed", chatbar_token: "" } }
+    end
+    assert_redirected_to edit_course_lesson_path(@course, @lesson)
+    assert_equal "saved-secret-token", material.reload.chatbar_token
+    assert_equal "Renamed", material.title
   end
 
   test "instructor can get edit form for own material" do
