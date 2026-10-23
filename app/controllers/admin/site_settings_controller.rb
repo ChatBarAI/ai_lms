@@ -26,6 +26,7 @@ class Admin::SiteSettingsController < Admin::BaseController
       smtp_address smtp_port smtp_domain smtp_username smtp_password
       smtp_authentication smtp_enable_starttls_auto smtp_openssl_verify_mode smtp_ssl smtp_tls
       sendmail_location sendmail_arguments
+      help_enabled help_admin_token help_instructor_token
     ],
     "terminology" => []
   }.freeze

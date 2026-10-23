@@ -1,0 +1,10 @@
+-# Ask Us button only (dashboard puts the panel at layout body level).
+- return unless site_setting.ask_help_available_for?(namespace)
+
+%button.bg-blue-600.hover:bg-blue-700.text-white.text-sm.font-medium.py-1.px-3.rounded-full.inline-flex.items-center.gap-1.transition-colors.cursor-pointer{
+  type: "button",
+  title: "AI Help Assistant",
+  data: { action: "click->ask-help-panel#toggle", ask_help_panel_target: "openButton" }
+}
+  %span Ask Us
+  = image_tag "ai-chatbar-helper-icon.svg", class: "w-7 h-7", alt: ""

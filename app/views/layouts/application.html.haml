@@ -21,7 +21,7 @@
     = yield :javascript
     = theme_style_tag
     = theme_mode_script
-  %body{ data: { controller: content_for(:body_controllers).presence } }
+  %body{ data: { controller: [content_for(:body_controllers).presence, ("ask-help-panel" if user_signed_in? && (current_user.instructor? || current_user.admin?))].compact.join(" ").presence } }
     %nav.site-nav.sticky.top-0.z-40.border-b.border-gray-200
       .max-w-6xl.mx-auto.px-4.py-3.flex.flex-wrap.items-center.justify-between.gap-3
         .flex.flex-wrap.items-center.gap-3
@@ -34,6 +34,8 @@
           = link_to t("layouts.application.courses", **terms), courses_path, class: "text-sm hover:opacity-80"
         .flex.flex-wrap.items-center.gap-3
           = yield :header_actions
+          - if user_signed_in? && (current_user.instructor? || current_user.admin?)
+            = render "shared/ask_help_button", namespace: "instructor"
           - if user_signed_in?
             .relative{ data: { controller: "dropdown" } }
               %button.flex.items-center.gap-1.5.cursor-pointer{ type: "button", data: { action: "click->dropdown#toggle", dropdown_target: "button" }, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "user-menu", "aria-label": current_user.display_name }
@@ -82,3 +84,6 @@
               = t("layouts.application.install")
             %button.text-sm.px-4.py-2.rounded.border.bg-transparent.cursor-pointer.w-full.sm:w-auto{ type: "button", data: { action: "pwa-install#dismiss" }, style: "border-color: color-mix(in srgb, var(--page-fg) 28%, transparent); color: var(--page-fg);" }
               = t("layouts.application.not_now")
+
+    - if user_signed_in? && (current_user.instructor? || current_user.admin?)
+      = render "shared/ask_help_panel", namespace: "instructor"
