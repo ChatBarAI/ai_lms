@@ -9,6 +9,10 @@ class LessonsController < ApplicationController
   end
 
   def show
+    if @course.paid? && !@course.purchased_by?(current_user)
+      return redirect_to @course, alert: "Please purchase this course to view this lesson."
+    end
+
     @enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
     if @enrollment
       @progress = @enrollment.progresses.find_or_create_by!(lesson_id: @lesson.id)
