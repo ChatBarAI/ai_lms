@@ -76,6 +76,10 @@ class User < ApplicationRecord
     course_locales.filter_map { |locale| SUPPORTED_LOCALES[locale] }
   end
 
+  def generate_reset_password_token
+    set_reset_password_token
+  end
+
   def self.from_omniauth(auth)
     user = find_or_initialize_by(provider: auth.provider, uid: auth.uid)
     user.email ||= auth.info.email
