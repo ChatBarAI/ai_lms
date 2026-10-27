@@ -18,12 +18,13 @@ class CoursePurchasesController < ApplicationController
   end
 
   # GET /courses/:course_id/purchase/success?session_id=...
-  # Stripe redirects here after successful payment.
+  # Stripe redirects here after successful payment. Webhook is the reliable fulfillment path;
+  # this call ensures immediate access when the customer is present.
   def success
     session_id = params[:session_id]
     return redirect_to @course, alert: "Invalid payment session." if session_id.blank?
 
-    handle_payment_success(session_id)
+    CoursePurchaseFulfillmentService.new(session_id).call
     redirect_to @course, notice: "Payment successful! You now have access to this course."
   rescue Stripe::StripeError => e
     Rails.logger.error "Stripe callback error for course: #{e.message}"
@@ -70,26 +71,6 @@ class CoursePurchasesController < ApplicationController
         course_id: @course.id
       }
     )
-  end
-
-  def handle_payment_success(session_id)
-    stripe_session = Stripe::Checkout::Session.retrieve(session_id)
-
-    # Idempotent: skip if already recorded
-    return if CoursePurchase.exists?(stripe_session_id: session_id)
-
-    CoursePurchase.create!(
-      user: current_user,
-      course: @course,
-      amount_cents: stripe_session.amount_total,
-      stripe_session_id: session_id,
-      stripe_payment_intent_id: stripe_session.payment_intent
-    )
-
-    # Automatically enrol the user after purchase
-    enrollment = Enrollment.find_or_initialize_by(user: current_user, course: @course)
-    enrollment.role ||= :student
-    enrollment.save!
   end
 
   def get_or_create_stripe_customer
