@@ -415,6 +415,7 @@ on the machine where they run.
 | Command | Purpose |
 | --- | --- |
 | `bin/deploy root@HOST DOMAIN` | Deploy application code to the remote server; no automatic data backup. |
+| `bin/check-deploy USER@HOST [GIT_REF]` | Compare production web/worker image tags with local `main` and check both are running. |
 | `bin/backup USER@HOST [FILE]` | Create a remote snapshot and download one archive locally. |
 | `bin/export USER@HOST [FILE]` | Same portable archive as `bin/backup`. |
 | `bin/restore --force USER@HOST FILE` | Upload and restore onto a prepared remote Docker instance. |
@@ -426,6 +427,15 @@ on the machine where they run.
 
 Backup, export, restore, and local-clone commands support `--help`.
 Remote wrappers accept `SSH_PORT` and `DEPLOY_ROOT`.
+
+Run `bin/check-deploy USER@HOST` to check a production server against the
+latest committed local `main`, without switching branches. The SSH target is
+required; `SSH_PORT` defaults to `22`. Override the port or ref with, for example,
+`SSH_PORT=2222 bin/check-deploy root@server.example.com HEAD`. It prints each
+container's image tag, status, and last start time (UTC). Exit status is `0`
+when both match and are running, `1` for a mismatch or stopped container, and
+`2` if the check fails. This compares deployment tags; it does not fetch remote
+Git changes, verify file contents, or deploy code.
 
 ### Single-instance limitation
 
