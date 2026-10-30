@@ -73,7 +73,7 @@ class Admin::UsersController < Admin::BaseController
 
   def reset_password
     @user.send_reset_password_instructions
-    redirect_to admin_user_path(@user), notice: "Password reset email sent to #{@user.email}."
+    redirect_to admin_user_path(@user), notice: "Password #{@user.initial_password_setup? ? 'setup' : 'reset'} email sent to #{@user.email}."
   rescue StandardError => error
     Rails.logger.error(
       "Password reset email delivery failed " \
@@ -82,6 +82,19 @@ class Admin::UsersController < Admin::BaseController
     )
     redirect_to admin_user_path(@user),
                 alert: "The password reset email could not be sent. Check the email settings and server logs, then try again."
+  end
+
+  def import
+  end
+
+  def create_import
+    @result = UserCsvImportService.new(params[:file]).call
+    if @result.success?
+      redirect_to admin_users_path,
+                  notice: "CSV import complete: #{@result.created} accounts created, #{@result.skipped} existing or duplicate emails skipped."
+    else
+      render :import, status: :unprocessable_entity
+    end
   end
 
   def export

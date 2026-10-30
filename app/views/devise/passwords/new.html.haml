@@ -1,5 +1,5 @@
 .max-w-md.mx-auto
-  %h1.text-2xl.font-semibold.mb-6 Forgot your password?
+  %h1.text-2xl.font-semibold.mb-6= t("devise.views.passwords.new.heading")
   - sso_org = current_user&.organization || (@email_hint && Organization.for_email_domain(@email_hint))
   - if sso_org&.sso_required?
     .bg-amber-50.border.border-amber-200.rounded.p-4.mb-4.text-sm
@@ -15,5 +15,5 @@
         = f.label :email, class: "block text-sm font-medium text-gray-700 mb-1"
         = f.email_field :email, autofocus: true, autocomplete: "email", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
       .mb-4
-        = f.submit "Send me reset password instructions", class: "w-full inline-flex justify-center px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 cursor-pointer"
+        = f.submit t("devise.views.passwords.new.submit"), class: "w-full inline-flex justify-center px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 cursor-pointer"
   = render "devise/shared/links"

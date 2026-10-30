@@ -4,6 +4,7 @@
   %h1.text-2xl.font-bold Users
   .flex.items-center.gap-2
     = link_to "Organizations", admin_organizations_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+    = link_to "Import CSV", import_admin_users_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
     = link_to "Export CSV", export_admin_users_path(request.query_parameters), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
     = link_to "New user", new_admin_user_path, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
 

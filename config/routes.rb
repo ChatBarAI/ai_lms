@@ -114,6 +114,8 @@ Rails.application.routes.draw do
       end
       collection do
         get :export
+        get :import
+        post :import, action: :create_import
       end
     end
     resources :organizations

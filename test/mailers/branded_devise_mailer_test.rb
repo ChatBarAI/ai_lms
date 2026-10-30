@@ -1,6 +1,18 @@
 require "test_helper"
 
 class BrandedDeviseMailerTest < ActionMailer::TestCase
+  test "password email uses setup wording only before the first sign-in" do
+    user = users(:student)
+    [ [ 0, "Set" ], [ 1, "Reset" ] ].each do |count, action|
+      user.update!(sign_in_count: count)
+      email = BrandedDeviseMailer.reset_password_instructions(user, "reset-token")
+      assert_equal "#{action} your password", email.subject
+      assert_includes email.html_part.body.decoded, "#{action} password"
+      assert_includes email.text_part.body.decoded, "#{action} your password"
+      assert_includes email.html_part.body.decoded, "reset_password_token=reset-token"
+    end
+  end
+
   test "password reset email uses site branding and embeds the uploaded logo" do
     setting = SiteSetting.current
     setting.update!(

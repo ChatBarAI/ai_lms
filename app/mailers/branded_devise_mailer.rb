@@ -3,7 +3,9 @@ class BrandedDeviseMailer < Devise::Mailer
 
   def reset_password_instructions(record, token, opts = {})
     prepare_branding(record)
-    super
+    @password_action = record.initial_password_setup? ? "set" : "reset"
+    opts = opts.merge(subject: I18n.t("devise.views.passwords.#{@password_action}.heading")) unless opts.key?(:subject)
+    super(record, token, opts)
   end
 
   private

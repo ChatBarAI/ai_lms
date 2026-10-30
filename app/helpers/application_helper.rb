@@ -1,6 +1,11 @@
 module ApplicationHelper
   TOGGLE_TRACK_CLASSES = "cb-toggle-track".freeze
 
+  def password_form_action(resource)
+    account = User.with_reset_password_token(resource.reset_password_token) if resource.reset_password_token.present?
+    account&.reset_password_period_valid? && account.initial_password_setup? ? "set" : "reset"
+  end
+
   def preview_text_for(field, course)
     case field
     when "name"           then "Student Name"

@@ -1,0 +1,25 @@
+- content_for :title, "Import users"
+
+%h1.text-2xl.font-bold.mb-4 Import users from CSV
+
+.space-y-4.bg-white.border.border-gray-200.rounded-lg.p-6
+  %p.text-sm Include a header row. Email is required; full_name (or name), role and organization are optional. The default role is student. Accepted roles are student, instructor and admin.
+  %p.text-sm Organization must match an existing organization name or slug. Leave it blank for accounts without an organization.
+  %pre.overflow-x-auto.bg-gray-50.rounded.p-3.text-sm= "email,full_name,role,organization\nlearner@example.com,Alex Learner,student,\nteacher@example.com,Sam Teacher,instructor,"
+  %p.text-sm Existing accounts and repeated emails are skipped without changing their details. If any row is invalid, no accounts are created. Upload a UTF-8 CSV, up to 2 MB and #{UserCsvImportService::MAX_ROWS} accounts.
+  %p.text-sm Accounts receive a random password. Users can sign in through configured Kinde SSO using the same email, or use Set or reset password to set a password. This import sends no emails and does not enroll users in courses.
+
+  - if @result&.errors&.any?
+    .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm{ role: "alert" }
+      %p.font-semibold No accounts were created. Correct the file and upload it again.
+      %ul.list-disc.pl-5
+        - @result.errors.each do |error|
+          %li= error
+
+  = form_with url: import_admin_users_path, multipart: true, local: true, data: { turbo: false }, class: "space-y-4" do |f|
+    %div
+      = f.label :file, "CSV file", class: "block text-sm font-medium mb-1"
+      = f.file_field :file, accept: ".csv,text/csv", required: true, class: "block w-full text-sm"
+    .flex.gap-2
+      = f.submit "Import accounts", class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+      = link_to "Cancel", admin_users_path, class: "px-4 py-2 rounded border border-gray-300 hover:bg-gray-50"

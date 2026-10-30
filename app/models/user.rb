@@ -64,6 +64,10 @@ class User < ApplicationRecord
     [ last_sign_in_at, progresses.maximum(:updated_at) ].compact.max
   end
 
+  def initial_password_setup?
+    persisted? && sign_in_count.to_i.zero?
+  end
+
   def display_name
     name.presence || email
   end

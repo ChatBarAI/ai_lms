@@ -12,10 +12,25 @@ de:
           heading: "Registrieren"
           minimum_password_length: "(mindestens %{count} Zeichen)"
           submit: "Registrieren"
+      passwords:
+        new:
+          heading: "Passwort festlegen oder zurücksetzen"
+          submit: "Passwort-Anweisungen senden"
+        set:
+          heading: "Passwort festlegen"
+          submit: "Passwort festlegen"
+          request: "Über den folgenden Link kannst du ein Passwort für dein Konto bei %{brand} festlegen."
+        reset:
+          heading: "Passwort zurücksetzen"
+          submit: "Passwort zurücksetzen"
+          request: "Wir haben eine Anfrage zum Zurücksetzen des Passworts für dein Konto bei %{brand} erhalten."
+        greeting: "Hallo %{name},"
+        ignore: "Wenn du dies nicht angefordert hast, kannst du diese E-Mail ignorieren."
+        unchanged: "Dein Passwort wird erst geändert, wenn du den Link oben verwendest und ein neues wählst."
       links:
         log_in: "Anmelden"
         sign_up: "Registrieren"
-        forgot_password: "Passwort vergessen?"
+        forgot_password: "Passwort festlegen oder zurücksetzen"
         confirmation_instructions: "Keine Bestätigungsanweisungen erhalten?"
         unlock_instructions: "Keine Entsperranweisungen erhalten?"
         sign_in_with: "Mit %{provider} anmelden"
@@ -52,7 +67,7 @@ de:
       success: "Erfolgreich über %{kind} authentifiziert."
     passwords:
       no_token: "Du kannst diese Seite nur über einen Link aus einer Passwort-Zurücksetzen-E-Mail öffnen. Falls du aus einer solchen E-Mail kommst, prüfe bitte, ob du die vollständige URL verwendet hast."
-      send_instructions: "Du erhältst in wenigen Minuten eine E-Mail mit Anweisungen zum Zurücksetzen deines Passworts."
+      send_instructions: "Du erhältst in wenigen Minuten eine E-Mail mit Anweisungen zum Festlegen oder Zurücksetzen deines Passworts."
       send_paranoid_instructions: "Falls deine E-Mail-Adresse in unserer Datenbank existiert, erhältst du in wenigen Minuten einen Link zur Passwort-Wiederherstellung."
       updated: "Dein Passwort wurde erfolgreich geändert. Du bist jetzt angemeldet."
       updated_not_active: "Dein Passwort wurde erfolgreich geändert."

@@ -2,6 +2,48 @@ require "test_helper"
 require "csv"
 
 class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
+  test "admin can open CSV import and upload accounts" do
+    sign_in users(:admin)
+    get import_admin_users_path
+    assert_response :success
+    assert_select "input[type=file][name=file]"
+
+    Tempfile.create([ "accounts", ".csv" ]) do |file|
+      file.write("email,full_name\nimported@example.com,Imported User\n")
+      file.flush
+      upload = Rack::Test::UploadedFile.new(file.path, "text/csv")
+      assert_no_emails do
+        assert_difference -> { User.count }, 1 do
+          post import_admin_users_path, params: { file: upload }
+        end
+      end
+    end
+    assert_redirected_to admin_users_path
+    assert_match "1 accounts created", flash[:notice]
+    assert User.find_by!(email: "imported@example.com").student?
+  end
+
+  test "admin sees CSV upload errors" do
+    sign_in users(:admin)
+    assert_no_difference -> { User.count } do
+      post import_admin_users_path
+    end
+    assert_response :unprocessable_entity
+    assert_match "Choose a CSV file", response.body
+  end
+
+  test "CSV import requires an admin" do
+    get import_admin_users_path
+    assert_redirected_to new_user_session_path
+    sign_in users(:instructor)
+    get import_admin_users_path
+    assert_redirected_to root_path
+    assert_no_difference -> { User.count } do
+      post import_admin_users_path
+    end
+    assert_redirected_to root_path
+  end
+
   test "non-admin is redirected" do
     sign_in users(:instructor)
     get admin_users_path
@@ -107,12 +149,25 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "admin can send a password reset email" do
+    users(:student).update!(sign_in_count: 1)
     sign_in users(:admin)
     assert_emails 1 do
       post reset_password_admin_user_path(users(:student))
     end
     assert_redirected_to admin_user_path(users(:student))
     assert_equal "Password reset email sent to #{users(:student).email}.", flash[:notice]
+  end
+
+  test "admin can send password setup to a user who has never signed in" do
+    sign_in users(:admin)
+    user = users(:student)
+    user.update!(sign_in_count: 0)
+    get admin_user_path(user)
+    assert_select "button", text: "Send password setup"
+    assert_emails 1 do
+      post reset_password_admin_user_path(user)
+    end
+    assert_equal "Password setup email sent to #{user.email}.", flash[:notice]
   end
 
   test "admin sees an error when a password reset email cannot be sent" do
