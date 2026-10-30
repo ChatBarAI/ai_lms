@@ -37,7 +37,6 @@ class LessonMaterialsController < ApplicationController
 
   def new
     @chatbar_token_prefilled = @lesson.cbai_token.present?
-    @lesson_material.chatbar_token ||= @lesson.cbai_token
     @copy_source_catalog = copy_source_catalog
   end
 
@@ -74,6 +73,7 @@ class LessonMaterialsController < ApplicationController
     return copy if starting_material_copy?
 
     @lesson_material.lesson = @lesson
+    @lesson_material.chatbar_token ||= @lesson.cbai_token if @lesson_material.chatbar?
     prepare_ai_design_material if starting_ai_design?
 
     if persist_material
@@ -86,6 +86,7 @@ class LessonMaterialsController < ApplicationController
       end
     else
       @copy_source_catalog = copy_source_catalog
+      @pending_chatbar_token = pending_chatbar_token_for_retry
       render :new, status: :unprocessable_entity
     end
   end
@@ -99,6 +100,7 @@ class LessonMaterialsController < ApplicationController
     if persist_material
       redirect_to edit_course_lesson_path(@course, @lesson), notice: "Material updated."
     else
+      @pending_chatbar_token = pending_chatbar_token_for_retry
       render :edit, status: :unprocessable_entity
     end
   end
@@ -194,7 +196,13 @@ class LessonMaterialsController < ApplicationController
   end
 
   def lesson_material_params
-    attributes = params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip, :chatbar_token, :chatbar_prompt, :chatbar_layout, :poster_image, :remove_poster_image)
+    attributes = params.require(:lesson_material).permit(:title, :kind, :position, :required, :open_by_default, :body, :document, :raw_html_content, :audio_file, :url, :image_file, :video_file, :google_doc_zip, :chatbar_token, :pending_chatbar_token, :chatbar_prompt, :chatbar_layout, :poster_image, :remove_poster_image)
+    # The token field is rendered masked and blank, so a blank submission keeps the saved token.
+    attributes[:chatbar_token] = attributes[:chatbar_token].to_s.strip if attributes.key?(:chatbar_token)
+    # After a failed save, a blank submission keeps the token entered on the previous attempt.
+    pending_token = read_pending_chatbar_token(attributes.delete(:pending_chatbar_token))
+    attributes[:chatbar_token] = pending_token if attributes[:chatbar_token].blank? && pending_token.present?
+    attributes.delete(:chatbar_token) if attributes[:chatbar_token].blank?
     remove_poster = ActiveModel::Type::Boolean.new.cast(attributes.delete(:remove_poster_image))
     # An empty file input means keep the poster; Active Storage treats "" as removal.
     attributes.delete(:poster_image) if attributes[:poster_image].blank?
@@ -258,6 +266,8 @@ class LessonMaterialsController < ApplicationController
       end
     end
 
+    return false unless chatbar_token_verified?
+
     @lesson_material.save
   rescue GoogleDocImportService::ImportError => error
     @lesson_material.errors.add(:google_doc_zip, error.message)
@@ -266,6 +276,50 @@ class LessonMaterialsController < ApplicationController
     @lesson_material.errors.add(:url, error.message)
     false
   rescue ActiveRecord::RecordInvalid
+    false
+  end
+
+  def pending_chatbar_token_for_retry
+    return unless @lesson_material.chatbar? && @lesson_material.will_save_change_to_chatbar_token?
+    return if @lesson_material.errors.include?(:chatbar_token)
+
+    token = @lesson_material.chatbar_token
+    # A blank retry on a new material already falls back to the lesson token.
+    return if token.blank? || (token == @lesson.cbai_token && @lesson_material.new_record?)
+
+    pending_chatbar_token_encryptor.encrypt_and_sign(token, purpose: pending_chatbar_token_purpose, expires_in: 1.hour)
+  end
+
+  def read_pending_chatbar_token(value)
+    return if value.blank?
+
+    pending_chatbar_token_encryptor.decrypt_and_verify(value.to_s, purpose: pending_chatbar_token_purpose)
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage
+    nil
+  end
+
+  # Bound to this user, lesson and material so a carried token cannot be replayed elsewhere.
+  def pending_chatbar_token_purpose
+    material_id = @lesson_material&.persisted? ? @lesson_material.id : "new"
+    "lesson_material_chatbar_token/#{current_user.id}/#{@lesson.id}/#{material_id}"
+  end
+
+  def pending_chatbar_token_encryptor
+    key = Rails.application.key_generator.generate_key("lesson_material_pending_chatbar_token", ActiveSupport::MessageEncryptor.key_len)
+    ActiveSupport::MessageEncryptor.new(key)
+  end
+
+  def chatbar_token_verified?
+    return true unless @lesson_material.chatbar? && @lesson_material.will_save_change_to_chatbar_token?
+    # Blank tokens are reported by the model's presence validation.
+    return true if @lesson_material.chatbar_token.blank?
+    # The lesson token was resolved from the ChatBar API when its key was saved.
+    return true if @lesson_material.chatbar_token == @lesson.cbai_token
+
+    ChatbarTokenVerifier.verify!(@lesson_material.chatbar_token)
+  rescue ChatbarTokenVerifier::Error => error
+    @lesson_material.valid?
+    @lesson_material.errors.add(:chatbar_token, error.message)
     false
   end
 end
