@@ -20,6 +20,24 @@ class SiteSettingTest < ActiveSupport::TestCase
     assert SiteSetting.current.allow_guest_access?
   end
 
+  test "ask_help_available_for requires enabled flag and token" do
+    s = SiteSetting.current
+    s.update!(help_enabled: false, help_admin_token: "tok")
+    assert_not s.ask_help_available_for?(:admin)
+
+    s.update!(help_enabled: true, help_admin_token: "")
+    assert_not s.ask_help_available_for?(:admin)
+
+    s.update!(help_enabled: true, help_admin_token: " help-lms-admin ")
+    assert s.ask_help_available_for?(:admin)
+    assert_equal "help-lms-admin", s.ask_help_token_for(:admin)
+    assert s.ask_help_available_for?(:instructor)
+    assert_equal "help-lms-admin", s.ask_help_token_for(:instructor)
+
+    s.update!(help_instructor_token: "help-lms-instructor")
+    assert_equal "help-lms-instructor", s.ask_help_token_for(:instructor)
+  end
+
   test "logo rejects non-image content types" do
     s = SiteSetting.current
     s.logo.attach(io: StringIO.new("x"), filename: "x.txt", content_type: "text/plain")
