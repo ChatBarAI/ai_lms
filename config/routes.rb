@@ -114,6 +114,7 @@ Rails.application.routes.draw do
       end
       collection do
         get :export
+        post :new_user
       end
     end
     resources :organizations

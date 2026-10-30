@@ -49,6 +49,30 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "Zapier user creation returns a password setup link without emailing" do
+    credentials = Rails.application.credentials
+
+    credentials.stub(:zapier_token, "test-zapier-token") do
+      assert_difference -> { User.count }, 1 do
+        assert_no_emails do
+          post new_user_admin_users_path,
+               params: { full_name: "New User", email: "zapier-user@example.com" },
+               headers: { "Authorization" => "test-zapier-token" }
+        end
+      end
+    end
+
+    assert_response :created
+    user = User.find_by!(email: "zapier-user@example.com")
+    assert_not user.valid_password?("@DefaultPWD123")
+    reset_url = JSON.parse(response.body).fetch("password_reset_url")
+    assert_match %r{\Ahttps?://}, reset_url
+    assert_includes reset_url, "/users/password/edit"
+    reset_token = Rack::Utils.parse_query(URI(reset_url).query).fetch("reset_password_token")
+    assert_equal user, User.with_reset_password_token(reset_token)
+    assert_not JSON.parse(response.body).key?("encrypted_password")
+  end
+
   test "admin sees errors when creating a user without a password" do
     sign_in users(:admin)
 
