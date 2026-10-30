@@ -40,27 +40,25 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 
-# Precompile bootsnap code for faster boot times
-RUN bundle exec bootsnap precompile app/ lib/
-
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
-
-
-
+# Precompile code and assets, then set runtime ownership before the final copy.
+# Keep this in one layer to avoid copying newly generated caches just to chown them.
+# Numeric IDs match the runtime user created below.
+RUN bundle exec bootsnap precompile app/ lib/ && \
+    SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
+    mkdir -p db log storage tmp/pids && \
+    chown -R 1000:1000 db log storage tmp
 
 # Final stage for app image
 FROM base
 
-# Copy built artifacts: gems, application
+# Create the runtime user before copying artifacts so this layer stays cached.
+RUN groupadd --system --gid 1000 rails && \
+    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
+
+# Copy preserves ownership: only runtime directories are writable by rails.
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
-# Run and own only the runtime files as a non-root user for security
-RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    mkdir -p db log storage tmp/pids && \
-    chown -R rails:rails db log storage tmp
 USER 1000:1000
 
 # Entrypoint prepares the database.
