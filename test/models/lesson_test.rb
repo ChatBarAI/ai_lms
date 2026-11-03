@@ -258,4 +258,26 @@ class LessonTest < ActiveSupport::TestCase
     assert_equal 1, Lesson.pending_marking_count
     assert_equal :manual, queued.find { |lesson| lesson.id == lessons(:intro).id }.pending_marking_mode
   end
+
+  test "immediate_score_for scores true/false radio values against legacy answers" do
+    lesson = lessons(:intro)
+    questions(:intro_q1).update_columns(kind: Question.kinds[:true_false], correct_answer: "True.", choices: nil, points: nil)
+
+    score = lesson.immediate_score_for(
+      enrollment: enrollments(:student_in_algebra),
+      answers: { questions(:intro_q1).id.to_s => "true", questions(:intro_q2).id.to_s => "5" }
+    )
+
+    assert_equal 50.0, score
+  end
+
+  test "incorrect_questions_for treats a matching true/false answer as correct" do
+    lesson = lessons(:intro)
+    enrollment = enrollments(:student_in_algebra)
+    questions(:intro_q1).update_columns(kind: Question.kinds[:true_false], correct_answer: "yes", choices: nil)
+    QuestionAnswer.create!(enrollment: enrollment, question: questions(:intro_q1), answer_text: "true")
+    QuestionAnswer.create!(enrollment: enrollment, question: questions(:intro_q2), answer_text: "5")
+
+    assert_equal [ questions(:intro_q2) ], lesson.incorrect_questions_for(enrollment)
+  end
 end

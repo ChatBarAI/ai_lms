@@ -21,11 +21,15 @@
 
     %div
       = f.label :correct_answer, class: "block text-sm font-medium mb-1"
-      = f.text_field :correct_answer, class: "w-full border border-gray-300 rounded px-3 py-2"
+      %div#correct-answer-text{ hidden: question.true_false? }
+        = f.text_field :correct_answer, disabled: question.true_false?, class: "w-full border border-gray-300 rounded px-3 py-2"
+      %div#correct-answer-true-false{ hidden: !question.true_false? }
+        = f.select :correct_answer, [ "True", "False" ], { include_blank: "Choose True or False", selected: Question.true_false_value(question.correct_answer) }, id: "question_correct_answer_true_false", disabled: !question.true_false?, aria: { label: "Correct answer" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
 
     %div
       = f.label :points, class: "block text-sm font-medium mb-1"
-      = f.number_field :points, class: "border border-gray-300 rounded px-3 py-2"
+      = f.number_field :points, min: 0, step: 1, class: "border border-gray-300 rounded px-3 py-2"
+      %p.text-xs.text-gray-500.mt-1= "Leave blank for the default of #{pluralize(Question::DEFAULT_POINTS, "point")}. Use 0 for a question that does not count towards the score."
 
   .flex.w-full.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
@@ -45,11 +49,26 @@
       }
     }
 
+    function toggleCorrectAnswer(kind) {
+      var isTrueFalse = kind === "true_false";
+      [["correct-answer-text", !isTrueFalse], ["correct-answer-true-false", isTrueFalse]].forEach(function (pair) {
+        var wrapper = document.getElementById(pair[0]);
+        if (!wrapper) return;
+        wrapper.hidden = !pair[1];
+        // Only the visible input may submit question[correct_answer].
+        wrapper.querySelectorAll("input, select").forEach(function (el) { el.disabled = !pair[1]; });
+      });
+    }
+
     function initChoicesToggle() {
       var kindSelect = document.getElementById("question_kind");
       if (!kindSelect) return;
       toggleChoices(kindSelect);
-      kindSelect.addEventListener("change", function () { toggleChoices(this); });
+      toggleCorrectAnswer(kindSelect.value);
+      kindSelect.addEventListener("change", function () {
+        toggleChoices(this);
+        toggleCorrectAnswer(this.value);
+      });
     }
 
     document.addEventListener("DOMContentLoaded", initChoicesToggle);

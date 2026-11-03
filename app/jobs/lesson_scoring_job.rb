@@ -50,7 +50,7 @@ class LessonScoringJob < ApplicationJob
     earned_points = 0.0
 
     questions.each do |q|
-      weight = (q.points.presence || 1).to_f
+      weight = q.weight
       total_points += weight
 
       qa = answers_by_question[q.id]
@@ -60,9 +60,7 @@ class LessonScoringJob < ApplicationJob
         next if qa.ai_score.nil? # still pending — skip, score will be partial
         earned_points += (qa.ai_score / 10.0) * weight
       else
-        given    = qa.answer_text.to_s.strip.downcase
-        expected = q.correct_answer.to_s.strip.downcase
-        earned_points += weight if expected.present? && given == expected
+        earned_points += weight if q.answer_correct?(qa.answer_text)
       end
     end
 

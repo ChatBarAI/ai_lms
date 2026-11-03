@@ -43,7 +43,7 @@ class LessonProgressScoreService
     earned_points = 0.0
 
     questions.each do |question|
-      weight = (question.points.presence || 1).to_f
+      weight = question.weight
       total_points += weight
 
       answer = answers_by_question[question.id]
@@ -52,9 +52,7 @@ class LessonProgressScoreService
       if question.free_text?
         earned_points += (answer.ai_score / 10.0) * weight
       else
-        given = answer.answer_text.to_s.strip.downcase
-        expected = question.correct_answer.to_s.strip.downcase
-        earned_points += weight if expected.present? && given == expected
+        earned_points += weight if question.answer_correct?(answer.answer_text)
       end
     end
 

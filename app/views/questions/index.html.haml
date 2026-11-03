@@ -17,7 +17,9 @@
         %span.font-mono.text-sm.text-gray-500.w-8.text-right.tabular-nums{ data: { question_number: true } }= "#{idx + 1}."
         .flex-1
           %p.font-medium= q.prompt
-          %p.text-xs.text-gray-500= "#{q.kind.humanize} · #{q.points || 0} pts · answer: #{q.correct_answer}"
+          %p.text-xs.text-gray-500= "#{q.kind.humanize} · #{pluralize(q.weight.to_i, "pt")} · answer: #{q.correct_answer}"
+          - if q.true_false? && Question.true_false_value(q.correct_answer).nil?
+            %p.text-xs.text-red-700 Correct answer must be True or False. Edit this question so learners are scored correctly.
         .flex.flex-wrap.gap-2.items-center
           = link_to "Edit", edit_course_lesson_question_path(@course, @lesson, q), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
           = button_to "Delete", course_lesson_question_path(@course, @lesson, q), method: :delete, data: { turbo_confirm: "Delete?" }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
