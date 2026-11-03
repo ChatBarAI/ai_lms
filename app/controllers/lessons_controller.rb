@@ -290,7 +290,8 @@ class LessonsController < ApplicationController
   def persist_lesson_video_attributes(*attributes)
     return unless params[:lesson].present?
 
-    @lesson.update(params.require(:lesson).permit(*attributes))
+    # Key fields render masked and blank, so a blank submission keeps the saved key.
+    @lesson.update(params.require(:lesson).permit(*attributes).compact_blank)
   end
 
   def fetch_video_data(fetch_method, instance_variable_name, **kwargs)

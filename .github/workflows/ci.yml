@@ -53,3 +53,6 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
+      - name: Lint Haml views (secrets rendered into pages)
+        run: bin/lint-views
+

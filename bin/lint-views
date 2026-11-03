@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+# Static checks for app/views that RuboCop cannot see (Haml). Runs locally and in CI.
+#
+#   bin/lint-views            # check app/views
+#   bin/lint-views DIR        # check another views tree (used to prove the check on old revisions)
+#
+# A line may opt out with a Haml comment on the line directly above it:
+#   -# lint-views:allow <rule> -- <reason> (expires YYYY-MM-DD, approved by <name>)
+
+root = File.expand_path(ARGV[0] || File.join(__dir__, "..", "app", "views"))
+SECRET_ATTRIBUTE = /:(\w*(?:api_key|_token|_secret|password))\b/
+
+RULES = {
+  "secret-value" => {
+    pattern: /password_field[ (].*\bvalue:(?!\s*nil\b)/,
+    message: "renders a saved secret into the page. Use `value: nil` and a " \
+             "\"saved — leave blank to keep it\" placeholder; drop blank values on save " \
+             "(see LessonFormAssignmentService::SECRET_ATTRIBUTES)."
+  },
+  "secret-plain-field" => {
+    pattern: /(?:text_field|text_area|hidden_field)[ (]\s*#{SECRET_ATTRIBUTE.source}/,
+    message: "shows a secret attribute in clear text. Use `f.password_field <attr>, value: nil`."
+  }
+}.freeze
+
+failures = Dir.glob(File.join(root, "**", "*.haml")).sort.flat_map do |path|
+  lines = File.readlines(path)
+  lines.each_with_index.filter_map do |line, index|
+    RULES.filter_map do |name, rule|
+      next unless line.match?(rule[:pattern])
+      # Haml cannot take a trailing comment on a `=` line, so the allow comment sits on the line above.
+      next if [ line, (lines[index - 1] if index.positive?) ].compact.any? { |l| l.include?("lint-views:allow #{name}") }
+
+      relative = path.delete_prefix("#{root}/")
+      "app/views/#{relative}:#{index + 1}: [#{name}] #{rule[:message]}"
+    end
+  end.flatten
+end
+
+if failures.empty?
+  puts "lint-views: OK"
+else
+  puts failures
+  puts "\nlint-views: #{failures.size} problem(s)"
+  exit 1
+end

@@ -328,6 +328,24 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Welcome", response.body
   end
 
+  test "video import forms keep a saved api key out of the page and keep it on a blank submit" do
+    sign_in users(:instructor)
+    lessons(:intro).update!(synthesia_api_key: "syn-saved-secret", heygen_api_key: "hg-saved-secret", cbai_api_key: "cbai-saved-secret")
+
+    [
+      [ :video_synthesia_course_lesson_path, :synthesia_api_key, "syn-saved-secret" ],
+      [ :video_heygen_course_lesson_path, :heygen_api_key, "hg-saved-secret" ],
+      [ :video_chatbar_course_lesson_path, :cbai_api_key, "cbai-saved-secret" ]
+    ].each do |path_helper, attribute, saved|
+      get public_send(path_helper, courses(:algebra), lessons(:intro)), params: { lesson: { attribute => "" } }
+
+      assert_response :success
+      assert_no_match saved, response.body, "#{attribute} was rendered into the page"
+      assert_match "Key saved — leave blank to keep it", response.body
+      assert_equal saved, lessons(:intro).reload.public_send(attribute), "blank #{attribute} wiped the saved key"
+    end
+  end
+
   test "import_synthesia_video attaches downloaded file and clears video_url" do
     sign_in users(:instructor)
     lessons(:intro).update!(synthesia_api_key: "syn-key", video_url: "https://example.com/old.mp4")

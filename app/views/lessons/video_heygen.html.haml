@@ -11,7 +11,7 @@
     = hidden_field_tag :fetch, "1"
     %div
       = f.label :heygen_api_key, "HeyGen API key", class: "block text-sm font-medium mb-1"
-      = f.password_field :heygen_api_key, value: @lesson.heygen_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2"
+      = f.password_field :heygen_api_key, value: nil, placeholder: (@lesson.heygen_api_key_in_database.present? ? "Key saved — leave blank to keep it" : nil), autocomplete: "new-password", class: "w-full border border-gray-300 rounded px-3 py-2"
       %p.text-xs.text-gray-500.mt-1= t("catalog_ui.stored_on_lesson", **terms)
     %div
       = label_tag :video_id, "HeyGen video ID", class: "block text-sm font-medium mb-1"
