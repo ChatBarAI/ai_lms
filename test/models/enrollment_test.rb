@@ -1,6 +1,55 @@
 require "test_helper"
 
 class EnrollmentTest < ActiveSupport::TestCase
+  test "newly published lessons do not revoke an earned completion or prerequisites" do
+    enrollment = enrollments(:student_in_algebra)
+    progresses(:student_intro).update!(status: :completed)
+    assert_nil enrollment.reload.completed_at
+    enrollment.progresses.create!(lesson: lessons(:advanced), status: :completed)
+    completed_at = enrollment.reload.completed_at
+    assert_not_nil completed_at
+
+    lessons(:draft_lesson).update!(published_at: Time.current)
+
+    assert enrollment.reload.fully_completed?
+    assert_equal 100.0, enrollment.completion_percentage
+    assert_includes Enrollment.completed, enrollment
+    CoursePrerequisite.create!(course: courses(:other_owner_course), prerequisite_course: courses(:algebra))
+    assert Enrollment.new(user: users(:student), course: courses(:other_owner_course)).valid?
+
+    travel 1.day do
+      enrollment.progresses.create!(lesson: lessons(:draft_lesson), status: :completed)
+    end
+    assert_equal completed_at, enrollment.reload.completed_at
+  end
+
+  test "new lessons still count for learners who have not completed the course" do
+    enrollment = enrollments(:student_in_algebra)
+    progresses(:student_intro).update!(status: :completed)
+    assert_equal 50.0, enrollment.reload.completion_percentage
+
+    lessons(:draft_lesson).update!(published_at: Time.current)
+
+    assert_nil enrollment.reload.completed_at
+    assert_not enrollment.fully_completed?
+    assert_equal 33.3, enrollment.completion_percentage
+    assert_not_includes Enrollment.completed, enrollment
+  end
+
+  test "completion timestamp rolls back with the final lesson completion" do
+    enrollment = enrollments(:student_in_algebra)
+    progresses(:student_intro).update!(status: :completed)
+
+    Progress.transaction do
+      enrollment.progresses.create!(lesson: lessons(:advanced), status: :completed)
+      assert_not_nil enrollment.reload.completed_at
+      raise ActiveRecord::Rollback
+    end
+
+    assert_nil enrollment.reload.completed_at
+    assert_not enrollment.fully_completed?
+  end
+
   test "valid fixture" do
     assert enrollments(:student_in_algebra).valid?
   end

@@ -14,6 +14,7 @@ class Progress < ApplicationRecord
   scope :with_score, -> { where.not(score: nil) }
 
   before_save :stamp_completed_at
+  after_save :record_enrollment_completion, if: -> { saved_change_to_status? && completed? }
 
   def next_attempt_number
     quiz_attempts.maximum(:attempt_number).to_i + 1
@@ -44,6 +45,10 @@ class Progress < ApplicationRecord
   end
 
   private
+
+  def record_enrollment_completion
+    enrollment.record_completion!
+  end
 
   def completion_materials
     materials = lesson.lesson_materials.to_a

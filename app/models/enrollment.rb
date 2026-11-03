@@ -25,10 +25,13 @@ class Enrollment < ApplicationRecord
 
     where(required_lessons.arel.exists)
       .where.not(incomplete_required_lessons.arel.exists)
+      .or(where.not(completed_at: nil))
   }
   scope :active, -> { joins(:progresses).where(progresses: { status: [ Progress.statuses[:in_progress], Progress.statuses[:completed] ] }).distinct }
 
   def completion_percentage
+    return 100.0 if completed_at.present?
+
     total = lessons_required_count
     return 0 if total.zero?
     progress_total = progresses
@@ -55,8 +58,17 @@ class Enrollment < ApplicationRecord
   end
 
   def fully_completed?
+    return true if completed_at.present?
+
     total = lessons_required_count
     total.positive? && lessons_completed_count >= total
+  end
+
+  # Record the first earned completion. Later curriculum changes cannot revoke it.
+  def record_completion!
+    with_lock do
+      update!(completed_at: Time.current) if completed_at.nil? && fully_completed?
+    end
   end
 
   private

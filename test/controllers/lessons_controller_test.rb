@@ -1,6 +1,50 @@
 require "test_helper"
 
 class LessonsControllerTest < ActionDispatch::IntegrationTest
+  test "editing a published lesson preserves completed progress and an issued certificate" do
+    course = courses(:algebra)
+    lesson = lessons(:intro)
+    enrollment = enrollments(:student_in_algebra)
+    course.lessons_required_for_completion.each do |required_lesson|
+      enrollment.progresses.find_or_initialize_by(lesson: required_lesson)
+        .update!(status: :completed, score: 80, completed_at: 1.week.ago)
+    end
+    sign_in users(:student)
+    get course_certificate_path(course)
+    assert_response :success
+    certificate = Certificate.find_by!(user: users(:student), course: course)
+    certificate_before = certificate.attributes
+    progress_before = enrollment.progresses.order(:id).map(&:attributes)
+
+    sign_out users(:student)
+    sign_in users(:instructor)
+    patch course_lesson_path(course, lesson), params: {
+      lesson: { title: "Revised introduction", body: "Updated lesson content", pass_mark: 90 }
+    }
+    assert_redirected_to course_lesson_path(course, lesson)
+    assert_equal "Revised introduction", lesson.reload.title
+    assert_equal "Updated lesson content", lesson.body.to_plain_text
+    assert_equal 90, lesson.pass_mark
+    assert lesson.published?
+
+    sign_out users(:instructor)
+    sign_in users(:student)
+    get course_lesson_path(course, lesson)
+    assert_response :success
+    assert_select "#lesson-course-sidebar [role='progressbar'][aria-valuenow='100']"
+    assert_equal progress_before, enrollment.progresses.reload.order(:id).map(&:attributes)
+    assert enrollment.reload.fully_completed?
+    assert_equal 100.0, enrollment.completion_percentage
+    assert_includes Enrollment.completed, enrollment
+
+    assert_no_difference "Certificate.count" do
+      get course_certificate_path(course)
+    end
+    assert_response :success
+    assert_equal certificate_before, certificate.reload.attributes
+    assert_select "#certificate-preview", text: /#{Regexp.escape(certificate.token)}/
+  end
+
   test "show published lesson anonymously" do
     get course_lesson_path(courses(:algebra), lessons(:intro))
     assert_response :success
