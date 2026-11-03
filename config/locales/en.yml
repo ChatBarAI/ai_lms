@@ -73,6 +73,7 @@ en:
       all_courses: "All %{courses_l}"
       sign_in_to_access: "Sign in to access %{courses_l}"
       recently_published: "Recently published"
+      empty_items: "No published %{items} yet."
       empty: "No published %{courses_l} yet."
     me:
       title: "My learning"

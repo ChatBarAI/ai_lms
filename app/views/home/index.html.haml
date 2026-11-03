@@ -16,17 +16,26 @@
       .flex.w-full.sm:w-auto
         = link_to t(".sign_in_to_access", **terms), new_user_session_path, class: "w-full text-center px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 sm:w-auto"
 
-- if (site_setting.allow_guest_access? || user_signed_in?) && (user_signed_in? || @recent_items&.any?)
-  %section
-    %h2.text-xl.font-semibold.mb-3= t(".recently_published")
+- if @show_recent_section
+  %section#recent-publications
+    .mb-3.flex.flex-wrap.items-center.justify-between.gap-3
+      %h2.text-xl.font-semibold= t(".recently_published")
+      .ml-auto.flex.items-center.gap-2.text-xs.font-semibold
+        - if subjects_enabled?
+          = link_to terms[:subjects], root_path(recent: "subjects", anchor: "recent-publications"), class: "rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200 hover:underline focus-visible:ring-2 #{@recent_type == 'subjects' ? 'ring-2 ring-indigo-500' : ''}", "aria-current": (@recent_type == "subjects" ? "true" : nil)
+          %span.text-gray-400{ "aria-hidden": "true" } →
+        = link_to terms[:courses], root_path(recent: "courses", anchor: "recent-publications"), class: "rounded-full bg-sky-50 px-3 py-1 text-sky-700 dark:bg-sky-950 dark:text-sky-200 hover:underline focus-visible:ring-2 #{@recent_type == 'courses' ? 'ring-2 ring-sky-500' : ''}", "aria-current": (@recent_type == "courses" ? "true" : nil)
+        %span.text-gray-400{ "aria-hidden": "true" } →
+        = link_to terms[:lessons], root_path(recent: "lessons", anchor: "recent-publications"), class: "rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200 hover:underline focus-visible:ring-2 #{@recent_type == 'lessons' ? 'ring-2 ring-emerald-500' : ''}", "aria-current": (@recent_type == "lessons" ? "true" : nil)
     - if @recent_items&.any?
       .flex.flex-wrap.justify-center.gap-4
         - @recent_items.each do |item|
           %div{class: "min-w-[320px] max-w-[364px] flex-1"}
-            - if item.is_a?(Course)
+            - if item.is_a?(Subject)
+              = render "subjects/card", subject: item, course_count: item.visible_courses_count
+            - elsif item.is_a?(Course)
               = render "courses/card", course: item
             - else
               = render "lessons/card", lesson: item
     - else
-      %p.text-gray-500= t(".empty", **terms)
-- else
+      %p.text-gray-500= t(".empty_items", items: terms.fetch("#{@recent_type}_l".to_sym))

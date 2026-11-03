@@ -1,6 +1,74 @@
 require "test_helper"
 
 class HomeControllerTest < ActionDispatch::IntegrationTest
+  test "recent lessons exclude drafts future lessons and private guest courses" do
+    lessons(:advanced).update!(published_at: 1.day.from_now)
+
+    get root_path, params: { recent: "lessons" }
+
+    assert_response :success
+    assert_select "#recent-publications" do
+      assert_select "a[aria-current=true]", text: "Lessons"
+      assert_select "h3", text: "Intro to Algebra"
+      assert_select "h3", text: "Quadratic equations", count: 0
+      assert_select "h3", text: "Draft Lesson", count: 0
+      assert_select "h3", text: "Newton's laws", count: 0
+    end
+  end
+
+  test "recent subjects reflect visible course publication order" do
+    sign_in users(:student)
+    courses(:other_owner_course).update!(published_at: 1.hour.ago)
+
+    get root_path, params: { recent: "subjects" }
+
+    assert_response :success
+    assert_select "#recent-publications h3" do |headings|
+      assert_equal [ "Science", "Mathematics" ], headings.map(&:text)
+    end
+
+    sign_out users(:student)
+    get root_path, params: { recent: "subjects" }
+    assert_select "#recent-publications h3", text: "Mathematics"
+    assert_select "#recent-publications h3", text: "Science", count: 0
+  end
+
+  test "recent filters respect course languages" do
+    courses(:other_owner_course).update!(locale: "de")
+    student = users(:student)
+    student.update!(course_locales: [ "de" ])
+    sign_in student
+
+    get root_path, params: { recent: "lessons" }
+    assert_select "#recent-publications h3", text: "Newton's laws"
+    assert_select "#recent-publications h3", text: "Intro to Algebra", count: 0
+
+    get root_path, params: { recent: "subjects" }
+    assert_select "#recent-publications h3", text: "Science"
+    assert_select "#recent-publications h3", text: "Mathematics", count: 0
+  end
+
+  test "disabled subjects and unknown recent filters fall back to courses" do
+    SiteSetting.current.update!(subjects_enabled: false)
+
+    %w[subjects unknown].each do |filter|
+      get root_path, params: { recent: filter }
+      assert_response :success
+      assert_select "#recent-publications a[aria-current=true]", text: "Courses"
+      assert_select "#recent-publications h3", text: "Algebra"
+      assert_select "#recent-publications a", text: "Subjects", count: 0
+    end
+  end
+
+  test "empty lesson filter keeps the pills available" do
+    Lesson.update_all(published_at: nil)
+
+    get root_path, params: { recent: "lessons" }
+
+    assert_select "#recent-publications a[aria-current=true]", text: "Lessons"
+    assert_select "#recent-publications p", text: "No published lessons yet."
+  end
+
   test "renders root for anonymous user" do
     get root_path
     assert_response :success

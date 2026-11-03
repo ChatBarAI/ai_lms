@@ -74,6 +74,7 @@ de:
       all_courses: "Alle %{courses}"
       sign_in_to_access: "Anmelden, um %{courses} zu öffnen"
       recently_published: "Zuletzt veröffentlicht"
+      empty_items: "Noch keine veröffentlichten %{items}."
       empty: "Noch keine veröffentlichten %{courses}."
     me:
       title: "Mein Lernen"
