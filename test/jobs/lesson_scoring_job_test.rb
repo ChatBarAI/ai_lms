@@ -74,4 +74,14 @@ class LessonScoringJobTest < ActiveJob::TestCase
   test "is a no-op for a non-existent progress id" do
     assert_nothing_raised { LessonScoringJob.new.perform(-1) }
   end
+
+  test "scores true/false answers against a legacy free-text correct answer" do
+    questions(:intro_q1).update_columns(kind: Question.kinds[:true_false], correct_answer: "T", choices: nil)
+    QuestionAnswer.create!(enrollment: @enrollment, question: questions(:intro_q1), answer_text: "true")
+    QuestionAnswer.create!(enrollment: @enrollment, question: questions(:intro_q2), answer_text: "4")
+
+    LessonScoringJob.new.perform(@progress.id)
+
+    assert_equal 100.0, @progress.reload.score.to_f
+  end
 end
