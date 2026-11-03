@@ -14,7 +14,7 @@
       = button_to "Delete", admin_user_path(@user), method: :delete, data: { turbo_confirm: "Delete #{@user.email}?" }, class: "px-3 py-1.5 rounded bg-red-100 text-red-800 hover:bg-red-200 border border-red-200 text-sm cursor-pointer"
 
 .grid.grid-cols-2.md:grid-cols-4.gap-3.mb-6
-  - tiles = [ [ "Enrolments", @enrollments.size ], [ t("catalog_ui.lessons_done", **terms), @user.completed_lessons_count ], [ "Avg score", (@user.average_score&.round(1) || "—") ], [ "Last activity", @user.last_activity_at&.strftime("%Y-%m-%d") || "—" ] ]
+  - tiles = [ [ "Enrolments", @enrollments.size ], [ t("catalog_ui.lessons_done"), @user.completed_lessons_count ], [ "Avg score", (@user.average_score&.round(1) || "—") ], [ "Last activity", @user.last_activity_at&.strftime("%Y-%m-%d") || "—" ] ]
   - tiles.each do |label, value|
     .bg-white.border.border-gray-200.rounded.p-3
       .text-xs.uppercase.tracking-wide.text-gray-500= label
@@ -45,7 +45,7 @@
         .px-4.py-3.text-sm.text-gray-500 No enrolments yet.
 
     .bg-white.border.border-gray-200.rounded
-      .px-4.py-2.border-b.border-gray-100.font-semibold= t("catalog_ui.recent_completions", **terms)
+      .px-4.py-2.border-b.border-gray-100.font-semibold= t("catalog_ui.recent_completions")
       - if @recent_completions.any?
         %ul.divide-y.divide-gray-100
           - @recent_completions.each do |p|
@@ -68,7 +68,7 @@
 
   .space-y-4
     .bg-white.border.border-gray-200.rounded.p-4
-      .font-semibold.mb-2= t("catalog_ui.force_enrol", **terms)
+      .font-semibold.mb-2= t("catalog_ui.force_enrol")
       = form_with url: enroll_admin_user_path(@user), method: :post, local: true, class: "space-y-2" do
         = select_tag :course_id, options_from_collection_for_select(@enrollable_courses, :id, :title), class: "w-full border border-gray-300 rounded px-2 py-1.5 text-sm bg-white"
         %label.flex.items-center.gap-2.text-xs.text-gray-600

@@ -17,7 +17,7 @@
 - mini_svg_class ||= "h-10 w-full"
 - mini_svg_width ||= nil
 - show_attempt_numbers = local_assigns.fetch(:show_attempt_numbers, false)
-- axis_label ||= t("catalog_ui.attempt_sequence", **terms)
+- axis_label ||= t("catalog_ui.attempt_sequence")
 - pass_marks = attempts.map { |attempt| attempt.lesson&.effective_pass_mark }.compact.map(&:to_f).uniq.sort
 - resolved_pass_mark = pass_marks.size == 1 ? pass_marks.first : pass_mark
 - show_shared_pass_line = pass_marks.size <= 1
@@ -45,7 +45,7 @@
   %button{ class: button_class, type: "button", data: { action: "click->status-modal#open" }, "aria-label": "Open larger #{terms[:quiz_l]} marks chart" }
     - if pass_mark_caption && show_shared_pass_line
       %span.flex.flex-wrap.items-baseline.justify-between.gap-x-2.text-xs
-        %span.font-medium.text-gray-600= t("lessons.show.quiz_scores", **terms)
+        %span.font-medium.text-gray-600= t("lessons.show.quiz_scores")
         %span.text-green-700= t("lessons.show.pass_mark", percent: resolved_pass_mark.round)
     %svg{ mini_svg_attrs }
       %line{ x1: mini_left.to_s, y1: mini_bottom.to_s, x2: mini_right.to_s, y2: mini_bottom.to_s, stroke: "#e5e7eb", "stroke-width": "1" }

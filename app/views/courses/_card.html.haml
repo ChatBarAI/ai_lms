@@ -12,7 +12,7 @@
     - lesson_count = course.lessons.published.count
     .flex.items-start.justify-between.gap-2
       %h3.font-semibold= course.title
-      %span.inline-flex.items-center.gap-1.flex-shrink-0.px-2.py-0.5.rounded-full.text-xs.font-medium.bg-indigo-50.text-indigo-700.border.border-indigo-200.dark:bg-indigo-900.dark:text-indigo-100.dark:border-indigo-700{ title: t("courses.card.lessons_count", count: lesson_count, **terms) }
+      %span.inline-flex.items-center.gap-1.flex-shrink-0.px-2.py-0.5.rounded-full.text-xs.font-medium.bg-indigo-50.text-indigo-700.border.border-indigo-200.dark:bg-indigo-900.dark:text-indigo-100.dark:border-indigo-700{ title: t("courses.card.lessons_count", count: lesson_count) }
         = image_tag "lesson.png", alt: "", class: "w-3 h-3 flex-shrink-0"
         = lesson_count
     - unless local_assigns[:hide_subject]

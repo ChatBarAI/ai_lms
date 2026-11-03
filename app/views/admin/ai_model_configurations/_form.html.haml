@@ -45,7 +45,7 @@
       %p.text-xs.text-gray-500.mt-1 Leave blank to use the secure built-in HTML design prompt.
   = toggle_switch_field f, :enabled,
       label: "Available for AI design",
-      title: t("catalog_ui.design_model_hint", **terms)
+      title: t("catalog_ui.design_model_hint")
   .flex.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
     = link_to "Cancel", admin_ai_model_configurations_path, class: "px-4 py-2 rounded border border-gray-300"

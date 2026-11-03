@@ -11,10 +11,10 @@
       = "← #{terms[:course]}"
     - if can?(:update, @lesson)
       - if @lesson.published?
-        = button_to t("common.unpublish"), unpublish_course_lesson_path(@course, @lesson), method: :post, data: { turbo_confirm: t(".unpublish_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer transition-colors"
+        = button_to t("common.unpublish"), unpublish_course_lesson_path(@course, @lesson), method: :post, data: { turbo_confirm: t(".unpublish_confirm") }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer transition-colors"
       - else
         = button_to t("common.publish_now"), publish_course_lesson_path(@course, @lesson), method: :post, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-600 text-white hover:bg-green-700 cursor-pointer transition-colors"
-      = link_to t(".edit", **terms), edit_course_lesson_path(@course, @lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+      = link_to t(".edit"), edit_course_lesson_path(@course, @lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
       = link_to t(".questions"), course_lesson_questions_path(@course, @lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
 
 - @lesson.effective_section_order.each do |section|
@@ -22,5 +22,5 @@
 
 - if !@enrollment && user_signed_in?
   .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
-    %p.flex-1= t(".enrol_prompt", **terms)
+    %p.flex-1= t(".enrol_prompt")
     = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"

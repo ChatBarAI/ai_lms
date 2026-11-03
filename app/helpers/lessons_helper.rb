@@ -21,7 +21,7 @@ module LessonsHelper
     offset = (circ * (1 - pct / 100.0)).round(2)
     ring_color = "var(--btn-primary-bg, #4f46e5)"
 
-    tag.svg(class: classes, width: "52", height: "52", viewBox: "0 0 48 48", fill: "none", role: "progressbar", "aria-label": t("lessons.show.progress", **terms), "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct) do
+    tag.svg(class: classes, width: "52", height: "52", viewBox: "0 0 48 48", fill: "none", role: "progressbar", "aria-label": t("lessons.show.progress"), "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct) do
       safe_join([
         tag.circle(cx: "24", cy: "24", r: "20", class: "stroke-gray-200 dark:stroke-[#4b5563]", "stroke-width": "6", "vector-effect": "non-scaling-stroke", fill: "none"),
         tag.circle(cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "6", "vector-effect": "non-scaling-stroke", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)"),

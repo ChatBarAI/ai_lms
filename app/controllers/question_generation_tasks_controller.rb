@@ -6,7 +6,7 @@ class QuestionGenerationTasksController < ApplicationController
   def create
     if @lesson.cbai_api_key.blank?
       redirect_to course_lesson_questions_path(@course, @lesson),
-                  alert: t("catalog_ui.question_api_key_required", **helpers.terms)
+                  alert: t("catalog_ui.question_api_key_required")
       return
     end
 

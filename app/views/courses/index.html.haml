@@ -1,4 +1,4 @@
-- content_for :title, t(".title", **terms)
+- content_for :title, t(".title")
 
 .flex.items-center.justify-between.mb-4
   %h1.text-2xl.font-bold= terms[:courses]
@@ -9,11 +9,11 @@
       = f.label :sort, t(".sort_by"), class: "text-sm font-medium text-gray-700"
       = f.select :sort, [[t(".publication_date"), "published_at"], [t(".learning_order"), "learning_order"]], { selected: @sort }, { onchange: "this.form.requestSubmit()", class: "border border-gray-300 rounded px-3 py-2 bg-white text-sm" }
     - if user_signed_in? && (current_user.instructor? || current_user.admin?)
-      = link_to t(".new", **terms), new_course_path, class: "px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm"
+      = link_to t(".new"), new_course_path, class: "px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 text-sm"
 
 - if @courses.any?
   .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
     - @courses.each do |course|
       = render "courses/card", course: course
 - else
-  %p.text-gray-500= t(".empty", **terms)
+  %p.text-gray-500= t(".empty")

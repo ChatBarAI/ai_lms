@@ -4,10 +4,7 @@ class Certificate < ApplicationRecord
 
   validates :token, presence: true, uniqueness: true
   validates :issued_at, presence: true
-  validates :user_id, uniqueness: { scope: :course_id, message: ->(*) {
-    label = Course.model_name.human(count: 1)
-    I18n.t("catalog_ui.duplicate_certificate", course: label, course_l: label.downcase)
-  } }
+  validates :user_id, uniqueness: { scope: :course_id, message: ->(*) { I18n.t("catalog_ui.duplicate_certificate") } }
 
   before_validation :set_issued_at, on: :create
   before_validation :generate_token, on: :create

@@ -76,7 +76,6 @@ class Enrollment < ApplicationRecord
     missing = course.missing_prerequisites_for(user)
     return if missing.empty?
 
-    label = Course.model_name.human(count: 2)
-    errors.add(:base, I18n.t("catalog_ui.missing_prerequisites", courses: label, courses_l: label.downcase, titles: missing.map(&:title).to_sentence))
+    errors.add(:base, I18n.t("catalog_ui.missing_prerequisites", titles: missing.map(&:title).to_sentence))
   end
 end

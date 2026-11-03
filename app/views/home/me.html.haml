@@ -5,8 +5,8 @@
 - if @enrollments.empty?
   .bg-white.border.border-gray-200.rounded-lg.p-6
     %p.text-gray-600
-      = t(".not_enrolled", **terms)
-      = link_to t(".browse_courses", **terms), courses_path, class: "text-indigo-600 hover:underline"
+      = t(".not_enrolled")
+      = link_to t(".browse_courses"), courses_path, class: "text-indigo-600 hover:underline"
 
 - else
   .bg-white.border.border-gray-200.rounded-lg.overflow-hidden.mb-8
@@ -15,9 +15,9 @@
         %tr
           %th.text-left.px-4.py-2= terms[:course]
           %th.text-left.px-4.py-2= t(".progress")
-          %th.text-left.px-4.py-2= t(".lessons_completed", **terms)
+          %th.text-left.px-4.py-2= t(".lessons_completed")
           %th.text-left.px-4.py-2= t(".avg_score")
-          %th.text-left.px-4.py-2= t(".quiz_trend", **terms)
+          %th.text-left.px-4.py-2= t(".quiz_trend")
           %th.text-left.px-4.py-2
       %tbody.divide-y
         - @enrollments.each do |enrollment|
@@ -39,15 +39,15 @@
                            title: t(".quiz_trend_title", quiz: terms[:quiz], course: course.title, lessons: terms[:lessons])
               - else
                 %span.text-gray-400 —
-            %td.px-4.py-2= link_to t(".view_course", **terms), course_path(course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
+            %td.px-4.py-2= link_to t(".view_course"), course_path(course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
 
   .grid.grid-cols-1.lg:grid-cols-2.gap-6.mb-8
     .bg-white.border.border-gray-200.rounded-lg.p-4
-      %h2.font-semibold.mb-2= t(".course_completion", **terms)
-      %p.text-xs.text-gray-500.mb-2= t(".course_completion_hint", **terms)
+      %h2.font-semibold.mb-2= t(".course_completion")
+      %p.text-xs.text-gray-500.mb-2= t(".course_completion_hint")
       = svg_chart @course_completion, type: :bar, color: "#4f46e5", max: 100, suffix: "%", height: 260
 
     .bg-white.border.border-gray-200.rounded-lg.p-4
-      %h2.font-semibold.mb-2= t(".lessons_per_week", **terms)
+      %h2.font-semibold.mb-2= t(".lessons_per_week")
       %p.text-xs.text-gray-500.mb-2= t(".last_12_weeks")
       = svg_chart @completed_per_week, type: :line, color: "#10b981", height: 260

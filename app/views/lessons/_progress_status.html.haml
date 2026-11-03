@@ -13,12 +13,12 @@
             = site_favicon_img_tag(class: "w-4 h-4 shrink-0 animate-pulse")
             %p.text-xs.text-indigo-600.font-medium Queued for marking…
         - elsif progress.score.present?
-          %p.text-xs.text-gray-500= t("lessons.show.score", score: progress.score.to_f.round(1), **terms)
+          %p.text-xs.text-gray-500= t("lessons.show.score", score: progress.score.to_f.round(1))
       - if !progress.completed? && lesson.questions.none?
         - unless ai_scoring_pending
           = form_with model: progress, url: progress_path(progress.id), method: :patch, local: true do |f|
             = f.hidden_field :status, value: "completed"
-            = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete", **terms) }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
+            = f.submit t("lessons.show.mark_complete"), data: { turbo_confirm: t("lessons.show.confirm_mark_complete") }, class: "px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 cursor-pointer text-sm"
       - elsif progress.completed?
         .flex.flex-col.items-end.gap-2
           %span.text-sm.font-medium.text-green-700= t("lessons.show.completed")

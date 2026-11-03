@@ -52,11 +52,11 @@
   - options = Course.prerequisite_options_for(except: course)
   - if options.any?
     %div
-      %p.block.text-sm.font-medium.mb-1= t("catalog_ui.prerequisite_heading", **terms)
-      %p.text-xs.text-gray-500.mb-2= t("catalog_ui.prerequisite_hint", **terms)
+      %p.block.text-sm.font-medium.mb-1= t("catalog_ui.prerequisite_heading")
+      %p.text-xs.text-gray-500.mb-2= t("catalog_ui.prerequisite_hint")
       = hidden_field_tag "course[prerequisite_course_ids][]", ""
       %fieldset
-        %legend.sr-only= t("catalog_ui.prerequisite_legend", **terms)
+        %legend.sr-only= t("catalog_ui.prerequisite_legend")
         .flex.flex-wrap.gap-3
           - options.each do |option|
             = toggle_switch_tag "course[prerequisite_course_ids][]",

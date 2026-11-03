@@ -1,14 +1,14 @@
-- content_for :title, t("catalog_ui.needs_marking", **terms)
+- content_for :title, t("catalog_ui.needs_marking")
 
 .flex.items-center.justify-between.mb-6
   %div
-    %h1.text-2xl.font-bold= t("catalog_ui.needs_marking", **terms)
+    %h1.text-2xl.font-bold= t("catalog_ui.needs_marking")
     %p.text-sm.text-gray-500.mt-1 Free-text answers waiting for AI or manual marking.
   = link_to "Back to dashboard", admin_root_path, class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
 
 - if @lessons.empty?
   .bg-white.border.border-gray-200.rounded.p-4.text-sm.text-gray-500
-    = t("catalog_ui.no_marking", **terms)
+    = t("catalog_ui.no_marking")
 - else
   .bg-white.border.border-gray-200.rounded.overflow-hidden
     %table.w-full.text-sm
