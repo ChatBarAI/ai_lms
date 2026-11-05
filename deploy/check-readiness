@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Expand IPv6 so compressed/uppercase addresses compare consistently. Sources
+# are hostname, SSH_CONNECTION, and dig's parsed A/AAAA answer records.
+normalize_address() {
+  local address=${1,,} left right group missing octet
+  local -a head=() tail=() octets=()
+  address=${address%%%*}
+  if [[ $address != *:* ]]; then
+    printf '%s\n' "$address"
+    return
+  fi
+  if [[ $address == *.* ]]; then
+    IFS=. read -r -a octets <<< "${address##*:}"
+    [[ ${#octets[@]} == 4 ]] || return 1
+    for octet in "${octets[@]}"; do
+      [[ $octet =~ ^[0-9]{1,3}$ ]] && ((10#$octet <= 255)) || return 1
+    done
+    printf -v right '%x:%x' "$((10#${octets[0]} * 256 + 10#${octets[1]}))" "$((10#${octets[2]} * 256 + 10#${octets[3]}))"
+    address="${address%:*}:$right"
+  fi
+  if [[ $address == *::* ]]; then
+    left=${address%%::*}
+    right=${address#*::}
+    [[ -z $left ]] || IFS=: read -r -a head <<< "$left"
+    [[ -z $right ]] || IFS=: read -r -a tail <<< "$right"
+    missing=$((8 - ${#head[@]} - ${#tail[@]}))
+    ((missing > 0)) || return 1
+    while ((missing > 0)); do head+=(0); missing=$((missing - 1)); done
+    head+=("${tail[@]}")
+  else
+    IFS=: read -r -a head <<< "$address"
+  fi
+  [[ ${#head[@]} == 8 ]] || return 1
+  for group in "${head[@]}"; do
+    [[ $group =~ ^[0-9a-f]{1,4}$ ]] || return 1
+    printf '%04x:' "$((16#$group))"
+  done
+  printf '\n'
+}
+
+check_dns() {
+  local addresses address normalized domain resolver record answer count
+  local name ttl class type value rest
+  local -a server_addresses=() connection=()
+  local -A expected=()
+  addresses=$(hostname -I) || { echo "Cannot determine server IP addresses." >&2; return 1; }
+  read -r -a server_addresses <<< "$addresses"
+  read -r -a connection <<< "${SSH_CONNECTION:-}"
+  if [[ ${#connection[@]} == 4 ]]; then server_addresses+=("${connection[2]}"); fi
+  for address in "${server_addresses[@]}"; do
+    normalized=$(normalize_address "$address") || return 1
+    expected["$normalized"]=1
+  done
+  [[ ${#expected[@]} -gt 0 ]] || { echo "No server IP addresses found." >&2; return 1; }
+  for domain in "${domains[@]}"; do
+    for resolver in 1.1.1.1 8.8.8.8; do
+      count=0
+      for record in A AAAA; do
+        if ! answer=$(dig "@$resolver" "$domain" "$record" +time=3 +tries=1 +noall +comments +answer) ||
+           [[ $answer != *'status: NOERROR,'* ]]; then
+          echo "DNS check failed for $domain ($record, resolver $resolver). Check public DNS records, propagation, and outbound DNS access." >&2
+          return 1
+        fi
+        while read -r name ttl class type value rest; do
+          [[ $type == A || $type == AAAA ]] || continue
+          normalized=$(normalize_address "$value") || return 1
+          if [[ -z ${expected[$normalized]:-} ]]; then
+            echo "$domain resolves to $value at $resolver, outside this server's addresses (${server_addresses[*]}). Point every A/AAAA record at this server before deploying." >&2
+            return 1
+          fi
+          count=$((count + 1))
+        done <<< "$answer"
+      done
+      ((count > 0)) || { echo "No public A/AAAA records for $domain at $resolver." >&2; return 1; }
+    done
+    echo "DNS ready: $domain"
+  done
+}
+
+check_https() {
+  local timeout=${1:-300} deadline remaining limit domain response code pause
+  local -a pending=("${domains[@]}") next=()
+  local -A errors=()
+  deadline=$((SECONDS + timeout))
+  while [[ ${#pending[@]} -gt 0 ]] && ((SECONDS < deadline)); do
+    next=()
+    for domain in "${pending[@]}"; do
+      remaining=$((deadline - SECONDS))
+      if ((remaining <= 0)); then next+=("$domain"); continue; fi
+      limit=10
+      ((remaining >= limit)) || limit=$remaining
+      # Keep curl's diagnostic alongside its final HTTP code. Never bypass TLS
+      # verification or follow a redirect to a different host.
+      if response=$(curl --noproxy '*' --silent --show-error --connect-timeout 5 \
+        --max-time "$limit" --output /dev/null --write-out $'\n%{http_code}' \
+        "https://$domain/up" 2>&1) && [[ ${response##*$'\n'} == 200 ]]; then
+        echo "HTTPS ready: https://$domain"
+      else
+        code=${response##*$'\n'}
+        errors["$domain"]=${response%$'\n'*}
+        errors["$domain"]=${errors[$domain]:-HTTP $code}
+        next+=("$domain")
+      fi
+    done
+    pending=("${next[@]}")
+    remaining=$((deadline - SECONDS))
+    if [[ ${#pending[@]} -gt 0 ]] && ((remaining > 0)); then
+      echo "Waiting for HTTPS: ${pending[*]}"
+      pause=5
+      ((remaining >= pause)) || pause=$remaining
+      sleep "$pause"
+    fi
+  done
+  if [[ ${#pending[@]} -gt 0 ]]; then
+    echo "HTTPS was not ready within $timeout seconds:" >&2
+    for domain in "${pending[@]}"; do
+      echo "  $domain: ${errors[$domain]:-not checked before timeout}" >&2
+    done
+    return 1
+  fi
+}
+
+main() {
+  local mode=${1:-} domain
+  local -a entries=() domains=()
+  local -A seen=()
+  IFS=, read -r -a entries <<< "${2:-}"
+  for domain in "${entries[@]}"; do
+    domain=${domain//[[:space:]]/}
+    [[ -n $domain ]] || continue
+    [[ $domain =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || { echo "Invalid domain: $domain" >&2; return 1; }
+    if [[ -z ${seen[$domain]:-} ]]; then domains+=("$domain"); seen[$domain]=1; fi
+  done
+  [[ ${#domains[@]} -gt 0 ]] || { echo "No deployment domains configured." >&2; return 1; }
+  case "$mode" in
+    dns) check_dns ;;
+    https) check_https ;;
+    *) echo "Usage: check-readiness dns|https DOMAIN[,DOMAIN...]" >&2; return 1 ;;
+  esac
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then main "$@"; fi

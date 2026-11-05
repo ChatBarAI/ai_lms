@@ -524,6 +524,31 @@ Subsequent runs repeat only the release, build, migration, and restart steps.
 The five newest source releases are retained. Deploys intentionally refuse
 tracked uncommitted changes so the deployed revision is reproducible.
 
+Before changing configuration or application data, deployment checks every
+configured domain (including retained aliases) against public DNS resolvers
+1.1.1.1 and 8.8.8.8. All returned A/AAAA addresses must belong to the server;
+an IPv4-only domain does not need an AAAA record. This check expects domains
+to point directly to the server, rather than a CDN or external load balancer.
+The server needs outbound DNS access to those resolvers. The checks use Bash, dnsutils,
+curl, and CA certificates are installed if the check tools are missing.
+
+After the containers become healthy, deployment checks `https://DOMAIN/up`
+for every domain using certificate verification and public hostname resolution.
+It retries for up to five minutes to allow certificate issuance, and requires
+HTTP 200 without following redirects. If HTTPS remains unavailable, it prints
+the last connection errors and recent Caddy logs and exits unsuccessfully.
+The new services remain running for diagnosis; the `current` symlink and release
+cleanup are not advanced, and database migrations are not rolled back.
+Caddy is not unconditionally restarted. DNS propagation beyond the checked
+resolvers and public reachability from other networks cannot be guaranteed by
+these server-side checks.
+
+Standalone readiness checks (no Rails boot or database access):
+
+```bash
+ruby test/deploy/readiness_test.rb
+```
+
 While developing the deployment mechanism itself, an explicit development mode
 can package the current working tree:
 

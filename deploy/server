@@ -82,6 +82,32 @@ fi
 
 shared_dir="$deploy_root/shared"
 env_file="$shared_dir/.env"
+
+# Resolve the final domain list before changing configuration or application data.
+configured_domain=
+previous_domains=
+if [[ -f $env_file ]]; then
+  configured_domain=$(sed -n 's/^APP_DOMAIN=//p' "$env_file")
+  previous_domains=$(sed -n 's/^APP_DOMAINS=//p' "$env_file")
+  previous_domains=${previous_domains:-$configured_domain}
+  if [[ $configured_domain != "$app_domain" && $allow_domain_change != true ]]; then
+    echo "Domain mismatch: shared environment uses '$configured_domain', requested '$app_domain'." >&2
+    echo "Use bin/deploy --change-domain to change the canonical hostname explicitly." >&2
+    exit 1
+  fi
+fi
+effective_domains=${requested_domains:-${previous_domains:-$app_domain}}
+if [[ -n $configured_domain && $configured_domain != "$app_domain" && -z $requested_domains ]]; then
+  effective_domains="$app_domain, $previous_domains"
+fi
+
+if ! command -v dig >/dev/null || ! command -v curl >/dev/null; then
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y dnsutils curl ca-certificates
+fi
+echo "Checking public DNS before deployment..."
+bash "$release_dir/deploy/check-readiness" dns "$effective_domains"
+
 mkdir -p "$shared_dir" "$deploy_root/releases"
 chmod 700 "$shared_dir"
 
@@ -111,16 +137,7 @@ if [[ ! -f $env_file ]]; then
   } > "$env_file"
   chmod 600 "$env_file"
 else
-  configured_domain=$(sed -n 's/^APP_DOMAIN=//p' "$env_file")
   if [[ $configured_domain != "$app_domain" ]]; then
-    if [[ $allow_domain_change != true ]]; then
-      echo "Domain mismatch: shared environment uses '$configured_domain', requested '$app_domain'." >&2
-      echo "Use bin/deploy --change-domain to change the canonical hostname explicitly." >&2
-      exit 1
-    fi
-
-    previous_domains=$(sed -n 's/^APP_DOMAINS=//p' "$env_file")
-    previous_domains=${previous_domains:-$configured_domain}
     sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$app_domain|" "$env_file"
     sed -i "s|^APP_HOST=.*|APP_HOST=https://$app_domain|" "$env_file"
     sed -i "s|^CALLBACK_HOST=.*|CALLBACK_HOST=https://$app_domain|" "$env_file"
@@ -200,6 +217,13 @@ health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{
 if [[ $health != healthy ]]; then
   "${compose[@]}" logs --tail=100 proxy
   echo "Caddy proxy container did not become healthy." >&2
+  exit 1
+fi
+
+echo "Checking public HTTPS (allowing up to five minutes for certificates)..."
+if ! bash "$release_dir/deploy/check-readiness" https "$effective_domains"; then
+  "${compose[@]}" logs --tail=100 proxy >&2 || true
+  echo "Deployment failed HTTPS readiness. Services remain running for diagnosis; no automatic rollback was attempted." >&2
   exit 1
 fi
 
