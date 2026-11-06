@@ -645,4 +645,48 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#lesson-course-sidebar img[class~=?]", "aspect-[728/320]"
     assert_select "#lesson-course-sidebar img[class~=h-28]", count: 0
   end
+
+  test "owner deletes a lesson with learner history and returns to the course" do
+    course = courses(:algebra)
+    lesson = lessons(:intro)
+    enrollment = enrollments(:student_in_algebra)
+    progress = enrollment.progresses.find_or_create_by!(lesson: lesson)
+    QuizAttempt.create!(progress: progress, enrollment: enrollment, lesson: lesson, attempt_number: 1, score: 50, submitted_at: Time.current)
+
+    sign_in users(:instructor)
+    assert_difference -> { Lesson.count } => -1, -> { QuizAttempt.where(lesson_id: lesson.id).count } => -1 do
+      delete course_lesson_path(course, lesson)
+    end
+
+    assert_redirected_to course_path(course)
+    assert_response :see_other
+    assert_equal "Lesson deleted.", flash[:notice]
+    assert_not Progress.exists?(lesson_id: lesson.id)
+    assert_not Rating.exists?(lesson_id: lesson.id)
+    assert_not Question.exists?(lesson_id: lesson.id)
+  end
+
+  test "another instructor cannot delete a lesson they do not own" do
+    sign_in users(:other_instructor)
+    assert_no_difference -> { Lesson.count } do
+      delete course_lesson_path(courses(:algebra), lessons(:intro))
+    end
+    assert_redirected_to root_path
+  end
+
+  test "edit page shows a Delete button with confirmation for the owner" do
+    course = courses(:algebra)
+    lesson = lessons(:intro)
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(course, lesson)
+
+    assert_response :success
+    assert_select "#lesson-danger-zone form[action=?]", course_lesson_path(course, lesson) do
+      assert_select "input[name=_method][value=delete]", 1
+      assert_select "button[data-turbo-confirm]", text: "Delete lesson" do |buttons|
+        assert_match(/cannot be undone/, buttons.first["data-turbo-confirm"])
+      end
+    end
+  end
 end
