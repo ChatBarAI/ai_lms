@@ -543,10 +543,25 @@ Caddy is not unconditionally restarted. DNS propagation beyond the checked
 resolvers and public reachability from other networks cannot be guaranteed by
 these server-side checks.
 
+For Cloudflare-proxied domains or another reverse proxy that hides the server's
+IP, explicitly skip the DNS-to-server IP validation on each deployment:
+
+```bash
+SSH_PORT=51760 bin/deploy --skip-dns-check root@148.72.159.88 ai-craig-academy.chatbar-ai.com
+```
+
+This flag applies to the canonical domain and all aliases for that invocation;
+it is not saved as a server setting. DNS validation remains enabled by default.
+The script prints a skip notice and still runs container health checks and
+verified public HTTPS checks. When using Cloudflare, the public HTTPS check
+validates the Cloudflare endpoint, not Caddy's origin certificate independently.
+The `dig` dependency is not required or installed when DNS validation is skipped.
+
 Standalone readiness checks (no Rails boot or database access):
 
 ```bash
 ruby test/deploy/readiness_test.rb
+ruby test/deploy/deploy_options_test.rb
 ```
 
 While developing the deployment mechanism itself, an explicit development mode

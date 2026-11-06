@@ -7,7 +7,13 @@ app_domain=${3:?application domain is required}
 requested_domains=${4:-}
 allow_domain_change=${5:-false}
 rails_key_file=${6:-}
+skip_dns_check=${7:-false}
 domain_changed=false
+
+[[ $skip_dns_check == true || $skip_dns_check == false ]] || {
+  echo "skip_dns_check must be true or false." >&2
+  exit 2
+}
 
 if [[ $EUID -ne 0 ]]; then
   echo "deploy/server must run as root" >&2
@@ -101,12 +107,19 @@ if [[ -n $configured_domain && $configured_domain != "$app_domain" && -z $reques
   effective_domains="$app_domain, $previous_domains"
 fi
 
-if ! command -v dig >/dev/null || ! command -v curl >/dev/null; then
+check_packages=()
+if ! command -v curl >/dev/null; then check_packages+=(curl ca-certificates); fi
+if [[ $skip_dns_check == false ]] && ! command -v dig >/dev/null; then check_packages+=(dnsutils); fi
+if [[ ${#check_packages[@]} -gt 0 ]]; then
   apt-get update
-  DEBIAN_FRONTEND=noninteractive apt-get install -y dnsutils curl ca-certificates
+  DEBIAN_FRONTEND=noninteractive apt-get install -y "${check_packages[@]}"
 fi
-echo "Checking public DNS before deployment..."
-bash "$release_dir/deploy/check-readiness" dns "$effective_domains"
+if [[ $skip_dns_check == true ]]; then
+  echo "Skipping public DNS-to-server IP validation (--skip-dns-check). Container health and verified public HTTPS checks remain enabled."
+else
+  echo "Checking public DNS before deployment..."
+  bash "$release_dir/deploy/check-readiness" dns "$effective_domains"
+fi
 
 mkdir -p "$shared_dir" "$deploy_root/releases"
 chmod 700 "$shared_dir"

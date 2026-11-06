@@ -4,28 +4,33 @@ set -Eeuo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  bin/deploy [--dirty] [--change-domain] HOST CANONICAL_DOMAIN [ALIAS_DOMAIN...]
+  bin/deploy [--dirty] [--change-domain] [--skip-dns-check] HOST CANONICAL_DOMAIN [ALIAS_DOMAIN...]
 
 Examples:
   bin/deploy root@203.0.113.10 learn.example.com
   bin/deploy root@203.0.113.10 learn.example.com training.example.com
   bin/deploy --dirty root@203.0.113.10 learn.example.com
   bin/deploy --dirty --change-domain root@203.0.113.10 new.example.com
+  bin/deploy --skip-dns-check root@203.0.113.10 proxied.example.com
   SSH_PORT=2222 bin/deploy root@server.example.com learn.example.com
 
 By default, the deploy contains exactly the committed HEAD. Use --dirty while
 developing the deployment mechanism to include tracked modifications and
 non-ignored new files. Set RAILS_PRODUCTION_KEY_FILE to override the default
 config/credentials/production.key path.
+Use --skip-dns-check when a proxy such as Cloudflare hides the server's IP.
+Container health and verified public HTTPS checks still run.
 USAGE
 }
 
 dirty=false
 change_domain=false
+skip_dns_check=false
 while [[ ${1:-} == --* ]]; do
   case "$1" in
     --dirty) dirty=true ;;
     --change-domain) change_domain=true ;;
+    --skip-dns-check) skip_dns_check=true ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
   shift
@@ -154,7 +159,7 @@ else
 fi
 
 printf -v remote_command \
-  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q; rm -f %q' \
-  "$deploy_root" "$release" "$remote_archive" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$remote_archive"
+  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q %q; rm -f %q' \
+  "$deploy_root" "$release" "$remote_archive" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$skip_dns_check" "$remote_archive"
 
 ssh "${ssh_args[@]}" "$host" "$remote_command"
