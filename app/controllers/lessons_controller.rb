@@ -108,7 +108,7 @@ class LessonsController < ApplicationController
 
   def destroy
     @lesson.destroy
-    redirect_to course_path(@course), notice: t("lessons.flash.deleted", **helpers.terms), status: :see_other
+    redirect_to (params[:return_to] == "admin" ? edit_admin_course_path(@course) : course_path(@course)), notice: t("lessons.flash.deleted", **helpers.terms), status: :see_other
   end
 
   def publish

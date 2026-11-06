@@ -689,4 +689,18 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
       end
     end
   end
+
+  test "admin deletes a lesson from the admin course page and returns there" do
+    course = courses(:algebra)
+    lesson = lessons(:advanced)
+    sign_in users(:admin)
+
+    get edit_admin_course_path(course)
+    assert_select "form[action=?] button[data-turbo-confirm]", course_lesson_path(course, lesson), text: "Delete"
+
+    assert_difference -> { Lesson.count }, -1 do
+      delete course_lesson_path(course, lesson, return_to: "admin")
+    end
+    assert_redirected_to edit_admin_course_path(course)
+  end
 end
