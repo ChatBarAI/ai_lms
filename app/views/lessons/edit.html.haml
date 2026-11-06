@@ -104,3 +104,7 @@
     = collapsible_icon_badge
   %div{data: { collapsible_target: "content" }}
     = render "form", lesson: @lesson, course: @course
+
+- if can?(:destroy, @lesson)
+  #lesson-danger-zone.mt-6.flex.justify-end
+    = button_to t("lessons.edit.delete", **terms), course_lesson_path(@course, @lesson), method: :delete, data: { turbo_confirm: t("lessons.edit.delete_confirm", **terms) }, class: "px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 cursor-pointer text-sm"

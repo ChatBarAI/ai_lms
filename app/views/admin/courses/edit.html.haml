@@ -32,6 +32,7 @@
             .flex.flex-wrap.gap-2.items-center
               = link_to "View", course_lesson_path(@course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
               = link_to "Edit", edit_course_lesson_path(@course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
+              = button_to t("common.delete"), course_lesson_path(@course, lesson), method: :delete, params: { return_to: "admin" }, data: { turbo_confirm: t("lessons.edit.delete_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
     - else
       .mt-3.bg-gray-50.border.border-gray-200.rounded.p-4.text-sm.text-gray-500
         = "No #{terms[:lessons_l]} yet. Add the first #{terms[:lesson_l]} for this #{terms[:course_l]}."

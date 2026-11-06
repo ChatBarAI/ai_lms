@@ -118,6 +118,9 @@ de:
       update_failed: "Profil konnte nicht gespeichert werden."
 
   lessons:
+    edit:
+      delete: "%{lesson} löschen"
+      delete_confirm: "%{lesson} und den gesamten Lernfortschritt dazu löschen? Dies kann nicht rückgängig gemacht werden."
     section_order:
       title: "Reihenfolge der Abschnitte"
       hint: "Verschiebe die Abschnitte per Ziehen oder mit den Pfeilen und speichere anschließend %{lesson}. Abschnitte erscheinen nur, wenn sie für Lernende verfügbar sind."

@@ -117,6 +117,9 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    edit:
+      delete: "Delete %{lesson_l}"
+      delete_confirm: "Delete this %{lesson_l} and all learner progress for it? This cannot be undone."
     section_order:
       title: "Presentation order"
       hint: "Drag sections or use the arrows, then save the %{lesson_l}. Sections appear only when available to the learner."
