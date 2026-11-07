@@ -179,23 +179,82 @@ else
   fi
 fi
 
+# Bootstrap the private relay only when no SMTP endpoint was configured in the
+# deployment environment. Existing provider credentials/settings are untouched.
+if ! grep -q '^SMTP_ADDRESS=' "$env_file"; then
+  {
+    printf 'SMTP_ADDRESS=mail\n'
+  } >> "$env_file"
+fi
+
 rm -f "$rails_key_file"
 trap - EXIT
 
 release_name=$(basename "$release_dir")
 export DEPLOY_ROOT="$deploy_root"
 export APP_IMAGE="ai_lms:$release_name"
-compose=(docker compose --env-file "$env_file")
+compose=(docker compose --env-file "$env_file" -f "$release_dir/compose.yaml")
+# Override any previously saved profile until the database has been inspected.
+export COMPOSE_PROFILES=
 
 cd "$release_dir"
 "${compose[@]}" build web
-"${compose[@]}" up -d db redis
+if ! "${compose[@]}" up -d --wait --wait-timeout 150 db redis; then
+  echo "A database or Redis dependency failed readiness checks. Service logs:" >&2
+  "${compose[@]}" logs --no-color --tail=100 db redis >&2 || true
+  exit 1
+fi
 "${compose[@]}" run --rm web ./bin/rails db:prepare
+"${compose[@]}" run --rm web ./bin/rails runner deploy/configure_mail.rb
+mail_output=$("${compose[@]}" run --rm -T web ./bin/rails runner deploy/mail_mode.rb)
+mail_mode=$(printf '%s\n' "$mail_output" | sed -n 's/^LMS_MAIL_MODE=//p')
+case "$mail_mode" in
+  local)
+    export COMPOSE_PROFILES=local-mail
+    compose+=(-f "$release_dir/compose.mail.yaml")
+    echo "Email uses mail: enabling the private Postfix service."
+    "${compose[@]}" build mail
+    if ! "${compose[@]}" up -d --wait --wait-timeout 150 mail; then
+      "${compose[@]}" logs --no-color --tail=100 mail >&2 || true
+      mail_id=$("${compose[@]}" ps -a -q mail) || mail_id=
+      if [[ -n $mail_id ]]; then
+        docker inspect --format '{{json .State.Health}}' "$mail_id" >&2 || true
+      fi
+      exit 1
+    fi
+    ;;
+  external)
+    echo "Email uses another transport/host: skipping Postfix build and readiness checks."
+    ;;
+  *)
+    echo "Could not determine the effective email configuration; aborting deployment." >&2
+    exit 1
+    ;;
+esac
+# Keep subsequent Compose operations (including restore) on the selected profile.
+if grep -q '^COMPOSE_PROFILES=' "$env_file"; then
+  sed -i "s/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=$COMPOSE_PROFILES/" "$env_file"
+else
+  printf 'COMPOSE_PROFILES=%s\n' "$COMPOSE_PROFILES" >> "$env_file"
+fi
+compose_files=compose.yaml
+[[ $mail_mode == local ]] && compose_files=compose.yaml:compose.mail.yaml
+if grep -q '^COMPOSE_FILE=' "$env_file"; then
+  sed -i "s|^COMPOSE_FILE=.*|COMPOSE_FILE=$compose_files|" "$env_file"
+else
+  printf 'COMPOSE_FILE=%s\n' "$compose_files" >> "$env_file"
+fi
 if $domain_changed; then
   "${compose[@]}" run --rm web ./bin/rails runner \
     'SiteSetting.update_all(app_url: ENV.fetch("APP_HOST"))'
 fi
-"${compose[@]}" up -d --remove-orphans
+if [[ $mail_mode == local ]]; then
+  "${compose[@]}" up -d --remove-orphans
+else
+  # Do not remove the previous mail container as an orphan while the old app
+  # may still be serving traffic; stop it after replacement readiness below.
+  "${compose[@]}" up -d db redis web worker proxy
+fi
 
 web_id=$("${compose[@]}" ps -q web)
 for _ in $(seq 1 30); do
@@ -241,6 +300,12 @@ if ! bash "$release_dir/deploy/check-readiness" https "$effective_domains"; then
 fi
 
 ln -sfn "$release_dir" "$deploy_root/current"
+
+if [[ $mail_mode == external ]]; then
+  # Stop a previous relay only after the replacement app is healthy. Retain its
+  # queue volume; pending mail can be inspected/drained explicitly by operators.
+  "${compose[@]}" -f "$release_dir/compose.mail.yaml" --profile local-mail stop mail || echo "Could not stop the old mail service; inspect it manually." >&2
+fi
 
 # Keep the current release and the four previous releases.
 mapfile -t old_releases < <(find "$deploy_root/releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' |

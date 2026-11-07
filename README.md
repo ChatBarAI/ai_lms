@@ -400,7 +400,22 @@ This app is wired for Chrome PWA installability and offline fallback:
 ## Deployment
 
 The production stack is designed for a fresh Debian server with SSH access.
-It runs Rails, Sidekiq, PostgreSQL, Redis, and Caddy in Docker containers.
+The deployment runs separate containers under the same Docker engine:
+
+| Service | Container | Purpose |
+| --- | --- | --- |
+| `web` | `ai_lms-web-1` | Rails application |
+| `worker` | `ai_lms-worker-1` | Sidekiq background jobs |
+| `db` | `ai_lms-db-1` | PostgreSQL database |
+| `redis` | `ai_lms-redis-1` | Job queue/cache |
+| `proxy` | `ai_lms-proxy-1` | Caddy HTTPS proxy |
+| `mail` | `ai_lms-mail-1` | Postfix email relay, when configured |
+
+That means **six running containers with the local mail relay**, or **five when
+using an external email provider such as SendGrid**. Rails and the worker connect
+to the separate mail container privately at `mail:25`; SMTP is not published on
+the host. See [Docker mail relay](#docker-mail-relay) for configuration details.
+
 Caddy obtains and renews the HTTPS certificate automatically.
 
 Persistent state lives in named Docker volumes. Application releases live
@@ -1012,6 +1027,202 @@ Throttle names, limits, and periods are defined centrally in
 
 ## Configuration
 
+### Docker mail relay
+
+The production deployment includes an outbound-only Postfix service named `mail`.
+Web and worker containers connect to `mail:25` on a dedicated Docker network;
+no mail ports are published on the host, so an existing host Postfix listener
+can remain running. The relay delivers directly to recipient MX servers using
+outbound port 25 and opportunistic TLS. The private app-to-relay connection uses
+no authentication or TLS. Only clients in the dedicated mail network are trusted;
+do not attach unrelated containers to it.
+
+`bin/deploy` prepares the database and runs `deploy/configure_mail.rb`, then
+resolves the effective mail configuration (saved Admin values before environment
+fallbacks). Only SMTP host `mail` enables the `local-mail` Compose profile:
+deployment builds the mail image and waits for SMTP health before starting the
+replacement app. External SMTP providers and other delivery methods skip the
+Postfix build/start/readiness steps, so a broken Postfix image cannot block them.
+The mail service and network attachments live in `compose.mail.yaml`, loaded
+only for local mail. External-provider deployments do not create the mail network
+or reserve its subnet. The selected `COMPOSE_FILE` and `COMPOSE_PROFILES` values
+are saved in the shared `.env` for subsequent Compose operations; backup/restore
+also loads the mail file when the local-mail profile is selected.
+Changing from an external provider to `mail` in Admin needs
+a deployment to start the relay. After a successful switch away from `mail`,
+deployment stops the previous relay; its queue volume is retained. Inspect and
+drain any pending mail before switching providers if continued retries are needed.
+For an unconfigured instance or a credential-free localhost SMTP setup, it fills
+the existing Admin -> Site settings -> Integration form with:
+
+| Setting | Value |
+| --- | --- |
+| Delivery method | SMTP |
+| SMTP host / port | `mail` / `25` |
+| SMTP domain | Application domain |
+| Authentication / credentials | Blank |
+| STARTTLS / SSL / TLS | Off |
+| Sender | Existing sender, or deployment `MAILER_SENDER` |
+
+Existing external SMTP hosts and credentials are preserved. A previously saved
+`mail` configuration is also preserved on later deployments. Deployment adds
+`SMTP_ADDRESS=mail` to the shared environment only if no `SMTP_ADDRESS` entry
+exists. The application defaults the `mail` host to port 25 without STARTTLS;
+external hosts retain port 587 and STARTTLS defaults. Explicit settings still
+override defaults. Set all connection settings explicitly when changing providers.
+
+Optional values in `/opt/ai_lms/shared/.env`:
+
+```dotenv
+# Defaults to APP_DOMAIN; set this to the hostname matching your sending IP's PTR.
+MAIL_HOSTNAME=mail.example.com
+# Change if this subnet conflicts with another Docker or host network.
+MAIL_NETWORK=172.30.25.0/24
+```
+
+The network must be an RFC1918 IPv4 subnet of /24 or smaller. This same value
+configures Docker IPAM and Postfix relay authorization. The persistent named
+volume `ai_lms_mail_queue` retains queued mail across releases and container
+replacements. Do not remove it while mail is pending. Existing backup/export
+archives cover the database and uploads, **not the Postfix queue**.
+
+After deploying, inspect readiness and queued mail on the server:
+
+```bash
+docker logs --tail 100 ai_lms-mail-1
+docker exec ai_lms-mail-1 postqueue -p
+```
+
+`bin/check-email USER@HOST` recognizes the configured private `mail:25` relay
+and checks its SMTP greeting without requiring TLS. A healthy relay means it can
+accept a connection; test a password-reset email to an account you control to
+verify delivery. Monitor logs/queue for deferrals and bounces.
+
+This service supplies outbound transport, not a mailbox service or automatic
+DNS setup. Before relying on delivery, configure the sending hostname's A/PTR,
+SPF and DMARC records and arrange DKIM signing (not included in this image).
+Use a sender domain with working bounce handling. DNS, recipient acceptance,
+and IP reputation cannot be established by the container health check.
+The relay restrictions and logging follow the Postfix documentation for
+[SMTP access control](https://www.postfix.org/SMTPD_ACCESS_README.html) and
+[stdout logging](https://www.postfix.org/MAILLOG_README.html).
+
+Local backup/clone deployments remain isolated and do not start the relay.
+Standalone deployment checks (no Rails or network):
+
+```bash
+ruby test/deploy/mail_configuration_test.rb
+ruby test/deploy/mail_compose_test.rb
+```
+
+### Email diagnostics
+
+From your workstation, use the same SSH target as `bin/deploy`:
+
+```bash
+bin/check-email root@server.example.com
+SSH_PORT=2222 bin/check-email root@server.example.com --host smtp.your-provider.com
+# Discover reachable external providers before choosing one:
+SSH_PORT=51760 bin/check-email root@server.example.com --providers
+```
+
+`--providers` checks SendGrid (`smtp.sendgrid.net`) and Mailjet
+(`in-v3.mailjet.com`) on ports 587 and 465 and prints candidate settings for each
+reachable provider. Endpoints follow the [SendGrid SMTP documentation](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/integrating-with-the-smtp-api)
+and [Mailjet SMTP documentation](https://dev.mailjet.com/docs/smtp-relay/configuration).
+It checks the configured SMTP endpoint first, then probes alternatives. It can be combined with `--env-only` or
+`--ports`, and cannot be combined with `--host`. With default timeouts, the four
+probes take up to roughly 32 seconds. No provider account or credentials are
+needed for these probes; successful connectivity does not establish delivery
+readiness. Direct delivery is also checked, as described below.
+Deploy the updated checker before using `--providers` remotely.
+The final summary reports the configured endpoint separately from reachable
+alternatives. A separate Docker relay requires neither local sendmail nor SMTP
+credentials in the Rails container; their absence is not an email failure.
+
+Remote mode first inventories mail servers on the SSH host, then runs the
+deployed checker inside `ai_lms-web-1`, using that
+container's environment, database access, and network. Deploy the checker first
+with your normal deployment workflow. SSH access and permission to run Docker
+are required; `--container NAME` selects another app container (for example,
+`ai_lms-worker-1`). The app directory inside the container is `/rails`, matching
+the deployment image. All diagnostic options are forwarded, and no local mail
+credentials are copied. Remote mode does not upload files or restart services.
+Diagnostic exit codes are preserved; SSH/transport failures return `2`.
+
+The host inventory is streamed over the same SSH session (one password prompt)
+and does not require Ruby on the host. It checks Postfix, Exim, Sendmail and
+OpenSMTPD package/executable presence, systemd service states where available,
+mail daemon process names, and listening TCP sockets on ports 25, 465 and 587.
+Package detection supports dpkg and RPM. Missing tools are reported as unavailable;
+other mail software and servers in separate containers may not be identified.
+It never starts services or prints credentials, mail configuration, or process
+arguments. Service/process evidence and listening sockets do not establish that
+the app container can reach the host MTA or is authorized to relay through it.
+Local invocation inventories its current environment; remote mode additionally
+inventories inside the container when the updated checker is deployed. Inventory
+results do not change connectivity-based exit codes. Standalone inventory tests:
+`ruby test/deploy/email_host_check_test.rb`.
+
+Run the read-only checker **on the deployed server or inside the app container**,
+using the same environment as the app:
+
+```bash
+RAILS_ENV=production bin/check-email
+# Check a provider before saving its settings:
+RAILS_ENV=production bin/check-email --host smtp.your-provider.com
+# Without Rails/database access (only exported environment is inspected):
+bin/check-email --env-only --host smtp.your-provider.com --ports 587,465
+```
+
+Every run also tests **direct delivery connectivity on port 25**, without an
+opt-in flag. It resolves MX records for `gmail.com` and `outlook.com` and reads
+SMTP greetings from up to two preferred MX servers per domain. To choose a
+different recipient domain, use `--recipient-domain example.com` (also supported
+remotely). Null MX records are treated as no mail service; domains without MX
+records are probed using the domain itself. Each DNS lookup and each connection
+has the configured timeout, adding up to roughly 48 seconds at default settings.
+This greeting-only test does not require or negotiate TLS, authenticate, or send
+mail. It samples destinations, so failures do not prove a universal port block.
+
+Direct connectivity does not establish a working local mail server, recipient
+acceptance, or IP reputation. You still need a local MTA/relay and appropriate
+PTR, SPF, DKIM and DMARC configuration. Inside Docker, the sendmail executable
+check describes the container, not the host; a host MTA must be reachable from
+the container. Never use a recipient MX as the application's SMTP relay.
+
+The default mode reads the effective Rails mail configuration, including Admin
+overrides. It reports credential presence without printing values, checks whether
+the local sendmail executable exists, and probes the configured SMTP port plus
+587 and 465. The configured endpoint honors its saved SSL/TLS and STARTTLS
+settings, including plaintext and opportunistic STARTTLS. Alternative endpoints
+use implicit TLS on port 465 and require STARTTLS on other ports. Certificates
+and hostnames are verified even if the app currently disables verification.
+Each endpoint has an eight-second deadline (`--timeout` changes it).
+
+Successful configured/provider probes produce candidate environment settings to apply manually, or
+enter under Admin -> Site settings -> Integration. Saved Admin values override
+environment defaults. Restart app and worker processes after environment changes.
+The checker never authenticates, sends email, or saves configuration. A successful
+configured/provider probe proves SMTP connectivity in the reported mode, not valid credentials, sender-domain DNS
+authentication, or inbox delivery. It cannot discover provider accounts or keys.
+Local sendmail presence likewise does not establish working outbound delivery.
+If SMTP probes fail, investigate DNS, firewall rules, and provider settings;
+failure alone does not establish a cloud-wide port block. HTTPS mail delivery
+would require a provider API integration in this app.
+
+Exit codes: `0` = at least one SMTP endpoint passed its connection check;
+`1` = none found; `2` = invalid input or configuration/runtime error. Exit `0`
+reports connectivity only, even if the app itself is not ready to send mail.
+Standalone checks require no Rails/database: `ruby test/lib/email_diagnostics_test.rb`.
+The `_test.rb` wrapper also includes these checks in the normal Rails test suite
+while isolating their protocol mocks in a subprocess.
+
+### Application settings
+
+- Outgoing email uses the brand name from Admin -> Site settings -> Branding
+  as its sender display name, for example `ChatBar AI Learn <no-reply@example.com>`.
+  The Integration tab's Sender email field remains an email address only.
 - `config/database.yml` — Postgres connection. The username defaults to
   the current OS user (peer auth); override via `PGUSER` env var or
   `DATABASE_URL` in production.

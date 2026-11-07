@@ -1,0 +1,41 @@
+# Loaded only when the effective SMTP host is mail.
+services:
+  mail:
+    profiles: ["local-mail"]
+    image: "${APP_IMAGE}-mail"
+    build:
+      context: ./deploy/mail
+    environment:
+      MAIL_HOSTNAME: "${MAIL_HOSTNAME:-${APP_DOMAIN}}"
+      MAIL_NETWORK: "${MAIL_NETWORK:-172.30.25.0/24}"
+    volumes:
+      - mail_queue:/var/spool/postfix
+    networks:
+      - mailnet
+    # No published ports: only web/worker share this relay network.
+    healthcheck:
+      test: ["CMD", "ruby", "/usr/local/bin/mail-healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  web:
+    networks:
+      - mailnet
+  worker:
+    networks:
+      - mailnet
+
+networks:
+  mailnet:
+    # Egress is needed for direct delivery; no public SMTP port is bound.
+    ipam:
+      config:
+        - subnet: "${MAIL_NETWORK:-172.30.25.0/24}"
+
+volumes:
+  mail_queue:
+    name: ai_lms_mail_queue

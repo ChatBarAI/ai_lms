@@ -41,6 +41,7 @@
         %div
           = f.label :mailer_sender, "Sender email", class: "block text-sm font-medium mb-1"
           = f.email_field :mailer_sender, placeholder: "no-reply@example.com", class: "w-full border border-gray-300 rounded px-3 py-2"
+          %p.mt-1.text-xs.text-gray-500 Emails display the brand name from Branding settings alongside this address.
 
       - smtp_selected = @site_setting.mail_delivery_method == "smtp"
       .mt-5.grid.gap-4.md:grid-cols-2{ class: (smtp_selected ? "hidden" : nil), data: { site_settings_target: "sendmailFields" } }

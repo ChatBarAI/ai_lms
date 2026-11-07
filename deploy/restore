@@ -113,6 +113,9 @@ case "$mode" in
     docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
     export APP_IMAGE="ai_lms:$(basename "$app_root")"
     compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
+    if [[ -f "$app_root/compose.mail.yaml" ]] && grep -qx 'COMPOSE_PROFILES=local-mail' "$env_file"; then
+      compose+=(-f "$app_root/compose.mail.yaml" --profile local-mail)
+    fi
 
     echo "Stopping the target application..."
     "${compose[@]}" stop web worker proxy

@@ -7,10 +7,10 @@ require "open3"
 class RestoreScriptTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
-  def run_restore(failure: nil, ask_admin: false)
+  def run_restore(failure: nil, ask_admin: false, local_mail: false)
     Dir.mktmpdir do |work|
       FileUtils.mkdir_p("#{work}/shared")
-      FileUtils.touch("#{work}/shared/.env")
+      File.write("#{work}/shared/.env", "COMPOSE_PROFILES=#{local_mail ? 'local-mail' : ''}\n")
       File.write("#{work}/docker", <<~'SH')
         #!/usr/bin/env bash
         set -eu
@@ -61,7 +61,18 @@ class RestoreScriptTest < Minitest::Test
       assert_includes calls, "--single-transaction"
       refute_includes calls, "--clean"
       refute_includes calls, "--create "
+      refute_includes calls, "compose.mail.yaml"
       assert_includes calls, "WHERE datname = 'ai_lms_production' AND pid <> pg_backend_pid()"
+    end
+  end
+
+  def test_restore_retains_local_mail_network_attachments
+    run_restore(local_mail: true) do |status, error, calls|
+      assert status.success?, error
+      calls.lines.each do |line|
+        next unless line.start_with?("compose ")
+        assert_includes line, "-f #{ROOT}/compose.mail.yaml --profile local-mail"
+      end
     end
   end
 

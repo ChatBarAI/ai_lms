@@ -1,0 +1,132 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+require "shellwords"
+require "tempfile"
+
+options = { timeout: 8 }
+container = "ai_lms-web-1"
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/check-email [USER@HOST] [--env-only] [--host SMTP_HOST] [--ports 587,465]"
+  opts.on("--container NAME", "Remote Docker container (default: ai_lms-web-1)") { |v| container = v }
+  opts.on("--env-only", "Skip Rails/database; inspect exported environment only") { options[:env_only] = true }
+  opts.on("--host HOST", "Probe this provider instead of the configured SMTP host") { |v| options[:host] = v }
+  opts.on("--providers", "Probe SendGrid and Mailjet (default ports: 587,465; excludes --host)") { options[:providers] = true }
+  opts.on("--recipient-domain DOMAIN", "Direct MX check destination (default: gmail.com and outlook.com)") { |v| options[:recipient_domain] = v }
+  opts.on("--ports PORTS", "Probe ports; configured endpoint uses saved TLS mode, alternatives use port defaults") do |v|
+    options[:ports] = v.split(",", -1).map { |p| Integer(p, 10) }
+  end
+  opts.on("--timeout SECONDS", Integer, "Per-endpoint deadline (default: 8)") { |v| options[:timeout] = v }
+  opts.on("-h", "--help", "Show help") do
+    puts opts
+    puts "No authentication, mail delivery, or configuration writes. Run on the deployed server/container."
+    puts "With USER@HOST, runs the deployed checker via SSH inside the app container (SSH_PORT defaults to 22)."
+    puts "Also inventories mail packages, services, processes and listening ports on the SSH host."
+    puts "Example: SSH_PORT=2222 bin/check-email root@server.example.com --host smtp.example.com"
+    puts "Always checks direct SMTP greetings on port 25 as well as configured/provider SMTP."
+    puts "Exit: 0 = at least one SMTP endpoint reachable; 1 = none reachable; 2 = configuration/check error."
+    exit 0
+  end
+end
+
+begin
+  parser.parse!
+  target = ARGV.shift
+  raise ArgumentError unless ARGV.empty? && options[:timeout].between?(1, 60)
+  raise ArgumentError if options[:ports]&.any? { |p| !p.between?(1, 65_535) }
+  raise ArgumentError if options[:providers] && options[:host]
+  if options[:recipient_domain]
+    domain = options[:recipient_domain]
+    raise ArgumentError unless domain.length <= 253 && domain.split(".", -1).length >= 2 &&
+      domain.split(".", -1).all? { |label| label.match?(/\A[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\z/) }
+  end
+  raise ArgumentError unless container.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*\z/)
+  if target
+    raise ArgumentError unless target.match?(/\A[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+\z/)
+    ssh_port = Integer(ENV.fetch("SSH_PORT", "22"), 10)
+    raise ArgumentError unless ssh_port.between?(1, 65_535)
+  end
+rescue OptionParser::ParseError, ArgumentError
+  warn "Invalid arguments. Run bin/check-email --help."
+  exit 2
+end
+
+if target
+  remote_args = [ "--timeout", options[:timeout].to_s ]
+  remote_args << "--env-only" if options[:env_only]
+  remote_args << "--providers" if options[:providers]
+  remote_args.concat([ "--recipient-domain", options[:recipient_domain] ]) if options[:recipient_domain]
+  remote_args.concat([ "--host", options[:host] ]) if options[:host]
+  remote_args.concat([ "--ports", options[:ports].join(",") ]) if options[:ports]
+  command = Shellwords.join([ "docker", "exec", "-w", "/rails", container,
+    "bundle", "exec", "ruby", "bin/check-email", *remote_args ])
+  puts "Checking email on #{target} in #{container} (SSH port #{ssh_port})..."
+  $stdout.flush
+  begin
+    # One SSH session/password prompt. Stream the read-only host inventory, then
+    # exec the container check so its exit status is preserved.
+    status = Tempfile.create("check-email-host") do |input|
+      input.write(File.read(File.expand_path("../lib/email_host_check.sh", __dir__)))
+      input.write("\nexec #{command}\n")
+      input.flush
+      input.rewind
+      system("ssh", "-p", ssh_port.to_s, "-o", "ConnectTimeout=15",
+        "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3", target, "sh -s", in: input)
+      $?.exitstatus
+    end
+    unless [ 0, 1, 2 ].include?(status)
+      warn "Remote check failed. Check SSH access, Docker permissions, and the running container."
+    end
+    exit([ 0, 1, 2 ].include?(status) ? status : 2)
+  rescue SystemCallError
+    warn "Could not start SSH. Check that the SSH client is installed."
+    exit 2
+  end
+end
+
+begin
+  inventory = File.expand_path("../lib/email_host_check.sh", __dir__)
+  if File.file?(inventory)
+    system("sh", inventory, "current environment; container when run through remote mode")
+  else
+    warn "Mail server inventory unavailable: deploy lib/email_host_check.sh."
+  end
+  if options[:env_only]
+    smtp = {
+      address: ENV["SMTP_ADDRESS"], port: ENV.fetch("SMTP_PORT", ENV["SMTP_ADDRESS"] == "mail" ? "25" : "587"),
+      user_name: ENV["SMTP_USERNAME"], password: ENV["SMTP_PASSWORD"],
+      enable_starttls_auto: ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", ENV["SMTP_ADDRESS"] == "mail" ? "false" : "true") != "false",
+      ssl: %w[1 true].include?(ENV["SMTP_SSL"]), tls: %w[1 true].include?(ENV["SMTP_TLS"])
+    }
+    method = ENV["MAIL_DELIVERY_METHOD"] || (smtp[:address].to_s.empty? ? "sendmail" : "smtp")
+    sender = ENV["MAILER_SENDER"]
+    app_url = ENV["APP_HOST"] || ENV["CALLBACK_HOST"]
+    sendmail = ENV.fetch("SENDMAIL_LOCATION", "/usr/sbin/sendmail")
+    puts "Source: exported environment only; saved Admin settings are NOT inspected."
+  else
+    require_relative "../config/environment"
+    # Fail explicitly if saved overrides cannot be inspected; do not report env
+    # fallbacks as the effective production configuration.
+    unless ActiveRecord::Base.connection.data_source_exists?("site_settings")
+      raise "Site settings table unavailable"
+    end
+    MailerConfiguration.apply!
+    smtp = ActionMailer::Base.smtp_settings
+    method = ActionMailer::Base.delivery_method.to_s
+    sender = ActionMailer::Base.default[:from]
+    app_url = ActionMailer::Base.default_url_options[:host]
+    sendmail = ActionMailer::Base.sendmail_settings[:location]
+    puts "Source: Rails #{Rails.env}; saved Admin settings override environment defaults."
+    puts "WARNING: deliveries are disabled." unless ActionMailer::Base.perform_deliveries
+  end
+
+  require_relative "../lib/email_diagnostics"
+  options.delete(:env_only)
+  exit EmailDiagnostics.new(smtp: smtp, method: method, sender: sender,
+    app_url: app_url, sendmail: sendmail, **options).run
+rescue StandardError, LoadError => e
+  # Exception messages may contain connection strings or SMTP credentials.
+  warn "Email check could not complete (#{e.class}). Check runtime/database setup, or use --env-only."
+  exit 2
+end

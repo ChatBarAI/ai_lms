@@ -1,5 +1,6 @@
 require "uri"
 require "shellwords"
+require "mail"
 
 class MailerConfiguration
   class << self
@@ -64,9 +65,15 @@ class MailerConfiguration
     end
 
     def mailer_sender(setting, app_url_options)
-      setting_value(setting, :mailer_sender).presence ||
+      sender = setting_value(setting, :mailer_sender).presence ||
         ENV["MAILER_SENDER"].presence ||
         default_sender(app_url_options)
+      return if sender.blank?
+
+      address = Mail::Address.new(sender)
+      brand = setting_value(setting, :brand_name).presence || "ChatBar AI Learn"
+      address.display_name = brand.gsub(/[\r\n]+/, " ").strip
+      address.format
     end
 
     def default_sender(app_url_options)
@@ -109,13 +116,14 @@ class MailerConfiguration
     end
 
     def smtp_settings(setting, app_url_options)
+      address = setting_value(setting, :smtp_address).presence || ENV.fetch("SMTP_ADDRESS", "localhost")
       settings = {
-        address: setting_value(setting, :smtp_address).presence || ENV.fetch("SMTP_ADDRESS", "localhost"),
-        port: (setting_value(setting, :smtp_port).presence || ENV.fetch("SMTP_PORT", "587")).to_i,
+        address: address,
+        port: (setting_value(setting, :smtp_port).presence || ENV.fetch("SMTP_PORT", address == "mail" ? "25" : "587")).to_i,
         domain: setting_value(setting, :smtp_domain).presence ||
                 ENV["SMTP_DOMAIN"].presence ||
                 app_url_options[:host],
-        enable_starttls_auto: smtp_starttls_enabled?(setting)
+        enable_starttls_auto: smtp_starttls_enabled?(setting, address)
       }.compact
       settings[:user_name] = setting_value(setting, :smtp_username).presence || ENV["SMTP_USERNAME"].presence
       settings[:password] = setting_value(setting, :smtp_password).presence || ENV["SMTP_PASSWORD"].presence
@@ -131,11 +139,11 @@ class MailerConfiguration
       settings.compact
     end
 
-    def smtp_starttls_enabled?(setting)
+    def smtp_starttls_enabled?(setting, address)
       configured = setting_value(setting, :smtp_enable_starttls_auto)
       return configured unless configured.nil?
 
-      ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", "true") != "false"
+      ENV.fetch("SMTP_ENABLE_STARTTLS_AUTO", address == "mail" ? "false" : "true") != "false"
     end
 
     def smtp_boolean_setting(setting, attribute, env_key)
