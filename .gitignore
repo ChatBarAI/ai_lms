@@ -48,3 +48,6 @@
 # Copilot/agent local guidance
 AGENTS.md
 .github/copilot-instructions.md
+
+# Local security review findings; never publish with application code.
+/SECURITY_REVIEW.md

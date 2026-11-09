@@ -121,7 +121,10 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#lesson-status a[href=?]", course_path(courses(:algebra))
-    assert_select "#lesson-status a[href=?]", course_certificate_path(courses(:algebra)), text: "Download Certificate"
+    assert_select "#lesson-status #completion-summary" do
+      assert_select "a[href=?]", course_certificate_path(courses(:algebra)), text: I18n.t("learning_completion.view_certificate")
+      assert_select "a[href=?]", course_certificate_path(courses(:algebra), format: :pdf), text: I18n.t("learning_completion.download_pdf")
+    end
     assert_select "#lesson-status a[href=?]", course_lesson_path(courses(:algebra), lessons(:draft_lesson)), count: 0
   end
 
@@ -506,6 +509,37 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_not lessons(:draft_lesson).reload.published?
   end
 
+  test "final lesson quiz dialog announces course completion and certificate availability" do
+    enrollment = enrollments(:student_in_algebra)
+    enrollment.progresses.create!(lesson: lessons(:advanced), status: :completed)
+    sign_in users(:student)
+
+    answers = lessons(:intro).questions.to_h { |question| [ question.id.to_s, question.correct_answer ] }
+    post submit_quiz_course_lesson_path(courses(:algebra), lessons(:intro)), params: { answers: answers }
+
+    assert enrollment.reload.fully_completed?
+    assert_equal courses(:algebra).id, flash[:popup_certificate_course_id]
+    assert_includes flash[:popup], "Lesson marked complete."
+    follow_redirect!
+    assert_response :success
+    assert_select "#lesson-status a[href=?]", course_certificate_path(courses(:algebra), format: :pdf)
+    assert_select "[role=dialog] #dialog-completion-summary" do
+      assert_select "p", text: "Certificate available"
+      assert_select "a[href=?]", course_certificate_path(courses(:algebra))
+      assert_select "a[href=?]", course_certificate_path(courses(:algebra), format: :pdf)
+    end
+  end
+
+  test "passing a lesson while the course is incomplete does not announce a certificate" do
+    sign_in users(:student)
+    answers = lessons(:intro).questions.to_h { |question| [ question.id.to_s, question.correct_answer ] }
+    post submit_quiz_course_lesson_path(courses(:algebra), lessons(:intro)), params: { answers: answers }
+
+    assert_includes flash[:popup], "Lesson marked complete."
+    assert_nil flash[:popup_certificate_course_id]
+    assert_not enrollments(:student_in_algebra).reload.fully_completed?
+  end
+
   test "submit_quiz scores answers and updates progress" do
     sign_in users(:student)
     post submit_quiz_course_lesson_path(courses(:algebra), lessons(:intro)),
@@ -521,6 +555,7 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     progress = Progress.find_by!(enrollment: enrollment, lesson: lessons(:intro))
     assert_equal 50.0, progress.score.to_f
     assert progress.in_progress?
+    assert_nil flash[:popup_certificate_course_id]
     assert_equal 1, progress.quiz_attempts.count
     assert_equal 50.0, progress.quiz_attempts.ordered.last.score.to_f
   end

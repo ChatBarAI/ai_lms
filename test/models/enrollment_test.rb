@@ -1,6 +1,27 @@
 require "test_helper"
 
 class EnrollmentTest < ActiveSupport::TestCase
+  test "historical completion summary uses the last required lesson date without changing records" do
+    enrollment = enrollments(:student_in_algebra)
+    completion_time = 2.days.ago.change(usec: 0)
+    enrollment.course.lessons_required_for_completion.each do |lesson|
+      enrollment.progresses.find_or_initialize_by(lesson: lesson).update!(status: :completed, completed_at: completion_time)
+    end
+    enrollment.update_column(:completed_at, nil)
+
+    assert_equal completion_time, enrollment.completion_summary_at
+    assert_nil enrollment.reload.completed_at
+
+    enrollment.update!(completed_at: 1.day.ago)
+    assert_equal enrollment.completed_at, enrollment.completion_summary_at
+  end
+
+  test "incomplete enrolments do not infer a completion date from partial progress" do
+    enrollment = enrollments(:student_in_algebra)
+    enrollment.progresses.find_or_initialize_by(lesson: lessons(:intro)).update!(status: :completed)
+    assert_nil enrollment.reload.completion_summary_at
+  end
+
   test "newly published lessons do not revoke an earned completion or prerequisites" do
     enrollment = enrollments(:student_in_algebra)
     progresses(:student_intro).update!(status: :completed)

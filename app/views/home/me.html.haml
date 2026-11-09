@@ -1,53 +1,34 @@
 - content_for :title, t(".title")
 
-%h1.text-2xl.font-bold.mb-6= t(".heading")
+.mb-8.flex.flex-wrap.items-end.justify-between.gap-4
+  %div
+    %h1.text-3xl.font-bold.tracking-tight= t(".heading")
+    %p.mt-2.text-sm.text-gray-500= t(".subtitle")
+  = link_to t(".browse_courses", **terms), courses_path, class: "inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-indigo-500"
 
 - if @enrollments.empty?
-  .bg-white.border.border-gray-200.rounded-lg.p-6
-    %p.text-gray-600
-      = t(".not_enrolled", **terms)
-      = link_to t(".browse_courses", **terms), courses_path, class: "text-indigo-600 hover:underline"
-
+  .bg-white.border.border-gray-200.rounded-xl.p-8.text-center
+    %p.text-gray-600= t(".not_enrolled", **terms)
 - else
-  .bg-white.border.border-gray-200.rounded-lg.overflow-hidden.mb-8
-    %table.min-w-full.text-sm
-      %thead.bg-gray-50.text-gray-600
-        %tr
-          %th.text-left.px-4.py-2= terms[:course]
-          %th.text-left.px-4.py-2= t(".progress")
-          %th.text-left.px-4.py-2= t(".lessons_completed", **terms)
-          %th.text-left.px-4.py-2= t(".avg_score")
-          %th.text-left.px-4.py-2= t(".quiz_trend", **terms)
-          %th.text-left.px-4.py-2
-      %tbody.divide-y
+  .space-y-5.mb-10
+    - @enrollments.each do |enrollment|
+      = render "enrollment_card", enrollment: enrollment, percentage: @completion_percentages.fetch(enrollment.id), attempts: @quiz_attempts_by_enrollment[enrollment.id] || [], pass_mark: @default_pass_mark
+
+  .grid.grid-cols-1.gap-6.lg:grid-cols-2
+    .min-w-0.rounded-xl.border.border-gray-200.bg-white.p-5.sm:p-6
+      %h2.font-semibold= t(".course_completion", **terms)
+      %p.mt-1.text-xs.text-gray-500= t(".course_completion_hint", **terms)
+      .mt-6.space-y-5
         - @enrollments.each do |enrollment|
-          - course = enrollment.course
-          - attempts = @quiz_attempts_by_enrollment[enrollment.id] || []
-          - trend_dialog_id = "my-learning-trend-#{enrollment.id}"
-          %tr
-            %td.px-4.py-2= link_to course.title, course_path(course), class: "text-indigo-700 hover:text-indigo-900 hover:underline font-medium"
-            %td.px-4.py-2 #{enrollment.completion_percentage}%
-            %td.px-4.py-2 #{enrollment.lessons_completed_count} / #{enrollment.lessons_required_count}
-            %td.px-4.py-2= enrollment.average_score || "—"
-            %td.px-4.py-2
-              - if attempts.size > 1
-                .w-32
-                  = render "shared/quiz_trend_popup",
-                           attempts: attempts,
-                           pass_mark: @default_pass_mark,
-                           dialog_id: trend_dialog_id,
-                           title: t(".quiz_trend_title", quiz: terms[:quiz], course: course.title, lessons: terms[:lessons])
-              - else
-                %span.text-gray-400 —
-            %td.px-4.py-2= link_to t(".view_course", **terms), course_path(course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
+          - percentage = @completion_percentages.fetch(enrollment.id)
+          %div
+            .mb-2.flex.items-baseline.justify-between.gap-4.text-sm
+              = link_to enrollment.course.title, course_path(enrollment.course), class: "min-w-0 break-words font-medium hover:text-indigo-600"
+              %span.shrink-0.tabular-nums.text-gray-500= "#{number_with_precision(percentage, precision: 1, strip_insignificant_zeros: true)}%"
+            .h-2.overflow-hidden.rounded-full.bg-gray-100
+              .h-full.rounded-full.bg-indigo-500{ style: "width: #{percentage.clamp(0, 100)}%" }
 
-  .grid.grid-cols-1.lg:grid-cols-2.gap-6.mb-8
-    .bg-white.border.border-gray-200.rounded-lg.p-4
-      %h2.font-semibold.mb-2= t(".course_completion", **terms)
-      %p.text-xs.text-gray-500.mb-2= t(".course_completion_hint", **terms)
-      = svg_chart @course_completion, type: :bar, color: "#4f46e5", max: 100, suffix: "%", height: 260
-
-    .bg-white.border.border-gray-200.rounded-lg.p-4
-      %h2.font-semibold.mb-2= t(".lessons_per_week", **terms)
-      %p.text-xs.text-gray-500.mb-2= t(".last_12_weeks")
-      = svg_chart @completed_per_week, type: :line, color: "#10b981", height: 260
+    .min-w-0.rounded-xl.border.border-gray-200.bg-white.p-5.sm:p-6
+      %h2.font-semibold= t(".lessons_per_week", **terms)
+      %p.mt-1.mb-4.text-xs.text-gray-500= t(".last_12_weeks")
+      = svg_chart @completed_per_week, type: :line, color: "#10b981", height: 180

@@ -26,6 +26,7 @@ class HomeController < ApplicationController
   def me
     @enrollments = current_user.enrollments.includes(course: :lessons).order(:enrolled_at)
 
+    @completion_percentages = @enrollments.to_h { |enrollment| [ enrollment.id, enrollment.completion_percentage ] }
     enrollment_ids = @enrollments.map(&:id)
     @quiz_attempts_by_enrollment = if enrollment_ids.any?
       QuizAttempt.includes(:lesson)
@@ -37,10 +38,6 @@ class HomeController < ApplicationController
       {}
     end
     @default_pass_mark = SiteSetting.current.pass_mark
-
-    @course_completion = @enrollments.each_with_object({}) do |e, h|
-      h[e.course.title] = e.completion_percentage
-    end
 
     @completed_per_week = current_user.progresses
                                       .where(status: Progress.statuses[:completed])

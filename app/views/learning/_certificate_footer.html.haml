@@ -1,0 +1,26 @@
+- if local_assigns.fetch(:compact, false)
+  .flex.items-center.justify-between.gap-2.border-t.border-gray-200.bg-gray-50.px-4.py-2.text-sm
+    %span.inline-flex.min-w-0.items-center.gap-1.5.font-medium.text-green-700{ title: t("learning_completion.certificate_available") }
+      %span{ "aria-hidden": true } ✓
+      = t("learning_completion.certificate")
+    .ml-auto.flex.shrink-0.items-center.gap-3
+      = link_to t("learning_completion.view"), course_certificate_path(course), class: "rounded py-2 font-medium text-indigo-700 hover:underline focus-visible:ring-2 focus-visible:ring-indigo-500", aria: { label: t("learning_completion.view_certificate") }
+      = link_to course_certificate_path(course, format: :pdf), class: "inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2", data: { turbo: false }, aria: { label: t("learning_completion.download_pdf") } do
+        %span{ "aria-hidden": true } ↓
+        PDF
+- else
+  - show_completion_details = local_assigns.fetch(:show_completion_details, false)
+  .flex.flex-wrap.items-center.justify-between.gap-4.border-t.border-gray-200.bg-gray-50.px-5.py-4.sm:px-6{ id: show_completion_details ? local_assigns.fetch(:summary_id, "completion-summary") : nil }
+    %div
+      %p.text-sm.font-medium.text-green-700= t("learning_completion.certificate_available")
+      - if show_completion_details
+        - completed_at = enrollment&.completion_summary_at
+        - if completed_at
+          %p.mt-1.text-xs.text-gray-600= t("learning_completion.completed_on", date: l(completed_at.to_date, format: :long))
+          - if enrollment.enrolled_at && completed_at >= enrollment.enrolled_at
+            %p.text-xs.text-gray-600= t("learning_completion.elapsed", duration: distance_of_time_in_words(enrollment.enrolled_at, completed_at))
+        - else
+          %p.mt-1.text-xs.text-gray-600= t("learning_completion.date_unavailable")
+    .order-last.ml-auto.flex.flex-wrap.items-center.justify-end.gap-3
+      = link_to t("learning_completion.download_pdf"), course_certificate_path(course, format: :pdf), class: "inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2", data: { turbo: false }
+      = link_to t("learning_completion.view_certificate"), course_certificate_path(course), class: "inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-white focus-visible:ring-2 focus-visible:ring-indigo-500"

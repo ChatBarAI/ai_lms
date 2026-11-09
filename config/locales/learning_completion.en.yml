@@ -1,0 +1,14 @@
+en:
+  learning_completion:
+    certificate: "Certificate"
+    view: "View"
+    certificate_available: "Certificate available"
+    completed: "Completed"
+    heading: "%{course} completed — congratulations!"
+    completed_on: "Completed on %{date}"
+    elapsed: "Time from enrolment to completion: %{duration}"
+    date_unavailable: "Your completion is recognised; the completion date is unavailable."
+    view_certificate: "View certificate"
+    download_pdf: "Download PDF"
+    my_certificates: "My certificates"
+    no_certificates: "Complete a %{course} to earn your first certificate."

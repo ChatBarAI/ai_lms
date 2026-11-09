@@ -1,0 +1,2 @@
+- footer = render "learning/certificate_footer", course: course, enrollment: enrollment, show_completion_details: true, summary_id: "dialog-completion-summary"
+= render "shared/dialog", title: t("learning_completion.heading", course: terms[:course]), subtitle: course.title, body: body, footer: footer, wide: true, kind: :notice

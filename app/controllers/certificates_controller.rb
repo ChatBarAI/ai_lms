@@ -5,13 +5,15 @@ class CertificatesController < ApplicationController
   def show
     @enrollment = current_user.enrollments.find_by(course: @course)
 
-    unless @enrollment&.fully_completed?
+    @certificate = Certificate.find_by(user: current_user, course: @course)
+
+    unless @certificate || @enrollment&.fully_completed?
       redirect_to course_path(@course),
                   alert: t("catalog_ui.certificate_incomplete", **helpers.terms)
       return
     end
 
-    @certificate = Certificate.find_or_issue(user: current_user, course: @course)
+    @certificate ||= Certificate.find_or_issue(user: current_user, course: @course)
 
     respond_to do |format|
       format.html

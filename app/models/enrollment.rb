@@ -49,6 +49,15 @@ class Enrollment < ApplicationRecord
     completed_required_progresses.count
   end
 
+  # Older completed enrolments predate the persisted completion timestamp.
+  # Do not substitute certificate issuance time for learning completion time.
+  def completion_summary_at
+    return completed_at if completed_at.present?
+    return unless fully_completed?
+
+    completed_required_progresses.maximum(:completed_at)
+  end
+
   def average_score
     progresses.where.not(score: nil).average(:score)&.round(1)
   end

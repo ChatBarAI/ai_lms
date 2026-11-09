@@ -249,6 +249,9 @@ class LessonsController < ApplicationController
       flash[:popup_alert] = t("lessons.flash.answers_pending_manual_marking")
     else
       flash[:popup] = scored_quiz_message(result)
+      if result[:progress].completed? && result[:progress].enrollment.fully_completed?
+        flash[:popup_certificate_course_id] = @course.id
+      end
     end
 
     redirect_to course_lesson_path(@course, @lesson, anchor: "lesson-status")

@@ -1,0 +1,14 @@
+de:
+  learning_completion:
+    certificate: "Zertifikat"
+    view: "Ansehen"
+    certificate_available: "Zertifikat verfügbar"
+    completed: "Abgeschlossen"
+    heading: "%{course} abgeschlossen — herzlichen Glückwunsch!"
+    completed_on: "Abgeschlossen am %{date}"
+    elapsed: "Zeit von der Einschreibung bis zum Abschluss: %{duration}"
+    date_unavailable: "Ihr Abschluss ist anerkannt; das Abschlussdatum ist nicht verfügbar."
+    view_certificate: "Zertifikat ansehen"
+    download_pdf: "PDF herunterladen"
+    my_certificates: "Meine Zertifikate"
+    no_certificates: "Noch keine Zertifikate vorhanden."
