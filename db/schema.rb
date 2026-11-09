@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_03_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -77,6 +77,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_000000) do
     t.string "token", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "revoked_at"
     t.index ["course_id"], name: "index_certificates_on_course_id"
     t.index ["token"], name: "index_certificates_on_token", unique: true
     t.index ["user_id", "course_id"], name: "index_certificates_on_user_id_and_course_id", unique: true

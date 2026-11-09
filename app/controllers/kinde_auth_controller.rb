@@ -5,6 +5,7 @@ class KindeAuthController < ApplicationController
   # Per-organisation SSO entry point. Looks up the org by slug, stores its id in
   # the session so the callback can assign the user to the correct organisation.
   def org_login
+    clear_pending_authentication
     unless kinde_configured?
       redirect_to new_user_session_path, alert: "Kinde sign-in is not configured."
       return
@@ -24,12 +25,13 @@ class KindeAuthController < ApplicationController
 
     session[:kinde_pending_org_id] = org.id
     session[:kinde_provider_hint] = org.kinde_connection_provider if org.kinde_connection_provider.present?
-    auth = KindeSdk.auth_url(connection_id: org.kinde_connection_id)
-    session[:kinde_code_verifier] = auth[:code_verifier] if auth[:code_verifier].present?
+    auth = KindeSdk.auth_url(connection_id: org.kinde_connection_id, prompt: "login", audience: KindeSdk.config.expected_audience)
+    bind_authentication_transaction!(auth)
     redirect_to auth[:url], allow_other_host: true
   end
 
   def login
+    clear_pending_authentication
     unless kinde_configured?
       redirect_to new_user_session_path, alert: "Kinde sign-in is not configured."
       return
@@ -37,7 +39,7 @@ class KindeAuthController < ApplicationController
 
     site_setting = SiteSetting.current
 
-    auth_options = {}
+    auth_options = { audience: KindeSdk.config.expected_audience }
     # Optional: pass connection_id to pre-select Google or Microsoft.
     # Store connection IDs in credentials under kinde: connections: google/microsoft.
     if params[:provider].present?
@@ -81,9 +83,8 @@ class KindeAuthController < ApplicationController
         login_hint: normalized_login_hint(params[:login_hint]) || session.delete(:kinde_login_hint)
       )
     end
-    Rails.logger.debug("[Kinde] auth_url generated: #{auth[:url]}")
     # PKCE is enabled by default; persist the code verifier across the redirect
-    session[:kinde_code_verifier] = auth[:code_verifier] if auth[:code_verifier].present?
+    bind_authentication_transaction!(auth)
     redirect_to auth[:url], allow_other_host: true
   end
 
@@ -93,14 +94,37 @@ class KindeAuthController < ApplicationController
       return
     end
 
-    code_verifier = session.delete(:kinde_code_verifier)
-    tokens = KindeSdk.fetch_tokens(params[:code], code_verifier: code_verifier)
-    client = KindeSdk.client(tokens)
-    kinde_user = client.oauth.get_user
-
+    transaction = session.delete(:kinde_transaction)
     pending_org_id = session.delete(:kinde_pending_org_id)
     provider_hint = session.delete(:kinde_provider_hint)
+    code_verifier = session.delete(:kinde_code_verifier)
+    unless transaction && transaction["expires_at"].to_i > Time.current.to_i &&
+           params[:state].present? && code_verifier.present? &&
+           ActiveSupport::SecurityUtils.secure_compare(transaction["state"], params[:state].to_s)
+      raise ArgumentError, "Invalid or expired authentication transaction"
+    end
+    tokens = KindeSdk.fetch_tokens(params[:code], code_verifier: code_verifier)
+    claims = KindeSdk.validate_jwt_token(tokens)
+    identity = claims.fetch("id_token")
+    unless identity["nonce"] == transaction["nonce"] &&
+           identity["sub"] == claims.fetch("access_token")["sub"] &&
+           (identity["azp"].blank? || identity["azp"] == KindeSdk.config.client_id) &&
+           (Array(identity["aud"]).size <= 1 || identity["azp"] == KindeSdk.config.client_id)
+      raise ArgumentError, "Invalid identity token binding"
+    end
+    client = KindeSdk.client(tokens)
+    kinde_user = client.oauth.get_user.dup
+    raise ArgumentError, "Userinfo subject mismatch" unless kinde_user[:id] == identity["sub"]
+    kinde_user[:email_verified] = identity["email_verified"] == true &&
+      identity["email"] == kinde_user[:preferred_email]
     organization = Organization.find_by(id: pending_org_id) if pending_org_id
+    # This must be a tenant-configured, signed claim sourced from the actual
+    # authentication connection. Never use the requested connection as proof.
+    connection_claim = Rails.application.credentials.dig(:kinde, :connection_id_claim)
+    verified_connection = identity[connection_claim] if connection_claim.present?
+    if organization && verified_connection != organization.kinde_connection_id
+      raise ArgumentError, "Organization connection could not be verified"
+    end
     provider_for_policy = organization&.kinde_connection_provider.presence || provider_hint
     site_setting = SiteSetting.current
 
@@ -131,7 +155,16 @@ class KindeAuthController < ApplicationController
     @user = User.from_kinde(kinde_user, organization: organization)
 
     if @user.persisted?
-      sign_in_and_redirect @user, event: :authentication
+      if @user.mandatory_sso? && @user.organization_id != organization&.id
+        raise ArgumentError, "Required organization SSO flow was not used"
+      end
+      reset_session
+      sign_in @user, event: :authentication, force: true
+      session[:sso_authentication] = {
+        "user_id" => @user.id, "organization_id" => organization&.id,
+        "connection_id" => verified_connection, "expires_at" => identity.fetch("exp")
+      }
+      redirect_to after_sign_in_path_for(@user)
       flash[:notice] = "Successfully signed in." if is_navigational_format?
     else
       redirect_to new_user_registration_path,
@@ -171,6 +204,20 @@ class KindeAuthController < ApplicationController
   end
 
   private
+
+  def clear_pending_authentication
+    %i[kinde_pending_org_id kinde_provider_hint kinde_code_verifier kinde_transaction].each { |key| session.delete(key) }
+  end
+
+  def bind_authentication_transaction!(auth)
+    raise ArgumentError, "PKCE verifier missing" if auth[:code_verifier].blank?
+
+    state = SecureRandom.hex(32)
+    nonce = SecureRandom.hex(32)
+    auth[:url] = auth_url_with_params(auth[:url], state: state, nonce: nonce)
+    session[:kinde_code_verifier] = auth[:code_verifier]
+    session[:kinde_transaction] = { "state" => state, "nonce" => nonce, "expires_at" => 10.minutes.from_now.to_i }
+  end
 
   def kinde_configured?
     Rails.application.credentials.dig(:kinde, :client_id).present?

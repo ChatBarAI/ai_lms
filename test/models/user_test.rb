@@ -54,6 +54,7 @@ class UserTest < ActiveSupport::TestCase
   # --- User.from_kinde ---
 
   KINDE_USER = {
+    email_verified: true,
     id: "kp_test_abc123",
     preferred_email: "sso@example.com",
     first_name: "Test",
@@ -122,5 +123,21 @@ class UserTest < ActiveSupport::TestCase
     User.from_kinde(kinde_data)
 
     assert_equal acme.id, student.reload.organization_id
+  end
+  test "unverified email cannot link an existing account" do
+    user = users(:student)
+    assert_raises(ArgumentError) do
+      User.from_kinde(KINDE_USER.merge(preferred_email: user.email, email_verified: false))
+    end
+    assert_nil user.reload.provider
+  end
+
+  test "mandatory SSO rejects local passwords and password recovery" do
+    user = users(:student)
+    password = generated_password
+    user.update!(password: password, organization: organizations(:sso_required_org))
+    assert_not user.valid_password?(password)
+    assert_nil user.send_reset_password_instructions
+    assert_not user.reset_password(generated_password, generated_password)
   end
 end

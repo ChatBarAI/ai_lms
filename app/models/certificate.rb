@@ -1,4 +1,12 @@
 class Certificate < ApplicationRecord
+  class RevokedError < StandardError; end
+
+  scope :active, -> { where(revoked_at: nil) }
+
+  def revoked?
+    revoked_at.present?
+  end
+
   belongs_to :user
   belongs_to :course
 
@@ -22,7 +30,10 @@ class Certificate < ApplicationRecord
 
   # Find an existing certificate or issue a new one. Idempotent.
   def self.find_or_issue(user:, course:)
-    find_or_create_by!(user: user, course: course)
+    certificate = find_or_create_by!(user: user, course: course)
+    raise RevokedError, "Certificate has been revoked" if certificate.revoked?
+
+    certificate
   end
 
   private

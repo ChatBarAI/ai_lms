@@ -2,11 +2,11 @@ class ProfilesController < ApplicationController
   before_action :authenticate_user!
 
   def show
-    certificates = Certificate.where(user: current_user).includes(:course).order(issued_at: :desc)
+    certificates = Certificate.active.where(user: current_user).includes(:course).order(issued_at: :desc)
     completed_enrollments = current_user.enrollments.completed.includes(:course).order(completed_at: :desc)
     @enrollments_by_course = completed_enrollments.index_by(&:course_id)
     @certificate_courses = (certificates.map(&:course) + completed_enrollments.map(&:course))
-      .uniq.select { |course| can?(:read, course) }
+      .uniq.select { |course| can?(:read, course) && helpers.certificate_available?(course) }
   end
 
   def edit

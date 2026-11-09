@@ -37,4 +37,11 @@ class EnrollmentsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to course_path(courses(:other_owner_course))
     assert_match(/Complete these courses first/, flash[:alert])
   end
+  test "student cannot enroll directly in a draft" do
+    sign_in users(:student)
+    assert_no_difference "Enrollment.count" do
+      post course_enrollments_path(courses(:draft_course))
+    end
+    assert_redirected_to root_path
+  end
 end

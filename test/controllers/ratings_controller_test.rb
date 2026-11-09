@@ -85,4 +85,11 @@ class RatingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     assert Rating.exists?(ratings(:student_intro_rating).id)
   end
+  test "student cannot rate an unreadable draft lesson" do
+    sign_in users(:student)
+    assert_no_difference "Rating.count" do
+      post course_lesson_ratings_path(courses(:algebra), lessons(:draft_lesson)), params: { rating: { stars: 5 } }
+    end
+    assert_redirected_to root_path
+  end
 end

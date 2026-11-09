@@ -64,6 +64,29 @@ class User < ApplicationRecord
     [ last_sign_in_at, progresses.maximum(:updated_at) ].compact.max
   end
 
+  def mandatory_sso?
+    !admin? && organization&.sso_required?
+  end
+
+  def valid_password?(password)
+    !mandatory_sso? && super
+  end
+
+  def send_reset_password_instructions
+    return if mandatory_sso? || provider.present?
+
+    super
+  end
+
+  def reset_password(new_password, new_password_confirmation)
+    if mandatory_sso? || provider.present?
+      errors.add(:base, "Credentials are managed by your identity provider.")
+      return false
+    end
+
+    super
+  end
+
   def initial_password_setup?
     persisted? && sign_in_count.to_i.zero?
   end
@@ -92,11 +115,18 @@ class User < ApplicationRecord
 
   # Used by KindeAuthController. kinde_user is a Hash with symbol keys returned by
   # client.oauth.get_user: { id:, preferred_email:, first_name:, last_name:, picture: }
-  # Falls back to email match so an existing account gets Kinde credentials attached.
+  # A verified email may link an existing local account; existing provider links
+  # cannot be overwritten through email matching.
   # Pass organization: org to auto-assign the user to an org on first sign-in.
   def self.from_kinde(kinde_user, organization: nil)
     user = find_by(provider: "kinde", uid: kinde_user[:id])
-    user ||= find_by(email: kinde_user[:preferred_email])
+    unless user
+      existing = find_by(email: kinde_user[:preferred_email])
+      if existing && (kinde_user[:email_verified] != true || existing.provider.present?)
+        raise ArgumentError, "Account linking requires a verified email and an unlinked account"
+      end
+      user = existing
+    end
     user ||= new
 
     user.provider  = "kinde"

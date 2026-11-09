@@ -5,6 +5,8 @@ module LearningCompletionHelper
 
   # Existing certificates remain available even when historical progress is missing.
   def certificate_available?(course)
+    return false if revoked_certificate_course_ids.include?(course.id)
+
     course_completed?(course) || issued_certificate_course_ids.include?(course.id)
   end
 
@@ -21,7 +23,11 @@ module LearningCompletionHelper
     @completed_learning_course_ids ||= current_user ? current_user.enrollments.completed.pluck(:course_id).to_set : Set.new
   end
 
+  def revoked_certificate_course_ids
+    @revoked_certificate_course_ids ||= current_user ? Certificate.where(user: current_user).where.not(revoked_at: nil).pluck(:course_id).to_set : Set.new
+  end
+
   def issued_certificate_course_ids
-    @issued_certificate_course_ids ||= current_user ? Certificate.where(user: current_user).pluck(:course_id).to_set : Set.new
+    @issued_certificate_course_ids ||= current_user ? Certificate.active.where(user: current_user).pluck(:course_id).to_set : Set.new
   end
 end

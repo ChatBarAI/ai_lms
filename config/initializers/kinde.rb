@@ -7,6 +7,9 @@
 #     domain:        https://yourapp.kinde.com
 #     client_id:     <client ID from Kinde dashboard>
 #     client_secret: <client secret from Kinde dashboard>
+#     access_token_audience: <API audience configured in Kinde>
+#     connection_id_claim: <signed ID-token claim of actual login connection>
+# See SECURITY_REVIEW.md for tenant verification and rollout requirements.
 #
 # Callback URL to register in Kinde dashboard:
 #   <APP_HOST>/kinde/callback
@@ -23,6 +26,9 @@ kinde_host          = ENV["APP_HOST"].presence ||
 
 if kinde_domain.present? && kinde_client_id.present? && kinde_client_secret.present?
   KindeSdk.configure do |c|
+    c.expected_issuer = kinde_domain
+    # API audience configured in Kinde; deliberately no generic audience fallback.
+    c.expected_audience = Rails.application.credentials.dig(:kinde, :access_token_audience)
     c.domain        = kinde_domain
     c.client_id     = kinde_client_id
     c.client_secret = kinde_client_secret

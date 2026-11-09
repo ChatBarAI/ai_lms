@@ -10,7 +10,16 @@ class Users::RegistrationsController < Devise::RegistrationsController
       attributes.delete(:password_confirmation) if attributes[:password_confirmation].blank?
     end
 
-    resource.update(attributes)
+    sensitive_change = attributes[:password].present? ||
+                       (attributes.key?(:email) && attributes[:email] != resource.email)
+    if sensitive_change && (resource.provider.present? || resource.mandatory_sso?)
+      resource.errors.add(:base, "SSO account credentials must be managed through your identity provider or an administrator.")
+      false
+    elsif sensitive_change
+      resource.update_with_password(params)
+    else
+      resource.update(attributes)
+    end
   end
 
   def ensure_self_service_sign_up_enabled!

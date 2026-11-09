@@ -3,6 +3,7 @@ class EnrollmentsController < ApplicationController
 
   def create
     course = Course.find_by(slug: params[:course_id]) || Course.find(params[:course_id])
+    authorize! :read, course
     enrollment = Enrollment.find_or_initialize_by(user: current_user, course: course)
     enrollment.role ||= :student
     authorize! :create, enrollment

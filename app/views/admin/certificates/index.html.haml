@@ -34,15 +34,18 @@
           %td.px-3.py-2.font-mono.text-xs.text-gray-400= cert.token
           %td.px-3.py-2.text-right
             .flex.flex-wrap.justify-end.gap-2
-              = link_to "Verify",
-                        verify_certificate_url(cert.token),
-                        target: "_blank",
-                        rel: "noopener",
-                        class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100"
-              = button_to "Revoke",
-                          admin_certificate_path(cert),
-                          method: :delete,
-                          data: { turbo_confirm: "Revoke this certificate? The recipient will lose access." },
-                          class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
+              - if cert.revoked?
+                %span.text-red-700 Revoked
+              - else
+                = link_to "Verify",
+                          verify_certificate_url(cert.token),
+                          target: "_blank",
+                          rel: "noopener",
+                          class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100"
+                = button_to "Revoke",
+                            admin_certificate_path(cert),
+                            method: :delete,
+                            data: { turbo_confirm: "Revoke this certificate? The recipient will lose access." },
+                            class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer transition-colors"
 
 .mt-4= raw @pagy.series_nav if @pagy.pages > 1

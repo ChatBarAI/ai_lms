@@ -187,7 +187,7 @@ class Course < ApplicationRecord
     CSV.generate do |out|
       out << ADMIN_CSV_HEADERS
       scope.find_each do |course|
-        out << csv_export_row(course)
+        out << csv_export_row(course).map { |value| SpreadsheetSafe.cell(value) }
       end
     end
   end
@@ -325,6 +325,7 @@ class Course < ApplicationRecord
           certificates.course_id AS course_id,
           COUNT(certificates.id) AS certificates_issued
         FROM certificates
+        WHERE certificates.revoked_at IS NULL
         GROUP BY certificates.course_id
       ) cert_stats ON cert_stats.course_id = courses.id
     SQL

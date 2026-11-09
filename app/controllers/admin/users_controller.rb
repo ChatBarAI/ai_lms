@@ -128,7 +128,7 @@ class Admin::UsersController < Admin::BaseController
           u.last_activity_at&.iso8601,
           days_since_last_activity(u.last_activity_at),
           active_last_30_days?(u.last_activity_at)
-        ]
+        ].map { |value| SpreadsheetSafe.cell(value) }
       end
     end
     send_data csv, filename: export_filename, type: "text/csv"
@@ -276,6 +276,7 @@ class Admin::UsersController < Admin::BaseController
           certificates.user_id AS user_id,
           COUNT(certificates.id) AS certificates_earned
         FROM certificates
+        WHERE certificates.revoked_at IS NULL
         GROUP BY certificates.user_id
       ) cert_stats ON cert_stats.user_id = users.id
     SQL

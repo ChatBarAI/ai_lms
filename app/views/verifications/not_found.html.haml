@@ -1,0 +1,8 @@
+- content_for :title, "Certificate Not Found"
+
+.max-w-xl.mx-auto.py-12
+  .bg-white.border.border-gray-200.rounded-lg.p-8.text-center.shadow-sm
+    %h1.text-xl.font-bold.text-gray-900.mb-2 Certificate could not be verified
+    %p.text-sm.text-gray-500 This certificate does not exist or is no longer valid.
+  .mt-6.text-center
+    = link_to "Go to homepage", root_path, class: "text-sm text-indigo-600 hover:underline"

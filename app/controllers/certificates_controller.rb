@@ -7,6 +7,8 @@ class CertificatesController < ApplicationController
 
     @certificate = Certificate.find_by(user: current_user, course: @course)
 
+    return head :forbidden if @certificate&.revoked?
+
     unless @certificate || @enrollment&.fully_completed?
       redirect_to course_path(@course),
                   alert: t("catalog_ui.certificate_incomplete", **helpers.terms)

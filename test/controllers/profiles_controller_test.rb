@@ -14,7 +14,7 @@ class ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'input[type="password"][name="user[password]"]'
     assert_select 'input[type="password"][name="user[password_confirmation]"]'
-    assert_select 'input[name="user[current_password]"]', count: 0
+    assert_select 'input[name="user[current_password]"]', count: 1
   end
 
   test "updates profile language" do

@@ -24,7 +24,8 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
 
     stub_auth_url(connection_id: org.kinde_connection_id) do |expected_url|
       get org_sso_login_path(org_slug: org.slug)
-      assert_redirected_to expected_url
+      assert_equal URI.parse(expected_url).host, URI.parse(response.location).host
+      assert session[:kinde_transaction]["state"].present?
     end
   end
 
@@ -80,15 +81,16 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
 
     stub_callback(KINDE_USER_PAYLOAD) do
       assert_difference -> { User.count }, 1 do
-        get kinde_callback_path, params: { code: "test_code", state: "x" }
+        get kinde_callback_path, params: { code: "test_code", state: session[:kinde_transaction]["state"] }
       end
       assert_equal "sso-ctrl@example.com", User.last.email
     end
   end
 
   test "callback redirects to root after successful sign-in" do
+    stub_auth_url { get kinde_login_path(provider: "microsoft") }
     stub_callback(KINDE_USER_PAYLOAD) do
-      get kinde_callback_path, params: { code: "test_code", state: "x" }
+      get kinde_callback_path, params: { code: "test_code", state: session[:kinde_transaction]["state"] }
       assert_response :redirect
       follow_redirect!
       assert_response :success
@@ -169,7 +171,7 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
     end
 
     stub_callback(KINDE_USER_PAYLOAD) do
-      get kinde_callback_path, params: { code: "test_code", state: "x" }
+      get kinde_callback_path, params: { code: "test_code", state: session[:kinde_transaction]["state"] }
     end
 
     user = User.find_by(uid: KINDE_USER_PAYLOAD[:id])
@@ -188,7 +190,7 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
 
     stub_callback(KINDE_USER_PAYLOAD) do
       assert_no_difference -> { User.count } do
-        get kinde_callback_path, params: { code: "test_code", state: "x" }
+        get kinde_callback_path, params: { code: "test_code", state: session[:kinde_transaction]["state"] }
       end
       assert_redirected_to new_user_session_path
       assert_match "No account found", flash[:alert]
@@ -208,7 +210,7 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
 
     stub_callback(KINDE_USER_PAYLOAD) do
       assert_no_difference -> { User.count } do
-        get kinde_callback_path, params: { code: "test_code", state: "x" }
+        get kinde_callback_path, params: { code: "test_code", state: session[:kinde_transaction]["state"] }
       end
       assert_response :redirect   # signed in, not rejected
       assert_not_equal new_user_session_path, response.location
@@ -216,6 +218,61 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
   end
 
   # ─── helpers ─────────────────────────────────────────────────────────────────
+
+  test "callback without pending state never exchanges a code" do
+    KindeSdk.stub(:fetch_tokens, ->(*) { flunk "unexpected token exchange" }) do
+      get kinde_callback_path, params: { code: "attacker", state: "invalid" }
+      assert_redirected_to new_user_session_path
+    end
+  end
+
+  test "invalid state consumes transaction and cannot be replayed" do
+    stub_auth_url { get kinde_login_path(provider: "microsoft") }
+    state = session[:kinde_transaction]["state"]
+    KindeSdk.stub(:fetch_tokens, ->(*) { flunk "unexpected token exchange" }) do
+      get kinde_callback_path, params: { code: "code", state: "wrong" }
+      assert_redirected_to new_user_session_path
+      get kinde_callback_path, params: { code: "code", state: state }
+      assert_redirected_to new_user_session_path
+    end
+  end
+
+  test "verified organization login grants session proof and logout clears it" do
+    org = organizations(:sso_required_org)
+    stub_auth_url { get org_sso_login_path(org_slug: org.slug) }
+    stub_callback(KINDE_USER_PAYLOAD) do
+      get kinde_callback_path, params: { code: "code", state: session[:kinde_transaction]["state"] }
+    end
+    assert_equal org.id, session[:sso_authentication]["organization_id"]
+    get root_path
+    assert_response :success
+    delete destroy_user_session_path
+    assert_nil session[:sso_authentication]
+  end
+
+  test "new generic login clears previous organization context" do
+    stub_auth_url do
+      get org_sso_login_path(org_slug: organizations(:entra_org).slug)
+      get kinde_login_path(provider: "microsoft")
+    end
+    assert_nil session[:kinde_pending_org_id]
+  end
+
+  test "valid state with mismatched token nonce is rejected before userinfo" do
+    stub_auth_url { get kinde_login_path(provider: "microsoft") }
+    state = session[:kinde_transaction]["state"]
+    claims = { "id_token" => { "sub" => "user", "nonce" => "wrong" }, "access_token" => { "sub" => "user" } }
+    tokens = { access_token: "access", id_token: "identity" }
+    KindeSdk.stub(:fetch_tokens, tokens) do
+      stub_verified_tokens(tokens, claims) do
+        KindeSdk.stub(:client, ->(*) { flunk "unexpected userinfo request" }) do
+          get kinde_callback_path, params: { code: "code", state: state }
+          assert_redirected_to new_user_session_path
+          assert_nil session[:sso_authentication]
+        end
+      end
+    end
+  end
 
   private
 
@@ -233,6 +290,26 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # validate_jwt_token is prepended by KindeJwtHardening, so a singleton
+  # stub of that method is bypassed. Stub the SDK verification boundary instead
+  # and keep the real token-type dispatch running. Crypto checks have separate tests.
+  def stub_verified_tokens(tokens, claims)
+    verified_types = []
+    verifier = ->(token, _jwks_url, _issuer, audience) do
+      type = tokens.key(token).to_s
+      expected_audience = type == "id_token" ? KindeSdk.config.client_id : KindeSdk.config.expected_audience
+      if expected_audience.nil?
+        assert_nil audience
+      else
+        assert_equal expected_audience, audience
+      end
+      verified_types << type
+      { valid: true, payload: claims.fetch(type) }
+    end
+    KindeSdk.stub(:jwt_validation, verifier) { yield }
+    assert_equal tokens.keys.map(&:to_s).sort, verified_types.sort
+  end
+
   # Stubs the full KindeSdk token-exchange and get_user chain used in #callback.
   def stub_callback(user_payload, &block)
     oauth_stub = Minitest::Mock.new
@@ -241,11 +318,25 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
     client_stub = Minitest::Mock.new
     client_stub.expect(:oauth, oauth_stub)
 
-    tokens_stub = { access_token: "tok_test" }
+    tokens_stub = { access_token: "tok_test", id_token: "id_test" }
+    org = Organization.find_by(id: session[:kinde_pending_org_id])
+    identity = {
+      "sub" => user_payload[:id], "nonce" => session[:kinde_transaction]["nonce"],
+      "exp" => 1.hour.from_now.to_i, "aud" => KindeSdk.config.client_id,
+      "email" => user_payload[:preferred_email], "email_verified" => true,
+      "test_connection" => org&.kinde_connection_id
+    }
+    credentials = Rails.application.credentials
+    original_dig = credentials.method(:dig)
+    credential_lookup = ->(*keys) { keys == [ :kinde, :connection_id_claim ] ? "test_connection" : original_dig.call(*keys) }
 
     KindeSdk.stub(:fetch_tokens, tokens_stub) do
       KindeSdk.stub(:client, client_stub) do
-        yield
+        credentials.stub(:dig, credential_lookup) do
+          stub_verified_tokens(tokens_stub, { "id_token" => identity, "access_token" => { "sub" => user_payload[:id] } }) do
+            yield
+          end
+        end
       end
     end
 

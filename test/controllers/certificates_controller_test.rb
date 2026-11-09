@@ -39,4 +39,34 @@ class CertificatesControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to course_path(courses(:algebra))
   end
+  test "revocation survives learner HTML PDF and verification requests" do
+    user = users(:student)
+    course = courses(:algebra)
+    certificate = Certificate.find_or_issue(user: user, course: course)
+    sign_in users(:admin)
+    assert_no_difference "Certificate.count" do
+      delete admin_certificate_path(certificate)
+    end
+    assert certificate.reload.revoked?
+    sign_out users(:admin)
+    sign_in user
+    assert_no_difference "Certificate.count" do
+      get course_certificate_path(course)
+      assert_response :forbidden
+      get course_certificate_path(course, format: :pdf)
+      assert_response :forbidden
+      get verify_certificate_path(certificate.token)
+      assert_response :not_found
+      assert_select "h1", text: "Certificate could not be verified"
+    end
+    assert_raises(Certificate::RevokedError) { Certificate.find_or_issue(user: user, course: course) }
+  end
+
+  test "unknown certificate token renders the generic not found page" do
+    get verify_certificate_path("nonexistent-certificate-token")
+
+    assert_response :not_found
+    assert_select "h1", text: "Certificate could not be verified"
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
 end

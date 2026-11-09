@@ -20,14 +20,14 @@ class SsoEnforcementTest < ActionDispatch::IntegrationTest
     assert_match "single sign-on", flash[:alert]
   end
 
-  test "Kinde-authenticated user in sso_required org passes through" do
+  test "linked Kinde account without current session proof is rejected" do
     student = users(:student)
     org = organizations(:sso_required_org)
     student.update!(organization: org, provider: "kinde", uid: "kp_enforce_test")
 
     sign_in student
     get root_path
-    assert_response :success
+    assert_match "/auth/org/locked-corp", response.location
   end
 
   test "user with no org is not redirected regardless of provider" do

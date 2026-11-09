@@ -1,6 +1,15 @@
 require "test_helper"
 
 class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
+  test "mandatory SSO session without proof cannot download protected files" do
+    user = users(:student)
+    user.update!(organization: organizations(:sso_required_org), provider: "kinde", uid: "linked")
+    courses(:other_owner_course).cover_image.attach(image_upload("course-cover.png"))
+    sign_in user
+    get rails_blob_path(courses(:other_owner_course).cover_image)
+    assert_response :unauthorized
+  end
+
   test "anonymous user cannot access a course asset" do
     courses(:other_owner_course).cover_image.attach(image_upload("course-cover.png"))
 

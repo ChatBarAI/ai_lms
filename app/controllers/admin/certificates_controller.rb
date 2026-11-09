@@ -9,7 +9,7 @@ class Admin::CertificatesController < Admin::BaseController
 
   def destroy
     @certificate = Certificate.find(params[:id])
-    @certificate.destroy!
+    @certificate.update!(revoked_at: @certificate.revoked_at || Time.current)
     redirect_to admin_certificates_path, notice: "Certificate revoked."
   end
 end

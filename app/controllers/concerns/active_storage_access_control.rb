@@ -57,7 +57,7 @@ module ActiveStorageAccessControl
   end
 
   def require_active_storage_user!
-    return if user_signed_in?
+    return if user_signed_in? && SsoSessionPolicy.allowed?(current_user, session)
 
     # Do not call Devise's authenticate_user! here: Active Storage controllers do
     # not run through the normal Devise failure app, which can turn Warden throws
@@ -66,6 +66,9 @@ module ActiveStorageAccessControl
   end
 
   def require_active_storage_user_for_blob!(blob)
+    require_active_storage_user!
+    return if performed?
+
     # Rich text direct uploads are temporarily unattached until the form is saved.
     # Allow signed-in authors to preview those blobs in the editor.
     if blob.attachments.empty?

@@ -15,7 +15,7 @@ class RatingsController < ApplicationController
   end
 
   def update
-    @rating = Rating.find(params[:id])
+    @rating = @lesson.ratings.find(params[:id])
     authorize! :update, @rating
     if @rating.update(rating_params)
       redirect_to course_lesson_path(@lesson.course, @lesson), notice: t("ratings.flash.updated")
@@ -25,7 +25,7 @@ class RatingsController < ApplicationController
   end
 
   def destroy
-    rating = Rating.find(params[:id])
+    rating = @lesson.ratings.find(params[:id])
     authorize! :destroy, rating
     rating.destroy
     redirect_to course_lesson_path(@lesson.course, @lesson), notice: t("ratings.flash.removed"), status: :see_other
@@ -35,6 +35,8 @@ class RatingsController < ApplicationController
 
   def set_lesson
     @lesson = Lesson.find(params[:lesson_id])
+    authorize! :read, @lesson.course
+    authorize! :read, @lesson
   end
 
   def rating_params
