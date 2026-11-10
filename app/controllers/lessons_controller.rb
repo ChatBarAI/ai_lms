@@ -95,6 +95,7 @@ class LessonsController < ApplicationController
   end
 
   def edit
+    load_cbai_name
   end
 
   def update
@@ -151,6 +152,7 @@ class LessonsController < ApplicationController
 
   def video_chatbar
     persist_lesson_video_attributes(:cbai_token, :cbai_api_key)
+    load_cbai_name
     fetch_video_data(:chatbar_recordings, :@recordings) if params[:fetch].present?
   end
 
@@ -214,6 +216,15 @@ class LessonsController < ApplicationController
   end
 
   private
+
+  def load_cbai_name
+    return if @lesson.cbai_api_key.blank?
+
+    @lesson.cbai_name = CbaiClient.name_from_details(CbaiClient.new(api_key: @lesson.cbai_api_key).details)
+  rescue CbaiClient::Error
+    # A metadata lookup must not prevent staff from editing or replacing the key.
+    @lesson.cbai_name = nil
+  end
 
   def prepare_course_sidebar
     visible_lessons = can?(:update, @course) ? @course.lessons : @course.lessons.published

@@ -7,12 +7,13 @@
   %p.text-sm.text-gray-500.mb-4
     = t("catalog_ui.chatbar_hint", **terms)
 
-  = form_with model: @lesson, url: video_chatbar_course_lesson_path(@course, @lesson), method: :get, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6 mb-4" do |f|
+  = form_with model: @lesson, url: video_chatbar_course_lesson_path(@course, @lesson), method: :get, data: { controller: "chatbar-name", chatbar_name_url_value: course_chatbar_name_path(@course) }, class: "space-y-4 bg-white border border-gray-200 rounded-lg p-6 mb-4" do |f|
     = hidden_field_tag :fetch, "1"
     %div
       = f.label :cbai_api_key, "CBAI API key", class: "block text-sm font-medium mb-1"
-      = f.password_field :cbai_api_key, value: @lesson.cbai_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2"
+      = f.password_field :cbai_api_key, value: @lesson.cbai_api_key, autocomplete: "off", class: "w-full border border-gray-300 rounded px-3 py-2", data: { chatbar_name_target: "key", action: "input->chatbar-name#changed blur->chatbar-name#lookup" }
       %p.text-xs.text-gray-500.mt-1= t("catalog_ui.stored_on_lesson", **terms)
+    = render "lessons/chatbar_name", lesson: @lesson
     .flex.w-full.gap-2
       = f.submit "Save & fetch recordings", class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"
 

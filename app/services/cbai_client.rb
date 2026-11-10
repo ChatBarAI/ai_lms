@@ -32,6 +32,14 @@ class CbaiClient
     JSON.parse(body)
   rescue JSON::ParserError => e
     raise Error, "Invalid JSON from CBAI: #{e.message}"
+  rescue SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError
+    raise Error, "Could not connect to ChatBar AI"
+  end
+
+  def self.name_from_details(details)
+    return unless details.is_a?(Hash)
+
+    (details["business_name"].presence || details["name"].presence).to_s.strip.presence
   end
 
   # Yields a Tempfile containing the recording binary; caller owns the file.

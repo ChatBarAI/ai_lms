@@ -13,7 +13,7 @@ class LessonFormAssignmentServiceTest < ActiveSupport::TestCase
       }
     )
     fake_client = Minitest::Mock.new
-    fake_client.expect(:details, { "token" => "tok_from_details", "id" => "42" })
+    fake_client.expect(:details, { "token" => "tok_from_details", "id" => "42", "business_name" => "Algebra tutor" })
 
     CbaiClient.stub(:new, fake_client) do
       assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
@@ -26,6 +26,7 @@ class LessonFormAssignmentServiceTest < ActiveSupport::TestCase
     assert_equal "https://example.com/tutor", lesson.custom_tutor_embed_url
     assert_equal "tok_from_details", lesson.cbai_token
     assert_equal 42, lesson.cbai_id
+    assert_equal "Algebra tutor", lesson.cbai_name
     assert_nil lesson.video_url
   end
 

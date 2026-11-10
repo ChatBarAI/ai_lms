@@ -29,6 +29,7 @@ Rails.application.routes.draw do
   end
 
   resources :courses do
+    post "chatbar_name", to: "chatbar_names#create", as: :chatbar_name
     member do
       post :publish
       post :unpublish

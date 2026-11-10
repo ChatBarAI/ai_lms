@@ -109,8 +109,11 @@ class LessonFormAssignmentService
     return unless attrs.key?("cbai_api_key") && attrs["cbai_api_key"].present?
 
     details = CbaiClient.new(api_key: attrs["cbai_api_key"]).details
-    @lesson.cbai_token = extract_cbai_token(details)
-    @lesson.cbai_id = extract_cbai_id(details)
+    @lesson.assign_attributes(
+      cbai_token: extract_cbai_token(details),
+      cbai_id: extract_cbai_id(details),
+      cbai_name: CbaiClient.name_from_details(details)
+    )
   end
 
   def anam_credentials_valid?

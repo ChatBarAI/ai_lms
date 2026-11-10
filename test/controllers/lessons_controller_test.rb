@@ -294,11 +294,14 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     lessons(:intro).update!(cbai_api_key: "saved-cbai-secret", anam_api_key: "saved-anam-secret")
     sign_in users(:instructor)
 
-    get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+    CbaiClient.stub(:new, Struct.new(:details).new({ "business_name" => "Algebra tutor" })) do
+      get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+    end
 
     assert_response :success
     assert_select 'input[name="lesson[cbai_api_key]"][type="password"][placeholder=?]', "Key saved — leave blank to keep it"
     assert_select 'input[name="lesson[anam_api_key]"][type="password"][placeholder=?]', "Key saved — leave blank to keep it"
+    assert_select "[data-chatbar-name]", text: "Algebra tutor"
     assert_not_includes response.body, "saved-cbai-secret"
     assert_not_includes response.body, "saved-anam-secret"
   end
@@ -307,10 +310,37 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     lessons(:intro).update!(cbai_api_key: "saved-cbai-secret", anam_api_key: nil)
     sign_in users(:instructor)
 
-    get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+    CbaiClient.stub(:new, Struct.new(:details).new({ "business_name" => "Algebra tutor" })) do
+      get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+    end
 
     assert_select 'input[type="checkbox"][name="lesson[remove_cbai_api_key]"]'
     assert_select 'input[type="checkbox"][name="lesson[remove_anam_api_key]"]', count: 0
+  end
+
+  test "edit remains available when ChatBar name lookup fails" do
+    lessons(:intro).update!(cbai_api_key: "saved-key")
+    sign_in users(:instructor)
+
+    CbaiClient.stub(:new, ->(**) { raise CbaiClient::Error, "unavailable" }) do
+      get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+    end
+
+    assert_response :success
+    assert_select "[data-chatbar-name]", text: "Name unavailable"
+    assert_not_includes response.body, "saved-key"
+  end
+
+  test "edit without a ChatBar key does not look up a name" do
+    lessons(:intro).update!(cbai_api_key: nil)
+    sign_in users(:instructor)
+
+    CbaiClient.stub(:new, ->(**) { flunk "should not contact ChatBar without a key" }) do
+      get edit_course_lesson_path(courses(:algebra), lessons(:intro))
+    end
+
+    assert_response :success
+    assert_select "[data-chatbar-name]", text: "No ChatBar connected"
   end
 
   test "instructor can remove the saved ChatBar key to turn off AI marking" do

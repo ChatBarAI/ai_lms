@@ -1,4 +1,7 @@
 class Lesson < ApplicationRecord
+  # Display-only metadata fetched from ChatBar; never accepted from form input.
+  attr_accessor :cbai_name
+
   belongs_to :course
 
   has_rich_text :body

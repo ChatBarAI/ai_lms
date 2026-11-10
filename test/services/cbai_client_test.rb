@@ -1,6 +1,20 @@
 require "test_helper"
 
 class CbaiClientTest < ActiveSupport::TestCase
+  test "extracts the dashboard name and tolerates older responses" do
+    assert_equal "Algebra tutor", CbaiClient.name_from_details({ "business_name" => " Algebra tutor ", "name" => "Other" })
+    assert_equal "Demo", CbaiClient.name_from_details({ "name" => "Demo" })
+    assert_nil CbaiClient.name_from_details({ "token" => "token" })
+    assert_nil CbaiClient.name_from_details(nil)
+  end
+
+  test "details converts connection failures into client errors" do
+    client = CbaiClient.new(api_key: "key")
+    client.stub(:get, ->(*) { raise Net::ReadTimeout }) do
+      assert_raises(CbaiClient::Error) { client.details }
+    end
+  end
+
   test "constructor rejects blank api key" do
     assert_raises(CbaiClient::Error) { CbaiClient.new(api_key: "") }
     assert_raises(CbaiClient::Error) { CbaiClient.new(api_key: nil) }
