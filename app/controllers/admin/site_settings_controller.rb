@@ -2,6 +2,7 @@ class Admin::SiteSettingsController < Admin::BaseController
   before_action :set_site_setting
 
   SECTION_ATTRIBUTES = {
+    "payments" => %i[stripe_secret_key stripe_webhook_secret payments_enabled payment_currency payment_tax_mode payment_tax_behavior payment_seller_name payment_terms_url payment_support_email payment_live_ready],
     "branding" => %i[
       brand_name show_brand_name invert_logo_on_dark logo favicon default_meta_card_image
       brand_primary_color
@@ -31,6 +32,7 @@ class Admin::SiteSettingsController < Admin::BaseController
   }.freeze
 
   SECTION_TITLES = {
+    "payments" => "Payments",
     "branding" => "Branding",
     "general" => "General",
     "theme" => "Theme",
@@ -96,7 +98,13 @@ class Admin::SiteSettingsController < Admin::BaseController
                         permitted_settings[:redis_url].to_s != @site_setting.redis_url.to_s
     purge_requested_attachments(section)
 
-    if @site_setting.update(permitted_settings)
+    saved = if section == "payments"
+      Payments::UpdateSettings.new.call(@site_setting, permitted_settings)
+    else
+      @site_setting.update(permitted_settings)
+    end
+
+    if saved
       MailerConfiguration.ensure_fresh! if section == "integration"
       notice = "#{SECTION_TITLES.fetch(section)} settings updated."
       notice += " Restart the web server and Sidekiq for the Redis change to take effect." if redis_url_changed

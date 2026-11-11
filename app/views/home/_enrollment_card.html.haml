@@ -1,4 +1,5 @@
 - course = enrollment.course
+- access_available = course_access_available?(course)
 - completed = course_completed?(course)
 - average_score = enrollment.average_score
 %article.overflow-hidden.rounded-xl.border.border-gray-200.bg-white.shadow-sm
@@ -12,6 +13,10 @@
         - else
           %span.rounded-full.bg-indigo-50.dark:bg-indigo-950.px-3.py-1.text-xs.font-semibold.text-indigo-700= percentage.positive? ? t("home.me.in_progress") : t("home.me.not_started")
 
+      - unless access_available
+        %p.mt-3.text-amber-700= t("payments.access_required")
+      - if enrollment.archived_at
+        %p.mt-3.text-gray-600= t("payments.archived")
       .mt-4.grid.grid-cols-1.items-start.gap-5.sm:grid-cols-2.sm:gap-8
         %div
           .flex.items-center.justify-between.gap-3.text-sm

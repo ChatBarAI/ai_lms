@@ -1,5 +1,5 @@
 .px-3.pt-3
-  .overflow-x-auto
+  .overflow-x-auto.overflow-y-hidden
     .flex.min-w-max.items-end.gap-1
       - site_settings_section_nav_items.each do |key, title, _subtitle|
         - active = @active_section.to_s == key

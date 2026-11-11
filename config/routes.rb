@@ -28,7 +28,11 @@ Rails.application.routes.draw do
     resources :courses, only: [ :index ]
   end
 
+  post "stripe/webhook", to: "stripe_webhooks#create", as: :stripe_webhook
+  resources :purchases, only: :show
+
   resources :courses do
+    resources :purchases, only: :create
     post "chatbar_name", to: "chatbar_names#create", as: :chatbar_name
     member do
       post :publish
@@ -105,6 +109,12 @@ Rails.application.routes.draw do
 
   resources :tags, only: [ :show ]
   namespace :admin do
+    resources :payments, only: [ :index, :show ] do
+      post :retry, on: :member
+      post :retry_event, on: :collection
+      post :grant, on: :collection
+      post :revoke, on: :collection
+    end
     root "dashboard#index"
     get "marking_queue", to: "marking_queue#index"
     patch "question_answers/:id/score", to: "question_answers#score", as: :question_answer_score
@@ -121,7 +131,11 @@ Rails.application.routes.draw do
     end
     resources :organizations
     resources :subjects
-    resources :courses do
+    post "stripe/webhook", to: "stripe_webhooks#create", as: :stripe_webhook
+  resources :purchases, only: :show
+
+  resources :courses do
+    resources :purchases, only: :create
       member do
         get :report
         get   "certificate_layout", to: "courses#certificate_layout"

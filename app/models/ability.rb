@@ -24,8 +24,8 @@ class Ability
   def allow_guest_catalog_access
     can :read, Subject
     can :read, Course, published_at: ..Time.current, public_access_enabled: true
-    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current, public_access_enabled: true }
-    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current, public_access_enabled: true } }
+    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current, public_access_enabled: true, access_policy: "free" }
+    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current, public_access_enabled: true, access_policy: "free" } }
   end
 
   def allow_authenticated_catalog_access(user)
@@ -34,23 +34,34 @@ class Ability
     can :read, Subject
     can :read, Course, published_at: ..Time.current
 
-    # Authenticated users can read instructor-owned drafts they own.
-    can :read, Lesson, published_at: ..Time.current, course: { published_at: ..Time.current }
+    learning_course_conditions(user).each do |condition|
+      published = condition.merge(published_at: ..Time.current)
+      can :read, Lesson, published_at: ..Time.current, course: published
+      can :read, Question, lesson: { published_at: ..Time.current, course: published }
+      can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: published }
+    end
     can :read, Lesson, course: { owner_id: user.id }
-    can :read, Question, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current } }
     can :read, Question, lesson: { course: { owner_id: user.id } }
-    can :read, LessonMaterial, lesson: { published_at: ..Time.current, course: { published_at: ..Time.current } }
     can :read, LessonMaterial, lesson: { course: { owner_id: user.id } }
+  end
+
+  def learning_course_conditions(user)
+    # Only this learner's effective course IDs; SQL scopes remain queryable and
+    # CanCan's in-memory matcher receives arrays, not ActiveRecord relations.
+    @learning_course_conditions ||= CourseAccess.conditions(user)
   end
 
   def allow_student_capabilities(user)
     can [ :create, :read, :update, :destroy ], Rating, user_id: user.id
-    can :read, Enrollment, user_id: user.id
-    can :create, Enrollment, user_id: user.id
+    can [ :read, :create ], Enrollment, user_id: user.id
     can :read, Progress, enrollment: { user_id: user.id }
-    can [ :create, :read ], QuestionAnswer, enrollment: { user_id: user.id }
-    can :create, LessonMaterialAcknowledgement, enrollment: { user_id: user.id }
+    can :read, QuestionAnswer, enrollment: { user_id: user.id }
     can :read, LessonMaterialAcknowledgement, enrollment: { user_id: user.id }
+    learning_course_conditions(user).each do |condition|
+      enrollment = { user_id: user.id, archived_at: nil, course: condition.merge(published_at: ..Time.current) }
+      can :create, QuestionAnswer, enrollment: enrollment
+      can :create, LessonMaterialAcknowledgement, enrollment: enrollment
+    end
     can :read, Certificate, user_id: user.id
   end
 

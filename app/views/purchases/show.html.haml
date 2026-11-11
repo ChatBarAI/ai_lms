@@ -1,0 +1,20 @@
+- content_for :title, t("payments.title")
+.max-w-2xl.mx-auto.border.rounded-lg.p-6.space-y-4
+  %h1.text-xl.font-semibold= @purchase.course_title
+  %p{ role: "status", "aria-live": "polite" }
+    - if @purchase.fulfilment_state == "fulfilled" && course_access_available?(@purchase.course)
+      = t("payments.access_available")
+    - elsif @purchase.fulfilment_state == "exception"
+      = t("payments.support_needed")
+    - elsif %w[refunded disputed lost].include?(@purchase.payment_state)
+      = t("payments.access_required")
+    - elsif @purchase.payment_state == "expired"
+      = t("payments.expired")
+    - elsif params[:cancelled]
+      = t("payments.cancelled")
+    - else
+      = t("payments.processing")
+  = link_to t("payments.back_course"), course_path(@purchase.course), class: "block text-indigo-600 underline"
+  = link_to t("payments.refresh"), purchase_path(@purchase), class: "block text-indigo-600 underline"
+  - if SiteSetting.current.payment_support_email.present?
+    = mail_to SiteSetting.current.payment_support_email, t("payments.support"), class: "block underline"

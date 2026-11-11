@@ -4,6 +4,11 @@ require "rails/test_help"
 require "minitest/mock"
 require "securerandom"
 
+# Initializers (terminology, Sidekiq and Rack::Attack) inspect SiteSetting before
+# rails/test_help prepares the test schema. Discard model metadata loaded against
+# the old schema before it is inherited by the parallel test workers.
+ActiveRecord::Base.descendants.each(&:reset_column_information)
+
 module PasswordTestHelper
   def generated_password
     SecureRandom.alphanumeric(24)

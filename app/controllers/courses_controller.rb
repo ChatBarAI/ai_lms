@@ -9,7 +9,7 @@ class CoursesController < ApplicationController
   end
 
   def show
-    @enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
+    @enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
     visible_lessons = can?(:update, @course) ? @course.lessons : @course.lessons.published
     @lessons = visible_lessons.includes(:tags)
 
@@ -87,7 +87,9 @@ class CoursesController < ApplicationController
   end
 
   def destroy
-    @course.destroy
+    unless @course.destroy
+      return redirect_to course_path(@course), alert: @course.errors.full_messages.to_sentence
+    end
     redirect_to courses_path, notice: t("courses.flash.deleted", **helpers.terms), status: :see_other
   end
 
@@ -104,7 +106,7 @@ class CoursesController < ApplicationController
   private
 
   def course_params
-    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    permitted = params.require(:course).permit(:access_policy, :price_minor, :price_currency, :title, :description, :locale, :subject_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
     filter_prerequisite_course_ids!(permitted)
     permitted
   end

@@ -10,6 +10,7 @@
           - course.tags.each do |tag|
             %span.inline-flex.items-center.px-3.py-1.rounded-full.text-xs.font-medium{ style: "background-color: #{tag.color}; color: #{tag.text_color}" }= tag.name
     .p-4
+      %p.text-sm.font-medium= course_price_label(course)
       - lesson_count = course.lessons.published.count
       .flex.items-start.justify-between.gap-2
         %h3.font-semibold= course.title

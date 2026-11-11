@@ -1,0 +1,12 @@
+%h1.text-2xl.font-bold.mb-4= "#{t('payments.purchases')} ##{@purchase.id}"
+= link_to t("payments.title"), admin_payments_path, class: "underline"
+%dl.space-y-2.mt-4
+  - %w[course_title user_id account_id livemode amount_minor currency base_minor tax_minor total_minor refunded_minor payment_state fulfilment_state exception_reason checkout_session_id payment_intent_id reconciled_at].each do |field|
+    %div
+      %dt.font-semibold= field.humanize
+      %dd= @purchase.public_send(field) || "—"
+= button_to t("payments.retry"), retry_admin_payment_path(@purchase), class: "rounded bg-indigo-600 text-white px-4 py-2 mt-4"
+- if @grant
+  %h2.text-lg.font-semibold.mt-6= t("payments.history")
+  - @grant.entitlement_events.order(:created_at).each do |event|
+    %p= "#{event.created_at}: #{event.action} / #{event.source} / #{event.reason}"

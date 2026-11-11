@@ -4,6 +4,7 @@ class Api::LessonsController < ApplicationController
 
   def show
     lesson = Lesson.find_by!(cbai_token: params[:token])
+    authorize! :read, lesson
     render json: {
       id: lesson.id,
       title: lesson.title,

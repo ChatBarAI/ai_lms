@@ -7,7 +7,12 @@ class EnrollmentsController < ApplicationController
     enrollment = Enrollment.find_or_initialize_by(user: current_user, course: course)
     enrollment.role ||= :student
     authorize! :create, enrollment
-    if enrollment.persisted? || enrollment.save
+    saved = course.with_lock do
+      raise CanCan::AccessDenied unless CourseAccess.allowed?(current_user, course)
+      enrollment.archived_at = nil
+      enrollment.save
+    end
+    if saved
       redirect_to course_path(course), notice: t("enrollments.flash.enrolled")
     else
       redirect_to course_path(course), alert: enrollment.errors.full_messages.to_sentence
@@ -17,7 +22,7 @@ class EnrollmentsController < ApplicationController
   def destroy
     course = Course.find_by(slug: params[:course_id]) || Course.find(params[:course_id])
     enrollment = current_user.enrollments.find_by!(course_id: course.id)
-    enrollment.destroy
+    course.paid? ? enrollment.update!(archived_at: Time.current) : enrollment.destroy
     redirect_to course_path(course), notice: t("enrollments.flash.unenrolled"), status: :see_other
   end
 end

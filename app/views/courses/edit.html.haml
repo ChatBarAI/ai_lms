@@ -2,12 +2,7 @@
 
 %h1.text-2xl.font-bold.mb-4= t("catalog_ui.edit_course_title", **terms, title: @course.title)
 
-.mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
-  %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
-    Main content
-    = collapsible_icon_badge
-  %div{data: { collapsible_target: "content" }}
-    = render "form", course: @course
+= render "form", course: @course
 
 .mb-6.bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible" }}
   %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}

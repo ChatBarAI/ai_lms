@@ -1,4 +1,8 @@
 class User < ApplicationRecord
+  has_many :granted_course_entitlements, class_name: "CourseEntitlement", foreign_key: :granted_by_id, dependent: :restrict_with_error
+  has_many :entitlement_audit_events, class_name: "EntitlementEvent", foreign_key: :actor_id, dependent: :restrict_with_error
+  has_many :purchases, dependent: :restrict_with_error
+  has_many :course_entitlements, dependent: :restrict_with_error
   SUPPORTED_LOCALES = {
     "en" => "English",
     "de" => "Deutsch"

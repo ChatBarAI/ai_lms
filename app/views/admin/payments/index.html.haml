@@ -1,0 +1,104 @@
+- content_for :title, t("payments.title")
+
+.flex.flex-wrap.items-center.justify-between.gap-3.mb-4
+  %h1.text-2xl.font-bold= t("payments.title")
+  = link_to t("payments.settings"), edit_admin_site_setting_path(section: "payments"), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+
+.space-y-6
+  %section.bg-white.border.border-gray-200.rounded-lg.overflow-hidden
+    .px-4.py-3.border-b.border-gray-100
+      %h2.font-semibold.text-gray-900= t("payments.purchases")
+    - if @purchases.any?
+      .overflow-x-auto
+        %table.w-full.text-sm
+          %thead.bg-gray-50
+            %tr
+              - %w[reference buyer course state].each do |label|
+                %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2= t("payments.#{label}")
+          %tbody
+            - @purchases.each do |purchase|
+              %tr.border-t.border-gray-100
+                %td.px-3.py-3.font-medium
+                  = link_to "##{purchase.id}", admin_payment_path(purchase), class: "text-indigo-600 hover:underline"
+                %td.px-3.py-3.text-gray-600= purchase.user.email
+                %td.px-3.py-3.text-gray-600= purchase.course_title
+                %td.px-3.py-3
+                  .flex.flex-wrap.items-center.gap-2
+                    %span.inline-flex.items-center.rounded-full.bg-gray-100.px-2.5.py-0.5.text-xs.font-medium.text-gray-700= purchase.payment_state.humanize
+                    %span.inline-flex.items-center.rounded-full.px-2.5.py-0.5.text-xs.font-medium{ class: purchase.fulfilment_state == "exception" ? "bg-amber-100 text-amber-800" : "bg-indigo-50 text-indigo-700" }= purchase.fulfilment_state.humanize
+                    %span.text-xs.font-medium.text-gray-500= purchase.livemode ? "LIVE" : "TEST"
+    - else
+      %p.px-4.py-6.text-sm.text-gray-500= t("payments.no_purchases")
+    - if @page > 1 || @purchases.size == 50
+      .flex.flex-wrap.gap-2.px-4.py-3.border-t.border-gray-100
+        - if @page > 1
+          = link_to t("payments.previous"), admin_payments_path(page: @page - 1), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+        - if @purchases.size == 50
+          = link_to t("payments.next"), admin_payments_path(page: @page + 1), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+
+  %section.bg-white.border.border-gray-200.rounded-lg.overflow-hidden
+    .px-4.py-3.border-b.border-gray-100
+      %h2.font-semibold.text-gray-900= t("payments.inbox")
+    - if @events.any?
+      .divide-y.divide-gray-100
+        - @events.each do |event|
+          .flex.flex-col.gap-3.p-4.sm:flex-row.sm:items-center.sm:justify-between
+            .min-w-0.space-y-1
+              %p.font-mono.text-xs.text-gray-700.break-all= event.provider_event_id
+              .flex.flex-wrap.items-center.gap-2
+                %span.inline-flex.items-center.rounded-full.bg-amber-100.px-2.5.py-0.5.text-xs.font-medium.text-amber-800= event.state.humanize
+                %span.text-xs.text-gray-500= t("payments.processing_attempts", count: event.attempts)
+              - if event.error_summary.present?
+                %p.text-sm.text-gray-600.break-words= event.error_summary
+            = button_to t("payments.retry"), retry_event_admin_payments_path, params: { event_id: event.id }, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 cursor-pointer"
+    - else
+      %p.px-4.py-6.text-sm.text-gray-500= t("payments.no_events")
+
+  %section.bg-white.border.border-gray-200.rounded-lg.p-6.shadow-sm
+    %h2.text-lg.font-semibold.text-gray-900= t("payments.grant")
+    = form_with url: grant_admin_payments_path do |f|
+      = hidden_field_tag :reference, SecureRandom.uuid
+      .mt-5.grid.grid-cols-1.gap-5.md:grid-cols-2
+        - [:user_id, :course_id].each do |field|
+          %div
+            = label_tag field, t("payments.#{field}"), class: "block text-sm font-medium mb-1"
+            = number_field_tag field, nil, min: 1, required: true, class: "w-full border border-gray-300 rounded px-3 py-2"
+        %div
+          = label_tag :reason, t("payments.reason"), class: "block text-sm font-medium mb-1"
+          = text_field_tag :reason, nil, required: true, class: "w-full border border-gray-300 rounded px-3 py-2"
+        %div
+          = label_tag :expires_at, t("payments.expires_at"), class: "block text-sm font-medium mb-1"
+          = datetime_local_field_tag :expires_at, nil, class: "w-full border border-gray-300 rounded px-3 py-2"
+      .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
+        = submit_tag t("payments.grant"), class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+
+  %section.bg-white.border.border-gray-200.rounded-lg.overflow-hidden
+    .px-4.py-3.border-b.border-gray-100
+      %h2.font-semibold.text-gray-900= t("payments.grants")
+    - if @grants.any?
+      .divide-y.divide-gray-100
+        - @grants.each do |grant|
+          .p-4.space-y-3
+            .flex.flex-wrap.items-start.justify-between.gap-3
+              .min-w-0
+                %p.font-medium.text-gray-900.break-words= grant.course.title
+                %p.mt-1.text-sm.text-gray-600.break-all= grant.user.email
+              .flex.flex-wrap.items-center.gap-2
+                %span.text-xs.text-gray-500= "##{grant.id} · #{grant.source.humanize}"
+                - status_class = { "active" => "bg-green-100 text-green-800", "suspended" => "bg-amber-100 text-amber-800", "revoked" => "bg-gray-100 text-gray-600" }.fetch(grant.status, "bg-gray-100 text-gray-600")
+                %span.inline-flex.items-center.rounded-full.px-2.5.py-0.5.text-xs.font-medium{ class: status_class }= grant.status.humanize
+            %p.text-xs.text-gray-500= "#{l(grant.starts_at, format: :short)} — #{grant.expires_at ? l(grant.expires_at, format: :short) : t('payments.no_expiry')}"
+            %details.rounded.border.border-gray-200
+              %summary.cursor-pointer.px-3.py-2.text-sm.font-medium.text-gray-700.hover:bg-gray-50= t("payments.history")
+              .border-t.border-gray-100.px-3.py-2.space-y-2
+                - grant.entitlement_events.order(:created_at).each do |event|
+                  %p.text-xs.text-gray-600.break-words= "#{l(event.created_at, format: :short)} · #{event.action.humanize} · #{event.source.humanize} · #{event.reason}"
+            - unless grant.status == "revoked"
+              = form_with url: revoke_admin_payments_path, class: "flex flex-col gap-3 border-t border-gray-100 pt-3 sm:flex-row sm:items-end" do
+                = hidden_field_tag :grant_id, grant.id
+                .flex-1
+                  = label_tag "reason_#{grant.id}", t("payments.reason"), class: "block text-sm font-medium mb-1"
+                  = text_field_tag :reason, nil, id: "reason_#{grant.id}", required: true, class: "w-full border border-gray-300 rounded px-3 py-2"
+                = submit_tag t("payments.revoke"), class: "px-3 py-2 rounded bg-red-100 text-red-800 hover:bg-red-200 border border-red-200 text-sm font-medium cursor-pointer"
+    - else
+      %p.px-4.py-6.text-sm.text-gray-500= t("payments.no_grants")

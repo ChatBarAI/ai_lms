@@ -5,11 +5,11 @@ class LessonsController < ApplicationController
   skip_authorize_resource only: [ :start, :submit_quiz ]
 
   def index
-    @lessons = @course.lessons
+    @lessons = @course.lessons.accessible_by(current_ability)
   end
 
   def show
-    @enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
+    @enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
     if @enrollment
       @progress = @enrollment.progresses.find_or_create_by!(lesson_id: @lesson.id)
       @progress.with_lock { @progress.refresh_material_progress! }
@@ -56,7 +56,8 @@ class LessonsController < ApplicationController
   end
 
   def start
-    enrollment = current_user.enrollments.find_by(course_id: @course.id)
+    authorize! :read, @lesson
+    enrollment = current_user.enrollments.find_by(course_id: @course.id, archived_at: nil)
     if enrollment && !@lesson.lesson_materials_complete_for?(enrollment)
       redirect_to course_lesson_path(@course, @lesson), alert: t("lessons.flash.complete_required_materials") and return
     end
@@ -70,7 +71,7 @@ class LessonsController < ApplicationController
   def submit_quiz
     authorize! :read, @lesson
 
-    enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
+    enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
     return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.enrol_to_submit")) unless enrollment
     return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.complete_required_materials")) unless @lesson.lesson_materials_complete_for?(enrollment)
 

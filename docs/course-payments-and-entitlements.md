@@ -1,6 +1,6 @@
 # Free and paid courses: entitlements and Stripe
 
-Status: proposed implementation specification. This document describes the enhancement; it does not indicate that payment support has been implemented.
+Status: implementation specification. The working tree now contains an initial implementation; local Rails tests and Stripe staging acceptance are required before live rollout. See [deployment and acceptance instructions](course-payments-operations.md).
 
 ## Purpose and issue scope
 
@@ -68,7 +68,7 @@ Existing course owners and administrators may edit course pricing. Only administ
 
 Publication and authentication rules still apply. An entitlement does not publish a draft or override an organisation's SSO session policy. Ownership exceptions remain consistent with existing authoring permissions.
 
-Course cards and detail pages show **Free**, a formatted price, or **Access available**. Paid catalogue pages expose only deliberate marketing content: description, cover and published syllabus titles. They must not render lesson bodies, quiz answers, material previews, video URLs, or tutor configuration for unauthorised users.
+Course cards and detail pages show **Free**, a formatted price, or **Access available**. Paid catalogue pages use the same lesson cards as free courses, including covers, titles, tags, durations and a plain-text description preview limited to 300 characters on the server. Cards without lesson access omit their link destination. They must not render full lesson bodies, quiz answers, material previews, video URLs, or tutor configuration for unauthorised users.
 
 Preserve locale filtering, slug-based route helpers, Haml, Tailwind, and English/German translations. Include loading, processing, cancellation and failure states with accessible controls and messages.
 
@@ -174,7 +174,7 @@ These commercial policies must be reflected in purchaser-facing terms before liv
 
 ## Administration and configuration
 
-Add a Payments section to site settings with enablement, configured currency, test/live indicator, webhook URL, readiness checks and processing health. Store secret keys and webhook secrets in deployment environment variables or Rails credentials; display only masked/configured status. Filter secrets and sensitive webhook fields from logs.
+Add a Payments section to site settings with enablement, configured currency, test/live indicator, webhook URL, readiness checks and processing health. Allow administrators to enter Stripe credentials in Payments settings and store them using Active Record Encryption, keeping the encryption keys outside the database. Blank fields preserve saved credentials, and saved values are never redisplayed. Validate the API connection before saving, apply changes without restarting web or worker processes, and prevent account/mode changes that strand historical purchases. Retain environment variables and Rails credentials as fallbacks; display only configured status. Filter secrets and sensitive webhook fields from logs.
 
 Disabling payments disables new checkout only. Existing entitlements remain effective, and webhook/refund processing continues. A Stripe outage similarly prevents new sales without interrupting already-granted course access. Separate test and production data; reject environment/account mismatches.
 

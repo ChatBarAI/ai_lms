@@ -26,6 +26,7 @@ module ActiveStorageAccessControl
     # inspect. Only signed-in users may create uploads.
     if is_a?(ActiveStorage::DirectUploadsController)
       @protected_active_storage_request = true
+      mark_protected_active_storage_response_private!
       return require_active_storage_user!
     end
 
@@ -35,7 +36,14 @@ module ActiveStorageAccessControl
     return if public_active_storage_blob?(blob)
 
     @protected_active_storage_request = true
+    mark_protected_active_storage_response_private!
     require_active_storage_user_for_blob!(blob)
+    return if performed?
+    if is_a?(ActiveStorage::Blobs::RedirectController)
+      redirect_to rails_service_blob_proxy_path(blob.signed_id, blob.filename, disposition: params[:disposition])
+    elsif is_a?(ActiveStorage::Representations::RedirectController)
+      redirect_to rails_blob_representation_proxy_path(blob.signed_id, params[:variation_key], blob.filename, disposition: params[:disposition])
+    end
   end
 
   def mark_protected_active_storage_response_private!
@@ -94,8 +102,10 @@ module ActiveStorageAccessControl
 
     case record
     when SiteSetting
-      false
-    when Course, Lesson, LessonMaterial
+      attachment.name == "certificate_template"
+    when Course
+      attachment.name != "cover_image" || !record.public_to_guests?
+    when Lesson, LessonMaterial
       !record.public_to_guests?
     when MaterialDesignAsset
       !record.lesson_material.public_to_guests?
@@ -112,7 +122,16 @@ module ActiveStorageAccessControl
     attachments = blob.attachments.includes(:record).to_a
     return false if attachments.empty?
 
-    attachments.all? { |attachment| active_storage_record_readable_by_current_user?(attachment.record) }
+    attachments.all? do |attachment|
+      record = attachment.record
+      if record.is_a?(SiteSetting) && attachment.name == "certificate_template"
+        current_user.admin? || current_user.instructor?
+      elsif record.is_a?(Course) && attachment.name != "cover_image"
+        active_storage_current_ability.can?(:update, record)
+      else
+        active_storage_record_readable_by_current_user?(record)
+      end
+    end
   end
 
   def active_storage_record_readable_by_current_user?(record)
