@@ -22,6 +22,7 @@ class User < ApplicationRecord
   has_many :courses, through: :enrollments
   has_many :progresses, through: :enrollments
   has_many :ratings, dependent: :destroy
+  has_many :course_purchases, dependent: :destroy
 
   has_one_attached :avatar
 

@@ -29,6 +29,20 @@ class Admin::SiteSettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#0ea5e9", SiteSetting.current.reload.brand_primary_color
   end
 
+  test "admin can toggle stripe features from general settings" do
+    sign_in users(:admin)
+
+    patch admin_site_setting_path, params: {
+      section: "general",
+      site_setting: {
+        stripe_enabled: "0"
+      }
+    }
+
+    assert_equal false, SiteSetting.current.reload.stripe_enabled
+    assert_redirected_to edit_admin_site_setting_path(anchor: "general")
+  end
+
   test "section update only applies permitted attributes" do
     sign_in users(:admin)
     setting = SiteSetting.current

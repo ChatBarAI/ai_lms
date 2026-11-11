@@ -131,7 +131,11 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def course_params
-    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    permitted = params.require(:course).permit(
+      :title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled,
+      :cover_image, :certificate_template, :free_course, :price_in_dollars,
+      tag_ids: [], prerequisite_course_ids: []
+    )
     filter_prerequisite_course_ids!(permitted)
     permitted
   end
