@@ -1,19 +1,36 @@
-.max-w-md.mx-auto
-  %h1.text-2xl.font-semibold.mb-6= t("devise.views.registrations.new.heading")
-  = form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f|
-    = render "devise/shared/error_messages", resource: resource
-    .mb-4
-      = f.label :email, class: "block text-sm font-medium text-gray-700 mb-1"
-      = f.email_field :email, autofocus: true, autocomplete: "email", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-    .mb-4
-      = f.label :password, class: "block text-sm font-medium text-gray-700 mb-1"
+- site_setting = SiteSetting.current
+- kinde_enabled = Rails.application.credentials.dig(:kinde, :client_id).present?
+- google_enabled = kinde_enabled && site_setting.kinde_google_sign_in_enabled?
+- microsoft_enabled = kinde_enabled && site_setting.kinde_microsoft_sign_in_enabled?
+.signup
+  %section.signup__form
+    %h1.signup__title= t("devise.views.registrations.new.heading")
+    %p.signup__lead= t("devise.views.registrations.new.subtitle")
+
+    - if google_enabled || microsoft_enabled
+      - if google_enabled
+        = link_to kinde_login_path(provider: "google"), data: { turbo: false }, class: "signup__sso" do
+          = image_tag "auth/google.svg", width: 18, height: 18, alt: ""
+          %span= t("devise.views.registrations.new.google")
+      - if microsoft_enabled
+        = link_to kinde_login_path(provider: "microsoft"), data: { turbo: false }, class: "signup__sso" do
+          = image_tag "auth/microsoft.svg", width: 18, height: 18, alt: ""
+          %span= t("devise.views.registrations.new.microsoft")
+      .signup__divider
+        %span= t("devise.views.registrations.new.or")
+
+    = form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f|
+      = render "devise/shared/error_messages", resource: resource
+      = f.text_field :name, autofocus: true, autocomplete: "name", required: true, placeholder: "#{t('devise.views.registrations.new.full_name')} *", "aria-label": t("devise.views.registrations.new.full_name"), class: "signup__field"
+      = f.email_field :email, autocomplete: "email", required: true, placeholder: "#{User.human_attribute_name(:email)} *", "aria-label": User.human_attribute_name(:email), class: "signup__field"
+      = f.password_field :password, autocomplete: "new-password", required: true, placeholder: "#{User.human_attribute_name(:password)} *", "aria-label": User.human_attribute_name(:password), class: "signup__field"
       - if @minimum_password_length
-        %span.text-xs.text-gray-500
-          = t("devise.views.registrations.new.minimum_password_length", count: @minimum_password_length)
-      = f.password_field :password, autocomplete: "new-password", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-    .mb-4
-      = f.label :password_confirmation, class: "block text-sm font-medium text-gray-700 mb-1"
-      = f.password_field :password_confirmation, autocomplete: "new-password", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-    .mb-4
-      = f.submit t("devise.views.registrations.new.submit"), class: "w-full inline-flex justify-center px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 cursor-pointer"
-  = render "devise/shared/links"
+        %p.signup__hint= t("devise.views.registrations.new.minimum_password_length", count: @minimum_password_length)
+      = f.password_field :password_confirmation, autocomplete: "new-password", required: true, placeholder: "#{User.human_attribute_name(:password_confirmation)} *", "aria-label": User.human_attribute_name(:password_confirmation), class: "signup__field"
+      = f.submit t("devise.views.registrations.new.submit"), class: "signup__cta"
+
+    %p.signup__alt
+      = t("devise.views.registrations.new.have_account")
+      = link_to t("devise.views.links.log_in"), new_session_path(resource_name)
+
+  = render "devise/shared/auth_panel", text: t("devise.views.registrations.new.panel_text", brand: site_brand_name)

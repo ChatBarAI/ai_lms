@@ -1,6 +1,8 @@
 require "csv"
 
 class Admin::UsersController < Admin::BaseController
+  skip_before_action :authenticate_user!, :require_admin, :verify_authenticity_token, only: [ :new_user ]
+
   before_action :set_user, only: [ :show, :edit, :update, :destroy, :enroll, :reset_password ]
 
   def index
@@ -22,6 +24,28 @@ class Admin::UsersController < Admin::BaseController
 
   def new
     @user = User.new
+  end
+
+  def new_user
+    zapier_token = Rails.application.credentials.zapier_token
+    provided_token = request.headers["Authorization"].to_s
+    head :unauthorized and return unless ActiveSupport::SecurityUtils.secure_compare(zapier_token, provided_token)
+
+    @user = User.new
+    @user.name = params[:full_name]
+    @user.email = params[:email]
+    @user.password = Devise.friendly_token[0, 20]
+
+    if @user.save
+      reset_password_token = @user.generate_reset_password_token
+      reset_password_url = edit_user_password_url(
+        @user,
+        reset_password_token: reset_password_token
+      )
+      render json: @user.as_json.merge(password_reset_url: reset_password_url), status: :created
+    else
+      render json: @user.errors, status: :unprocessable_entity
+    end
   end
 
   def create
