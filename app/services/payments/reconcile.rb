@@ -77,6 +77,8 @@ module Payments
       charge = intent.fetch("latest_charge")
       raise Error, "Payment not captured" unless intent["status"] == "succeeded" && charge["paid"] && charge["captured"] &&
         charge["currency"] == purchase.currency && charge["amount"] == session["amount_total"] && charge["livemode"] == purchase.livemode
+      # Checkout is card only; any other method is flagged for review, never granted.
+      raise Error, "Unsupported payment method" unless charge.dig("payment_method_details", "type") == "card"
       disputes = @client.request(:get, "/disputes", { charge: charge.fetch("id"), limit: 100 })
       raise Error, "Dispute history requires review" if disputes["has_more"]
       disputes

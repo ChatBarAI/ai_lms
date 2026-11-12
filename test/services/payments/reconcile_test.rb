@@ -30,7 +30,8 @@ class Payments::ReconcileTest < ActiveSupport::TestCase
       "automatic_tax" => { "enabled" => false }, "amount_total" => 1000,
       "total_details" => { "amount_tax" => 0, "amount_discount" => 0, "amount_shipping" => 0 },
       "payment_intent" => { "id" => "pi_test", "status" => "succeeded", "latest_charge" => {
-        "id" => "ch_test", "paid" => true, "captured" => true, "amount" => 1000, "currency" => "eur", "livemode" => false, "amount_refunded" => 0 } }
+        "id" => "ch_test", "paid" => true, "captured" => true, "amount" => 1000, "currency" => "eur", "livemode" => false, "amount_refunded" => 0,
+        "payment_method_details" => { "type" => "card" } } }
     }
     @stripe.items = { "data" => [ { "quantity" => 1, "price" => { "unit_amount" => 1000, "currency" => "eur", "tax_behavior" => "exclusive" } } ] }
     @stripe.disputes = { "data" => [] }
@@ -151,5 +152,14 @@ class Payments::ReconcileTest < ActiveSupport::TestCase
     end
     reconcile
     assert_equal "lost", @purchase.reload.payment_state
+  end
+
+  test "a payment by any method other than card is flagged and never granted" do
+    @stripe.session["payment_intent"]["latest_charge"]["payment_method_details"] = { "type" => "sepa_debit" }
+    assert_no_difference "CourseEntitlement.count" do
+      assert_raises(Payments::Error) { reconcile }
+    end
+    assert_equal "exception", @purchase.reload.fulfilment_state
+    assert_equal "Unsupported payment method", @purchase.exception_reason
   end
 end

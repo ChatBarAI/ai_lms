@@ -14,10 +14,12 @@ module PaymentsHelper
     course_price_amount(course)
   end
 
-  # Amount actually charged for a purchase, e.g. "USD 25.00".
+  # Amount charged for a purchase, e.g. "USD 25.00": the reconciled total including
+  # any tax once paid, otherwise the quoted course price.
   def purchase_amount_label(purchase)
     precision = Payments::Currency::RULES.fetch(purchase.currency, [ 2 ]).first
-    number_to_currency(BigDecimal(purchase.amount_minor.to_s) / (10 ** precision), unit: purchase.currency.upcase + " ", precision: precision)
+    minor = purchase.total_minor || purchase.amount_minor
+    number_to_currency(BigDecimal(minor.to_s) / (10 ** precision), unit: purchase.currency.upcase + " ", precision: precision)
   end
 
   # Presentation for the purchase status page. Class strings are written out in

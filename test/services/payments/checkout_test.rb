@@ -20,7 +20,7 @@ class Payments::CheckoutTest < ActiveSupport::TestCase
 
   # Tracks session state per path so retirement (lookup + expire) can be asserted.
   class SessionStripe
-    attr_reader :calls, :sessions
+    attr_reader :calls, :sessions, :created_with
     def initialize
       @calls = []
       @sessions = {}
@@ -31,6 +31,7 @@ class Payments::CheckoutTest < ActiveSupport::TestCase
       @calls << [ method, path ]
       case [ method, path ]
       in [ :post, "/checkout/sessions" ]
+        @created_with = params
         id = "cs_#{@seq += 1}"
         @sessions[id] = { "id" => id, "status" => "open", "url" => "https://checkout.stripe.com/c/pay/#{id}",
           "expires_at" => 1.hour.from_now.to_i, "client_reference_id" => params[:client_reference_id] }
@@ -105,6 +106,7 @@ class Payments::CheckoutTest < ActiveSupport::TestCase
     assert_equal "expired", first.reload.payment_state
     assert_equal "expired", @client.sessions[first.checkout_session_id]["status"]
     assert_equal 5000, second.amount_minor
+    assert_equal [ "card" ], @client.created_with[:payment_method_types]
     assert_equal "open", @client.sessions[second.checkout_session_id]["status"]
   end
 
