@@ -95,7 +95,43 @@
       "mode_unconfigured": "Stripe: Nicht konfiguriert",
       "mode_test_tooltip": "Der gespeicherte Stripe-Schlüssel verwendet eine Testumgebung. Zahlungen werden simuliert; es wird kein echtes Geld abgebucht. Dies ist eine Statusanzeige, kein Bedienelement.",
       "mode_live_tooltip": "Der gespeicherte Stripe-Schlüssel verwendet die Live-Umgebung. Bei aktivierten Käufen kann echtes Geld abgebucht werden. Dies ist eine Statusanzeige, kein Bedienelement.",
-      "mode_unconfigured_tooltip": "Es ist kein geheimer Stripe-API-Schlüssel konfiguriert. Tragen Sie unter Stripe-Verbindung einen Schlüssel ein, um die Zahlungsumgebung festzulegen."
+      "mode_unconfigured_tooltip": "Es ist kein geheimer Stripe-API-Schlüssel konfiguriert. Tragen Sie unter Stripe-Verbindung einen Schlüssel ein, um die Zahlungsumgebung festzulegen.",
+      "success": "Zahlung erhalten. Der Kurs ist jetzt in Ihrem Konto freigeschaltet.",
+      "start_learning": "Jetzt lernen",
+      "amount": "Betrag",
+      "secure_checkout": "Zahlungen werden sicher über Stripe abgewickelt.",
+      "status": {
+        "success": {
+          "badge": "Zahlung erfolgreich",
+          "heading": "Ihr Kurs ist",
+          "accent": "startklar"
+        },
+        "processing": {
+          "badge": "In Bearbeitung",
+          "heading": "Ihre Zahlung wird",
+          "accent": "verarbeitet"
+        },
+        "cancelled": {
+          "badge": "Kauf abgebrochen",
+          "heading": "Der Kauf wurde",
+          "accent": "abgebrochen"
+        },
+        "expired": {
+          "badge": "Kauf abgelaufen",
+          "heading": "Ihr Kaufvorgang ist",
+          "accent": "abgelaufen"
+        },
+        "support": {
+          "badge": "Wird geprüft",
+          "heading": "Wir prüfen",
+          "accent": "Ihren Kauf"
+        },
+        "locked": {
+          "badge": "Zugriff gesperrt",
+          "heading": "Der Kurszugriff ist",
+          "accent": "gesperrt"
+        }
+      }
     }
   }
 }

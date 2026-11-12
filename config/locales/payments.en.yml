@@ -95,7 +95,43 @@
       "mode_unconfigured": "Stripe: Not configured",
       "mode_test_tooltip": "The saved Stripe key uses a test environment. Payments are simulated and no real money is charged. This status is informational, not a control.",
       "mode_live_tooltip": "The saved Stripe key uses the live environment. Purchases can charge real money when new purchases are enabled. This status is informational, not a control.",
-      "mode_unconfigured_tooltip": "No Stripe secret key is configured. Add a key under Stripe connection to set the payment environment."
+      "mode_unconfigured_tooltip": "No Stripe secret key is configured. Add a key under Stripe connection to set the payment environment.",
+      "success": "Payment received. The course is now unlocked in your account.",
+      "start_learning": "Start learning",
+      "amount": "Amount",
+      "secure_checkout": "Payments are processed securely by Stripe.",
+      "status": {
+        "success": {
+          "badge": "Payment successful",
+          "heading": "Your course is",
+          "accent": "ready to go"
+        },
+        "processing": {
+          "badge": "Processing",
+          "heading": "Your payment is",
+          "accent": "processing"
+        },
+        "cancelled": {
+          "badge": "Checkout cancelled",
+          "heading": "Checkout was",
+          "accent": "cancelled"
+        },
+        "expired": {
+          "badge": "Checkout expired",
+          "heading": "Your checkout has",
+          "accent": "expired"
+        },
+        "support": {
+          "badge": "Needs review",
+          "heading": "We are reviewing",
+          "accent": "your purchase"
+        },
+        "locked": {
+          "badge": "Access locked",
+          "heading": "Course access is",
+          "accent": "locked"
+        }
+      }
     }
   }
 }

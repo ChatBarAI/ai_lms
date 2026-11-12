@@ -58,7 +58,7 @@ module Payments
         end
         metadata = { purchase_id: purchase.id, user_id: purchase.user_id, course_id: purchase.course_id, attempt_key: purchase.attempt_key }
         session = @client.request(:post, "/checkout/sessions", {
-          mode: "payment", payment_method_types: [ "card" ], client_reference_id: purchase.attempt_key,
+          mode: "payment", client_reference_id: purchase.attempt_key,
           metadata: metadata, payment_intent_data: { metadata: metadata },
           automatic_tax: { enabled: purchase.tax_mode == "automatic" },
           adaptive_pricing: { enabled: false },
