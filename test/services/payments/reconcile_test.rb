@@ -2,9 +2,12 @@ require "test_helper"
 
 class Payments::ReconcileTest < ActiveSupport::TestCase
   class FakeStripe
-    attr_accessor :session, :items, :disputes
+    attr_accessor :session, :items, :disputes, :on_request
+    attr_reader :open_transactions
     def verify_account!(_purchase = nil); end
     def request(_method, path, _params = {})
+      (@open_transactions ||= []) << ActiveRecord::Base.connection.open_transactions
+      on_request&.call(path)
       return items if path.end_with?("/line_items")
       return disputes if path == "/disputes"
       session
@@ -127,5 +130,26 @@ class Payments::ReconcileTest < ActiveSupport::TestCase
     assert_equal 1000, @purchase.reload.amount_minor
     assert_equal "Paid", @purchase.course_title
     assert_equal "fulfilled", @purchase.fulfilment_state
+  end
+
+  test "Stripe is never called while a database row lock is held" do
+    @stripe.disputes = { "data" => [ { "status" => "lost" } ] }
+    reconcile
+    # Only the test's own wrapping transaction may be open during Stripe calls.
+    assert_equal [ 1 ], @stripe.open_transactions.uniq
+  end
+
+  test "an older Stripe read cannot overwrite a newer reconcile" do
+    reconcile
+    assert_equal "paid", @purchase.reload.payment_state
+    # Another worker reads Stripe after we did and records the lost dispute first.
+    @stripe.on_request = lambda do |path|
+      next unless path == "/disputes"
+      @stripe.on_request = nil
+      newer = Purchase.find(@purchase.id)
+      newer.update_columns(payment_state: "lost", reconciled_at: 1.minute.from_now)
+    end
+    reconcile
+    assert_equal "lost", @purchase.reload.payment_state
   end
 end

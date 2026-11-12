@@ -3,7 +3,7 @@ require "test_helper"
 class StripeWebhooksControllerTest < ActionDispatch::IntegrationTest
   test "durable inbox survives queue submission failure" do
     event = PaymentEvent.create!(provider_event_id: "evt_test", account_id: "acct_test", livemode: false,
-      event_type: "checkout.session.completed", object_id: "cs_test")
+      event_type: "checkout.session.completed", provider_object_id: "cs_test")
     Payments::Webhook.stub(:receive, event) do
       PaymentEventJob.stub(:perform_later, ->(*) { raise IOError, "Redis unavailable" }) do
         post stripe_webhook_path, params: "{}", headers: { "CONTENT_TYPE" => "application/json" }

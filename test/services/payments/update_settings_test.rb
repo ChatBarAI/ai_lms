@@ -82,7 +82,7 @@ class Payments::UpdateSettingsTest < ActiveSupport::TestCase
   test "existing inbox history prevents switching account or mode but permits rotation" do
     assert update
     PaymentEvent.create!(provider_event_id: "evt_previous", account_id: "acct_example", livemode: false,
-      event_type: "checkout.session.completed", object_id: "cs_previous")
+      event_type: "checkout.session.completed", provider_object_id: "cs_previous")
     assert update(stripe_secret_key: "sk_test_rotated")
     assert_not update(stripe_secret_key: "sk_live_example", stripe_webhook_secret: "whsec_live")
     assert_equal "sk_test_rotated", @settings.reload.stripe_secret_key

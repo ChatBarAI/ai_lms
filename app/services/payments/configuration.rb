@@ -1,11 +1,30 @@
 module Payments
   class Configuration
+    SECRETS = %w[secret_key webhook_secret account_id].freeze
+
+    # Snapshot for one request or job: Ability, checkout and views call these many
+    # times per request. The Rails executor resets it between requests and jobs, so
+    # there is still no process-level memoization and later work sees committed
+    # changes. SiteSetting saves reset it too. Code that re-checks settings under the
+    # settings row lock calls reset! first so it never decides on a pre-lock read.
+    class Snapshot < ActiveSupport::CurrentAttributes
+      attribute :secrets, :problems
+    end
+
+    def self.reset!
+      Snapshot.reset
+    end
+
     def self.secret(name)
-      raise ArgumentError, "Unknown Stripe setting" unless %w[secret_key webhook_secret account_id].include?(name.to_s)
-      # No process-level memoization: web requests and jobs see committed changes.
-      settings = SiteSetting.uncached { SiteSetting.first }
-      stored = settings&.has_attribute?("stripe_#{name}") && settings.public_send("stripe_#{name}")
-      stored.presence || fallback_secret(name)
+      raise ArgumentError, "Unknown Stripe setting" unless SECRETS.include?(name.to_s)
+      Snapshot.secrets ||= begin
+        settings = SiteSetting.uncached { SiteSetting.first }
+        SECRETS.to_h do |key|
+          stored = settings&.has_attribute?("stripe_#{key}") && settings.public_send("stripe_#{key}")
+          [ key, stored.presence || fallback_secret(key) ]
+        end.freeze
+      end
+      Snapshot.secrets.fetch(name.to_s)
     end
 
     def self.fallback_secret(name)
@@ -30,6 +49,10 @@ module Payments
     end
 
     def self.problems
+      (Snapshot.problems ||= compute_problems.freeze).dup
+    end
+
+    def self.compute_problems
       settings = SiteSetting.current
       errors = []
       %w[secret_key webhook_secret account_id].each { |key| errors << "STRIPE_#{key.upcase}" if secret(key).blank? }

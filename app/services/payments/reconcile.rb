@@ -5,19 +5,27 @@ module Payments
     end
 
     def call(purchase)
+      read_at = Time.current
+      # Every Stripe read happens before any row lock, so a slow Stripe response
+      # never blocks the buyer's sign-in, admin edits or parallel checkouts.
+      @client.verify_account!(purchase)
+      raise Error, "Checkout session missing" if purchase.checkout_session_id.blank?
+      session = @client.request(:get, "/checkout/sessions/#{purchase.checkout_session_id}", { expand: [ "payment_intent.latest_charge" ] })
+      validate_session!(purchase, session)
+      disputes = fetch_disputes!(purchase, session) if session["payment_status"] == "paid"
+
       # Same buyer lock serializes separate attempts and return/webhook races.
       purchase.user.with_lock do
         purchase.with_lock do
-          @client.verify_account!(purchase)
-          raise Error, "Checkout session missing" if purchase.checkout_session_id.blank?
-          session = @client.request(:get, "/checkout/sessions/#{purchase.checkout_session_id}", { expand: [ "payment_intent.latest_charge" ] })
-          validate_session!(purchase, session)
-          purchase.reconciled_at = Time.current
+          # Compare-and-write: a reconcile that read Stripe after us has already
+          # written newer state; applying our older snapshot could undo it.
+          next if purchase.reconciled_at && purchase.reconciled_at > read_at
+          purchase.reconciled_at = read_at
           if session["status"] == "expired" && purchase.payment_state == "pending"
             purchase.payment_state = "expired"
           end
           if session["payment_status"] == "paid"
-            reconcile_paid!(purchase, session)
+            reconcile_paid!(purchase, session, disputes)
           elsif purchase.fulfilled_at.nil?
             purchase.fulfilment_state = "pending"
             purchase.exception_reason = nil
@@ -31,7 +39,9 @@ module Payments
       end
       purchase
     rescue Error => e
-      purchase.update!(fulfilment_state: "exception", exception_reason: e.message)
+      # Reload first: the rolled-back transaction leaves partial reconcile state
+      # (reconciled_at, totals, refunds) dirty in memory, which must not be saved.
+      purchase.reload.update!(fulfilment_state: "exception", exception_reason: e.message)
       raise
     end
 
@@ -62,18 +72,24 @@ module Payments
       raise Error, "Tax calculation incomplete" if purchase.tax_mode == "automatic" && session.dig("automatic_tax", "status") != "complete"
     end
 
-    def reconcile_paid!(purchase, session)
+    def fetch_disputes!(purchase, session)
       intent = session.fetch("payment_intent")
       charge = intent.fetch("latest_charge")
       raise Error, "Payment not captured" unless intent["status"] == "succeeded" && charge["paid"] && charge["captured"] &&
         charge["currency"] == purchase.currency && charge["amount"] == session["amount_total"] && charge["livemode"] == purchase.livemode
+      disputes = @client.request(:get, "/disputes", { charge: charge.fetch("id"), limit: 100 })
+      raise Error, "Dispute history requires review" if disputes["has_more"]
+      disputes
+    end
+
+    def reconcile_paid!(purchase, session, disputes)
+      intent = session.fetch("payment_intent")
+      charge = intent.fetch("latest_charge")
       purchase.payment_intent_id = intent.fetch("id")
       purchase.tax_minor = session.dig("total_details", "amount_tax")
       purchase.total_minor = session.fetch("amount_total")
       purchase.base_minor = purchase.total_minor - purchase.tax_minor
       purchase.refunded_minor = [ purchase.refunded_minor, charge.fetch("amount_refunded") ].max
-      disputes = @client.request(:get, "/disputes", { charge: charge.fetch("id"), limit: 100 })
-      raise Error, "Dispute history requires review" if disputes["has_more"]
       statuses = disputes.fetch("data").map { |d| d.fetch("status") }
       grant = purchase.course_entitlement
       if purchase.refunded_minor >= purchase.total_minor

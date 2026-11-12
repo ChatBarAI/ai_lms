@@ -69,6 +69,7 @@
       "settings_description": "Course purchases, Stripe connection and payment processing.",
       "connection_heading": "Stripe connection",
       "readiness_heading": "Configuration needed",
+      "readiness_account_not_linked": "Stripe account not linked: save the Stripe secret key here to connect it",
       "health_heading": "Processing health",
       "payment_tax_mode_tooltip": "automatic = Stripe Tax; exempt = explicitly no tax",
       "stripe_secret_key": "Stripe secret key",

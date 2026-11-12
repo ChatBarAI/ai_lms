@@ -9,26 +9,21 @@ module Payments
         values[field] = values[field].to_s.strip
         values.delete(field) if values[field].blank?
       end
+      verified = verify_credentials(settings, values) if CREDENTIAL_FIELDS.any? { |field| values.key?(field) }
+      return false if verified == false
       # Shared with checkout-attempt creation: switching identity cannot race
       # the first purchase. Failed checks roll back the entire settings change.
+      # Stripe was contacted above, before this lock, so checkout never waits on it.
       settings.with_lock do
         previous_account = effective(settings, "account_id")
         previous_mode = live?(effective(settings, "secret_key"))
         settings.assign_attributes(values)
         return false unless settings.valid?
-        if CREDENTIAL_FIELDS.any? { |field| values.key?(field) }
+        if verified
           key = effective(settings, "secret_key")
-          webhook_secret = effective(settings, "webhook_secret")
-          if [ key, webhook_secret ].any?(&:blank?)
-            return reject(settings, "credentials_required")
-          end
-          client = StripeClient.new(secret_key: key)
-          remote_account = client.request(:get, "/account")
-          balance = client.request(:get, "/balance")
-          account = remote_account["id"]
-          unless account.is_a?(String) && account.match?(/\Aacct_[A-Za-z0-9]+\z/) && balance["livemode"] == live?(key)
-            return reject(settings, "connection_mismatch")
-          end
+          # Another save changed the credentials while Stripe was being contacted.
+          return reject(settings, "connection_failed") unless key == verified[:key]
+          account = verified[:account]
           if history_for_other_identity?(account, live?(key))
             return reject(settings, "identity_locked")
           end
@@ -49,6 +44,21 @@ module Payments
     end
 
     private
+
+    # Returns { key:, account: } for credentials Stripe confirmed, or false after
+    # adding the rejection error. Never called while a row lock is held.
+    def verify_credentials(settings, values)
+      key = values["stripe_secret_key"].presence || effective(settings, "secret_key")
+      webhook_secret = values["stripe_webhook_secret"].presence || effective(settings, "webhook_secret")
+      return reject(settings, "credentials_required") if [ key, webhook_secret ].any?(&:blank?)
+      client = StripeClient.new(secret_key: key)
+      account = client.request(:get, "/account")["id"]
+      balance = client.request(:get, "/balance")
+      unless account.is_a?(String) && account.match?(/\Aacct_[A-Za-z0-9]+\z/) && balance["livemode"] == live?(key)
+        return reject(settings, "connection_mismatch")
+      end
+      { key: key, account: account }
+    end
 
     def effective(settings, name)
       settings.public_send("stripe_#{name}").presence || Configuration.fallback_secret(name)

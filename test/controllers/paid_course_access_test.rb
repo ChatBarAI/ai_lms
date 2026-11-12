@@ -33,6 +33,17 @@ class PaidCourseAccessTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "token API stays available to anonymous embeds for free courses and answers JSON when gated" do
+    free = Course.create!(title: "Free private", owner: users(:instructor), published_at: nil, public_access_enabled: false)
+    free_lesson = free.lessons.create!(title: "Draft lesson", position: 1, cbai_token: "free-embed-token")
+    get api_lesson_path(free_lesson.cbai_token)
+    assert_response :success
+    assert_equal "Draft lesson", response.parsed_body["title"]
+    get api_lesson_path(@lesson.cbai_token)
+    assert_response :forbidden
+    assert_equal "forbidden", response.parsed_body["error"]
+  end
+
   test "withdrawal archives learning history and rejoin retains access" do
     user = users(:other_student)
     Entitlements::Grant.call(user: user, course: @course, source: "manual", reference: "manual",

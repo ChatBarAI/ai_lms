@@ -88,7 +88,7 @@ class AddCoursePayments < ActiveRecord::Migration[7.2]
       t.string :account_id, null: false
       t.boolean :livemode, null: false
       t.string :event_type, null: false
-      t.string :object_id, null: false
+      t.string :provider_object_id, null: false
       t.string :state, default: "pending", null: false
       t.integer :attempts, default: 0, null: false
       t.string :error_summary

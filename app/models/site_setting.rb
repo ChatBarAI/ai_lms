@@ -74,6 +74,9 @@ class SiteSetting < ApplicationRecord
   before_validation :normalise_terminology
 
   after_commit :reapply_terminology
+  # Payment configuration is snapshotted per request/job; never serve it stale after a change.
+  after_save { Payments::Configuration.reset! }
+  after_rollback { Payments::Configuration.reset! }
 
   def self.current
     first_or_create!(brand_name: "ChatBar AI Learn", pass_mark: 70)

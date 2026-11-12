@@ -38,4 +38,19 @@ class Payments::ConfigurationTest < ActiveSupport::TestCase
   test "HTTPS origins remain valid for live production payments" do
     assert_equal "https://lms.example", base_url_for("https://lms.example/", environment: "production", key: "sk_live_example")
   end
+
+  test "secrets are read once per request snapshot and refreshed after a settings save" do
+    SiteSetting.current.update!(stripe_secret_key: "sk_test_first")
+    Payments::Configuration.reset!
+    queries = 0
+    counter = ->(*, payload) { queries += 1 if payload[:sql].include?("site_settings") }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      5.times { Payments::Configuration.secret("secret_key") }
+      Payments::Configuration.livemode?
+      Payments::Configuration.secret("account_id")
+    end
+    assert_equal 1, queries
+    SiteSetting.current.update!(stripe_secret_key: "sk_test_second")
+    assert_equal "sk_test_second", Payments::Configuration.secret("secret_key")
+  end
 end

@@ -69,6 +69,7 @@
       "settings_description": "Kurskäufe, Stripe-Verbindung und Zahlungsverarbeitung.",
       "connection_heading": "Stripe-Verbindung",
       "readiness_heading": "Konfiguration erforderlich",
+      "readiness_account_not_linked": "Stripe-Konto nicht verknüpft: Stripe Secret Key hier speichern, um es zu verbinden",
       "health_heading": "Verarbeitungsstatus",
       "payment_tax_mode_tooltip": "automatic = Stripe Tax; exempt = ausdrücklich steuerfrei",
       "stripe_secret_key": "Geheimer Stripe-API-Schlüssel",

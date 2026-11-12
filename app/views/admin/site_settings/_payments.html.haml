@@ -69,7 +69,10 @@
               %code= Payments::StripeClient::API_VERSION
 
         .min-w-0
-          - problems = Payments::Configuration.problems - ["STRIPE_ACCOUNT_ID", "tax configuration"]
+          - problems = Payments::Configuration.problems
+          -# The account ID is discovered by saving the secret key; a missing key already covers it.
+          - problems -= ["STRIPE_ACCOUNT_ID"] if problems.include?("STRIPE_SECRET_KEY")
+          - problems = problems.map { |problem| problem == "STRIPE_ACCOUNT_ID" ? t("payments.readiness_account_not_linked") : problem }
           - if problems.any?
             .rounded.border.border-amber-300.bg-amber-50.px-4.py-3.text-sm.text-amber-800
               %p.font-semibold= t("payments.readiness_heading")

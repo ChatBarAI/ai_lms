@@ -299,7 +299,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_11_000000) do
     t.string "account_id", null: false
     t.boolean "livemode", null: false
     t.string "event_type", null: false
-    t.string "object_id", null: false
+    t.string "provider_object_id", null: false
     t.string "state", default: "pending", null: false
     t.integer "attempts", default: 0, null: false
     t.string "error_summary"

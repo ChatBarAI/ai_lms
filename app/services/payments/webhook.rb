@@ -20,7 +20,7 @@ module Payments
       # Keep identifiers only; do not retain billing addresses, cards or full payloads.
       PaymentEvent.create_or_find_by!(account_id: account, livemode: event.fetch("livemode"), provider_event_id: event.fetch("id")) do |row|
         row.event_type = event.fetch("type")
-        row.object_id = event.fetch("data").fetch("object").fetch("id")
+        row.provider_object_id = event.fetch("data").fetch("object").fetch("id")
       end
     rescue JSON::ParserError, KeyError
       raise Error, "Invalid event"

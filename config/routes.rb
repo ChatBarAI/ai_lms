@@ -131,11 +131,7 @@ Rails.application.routes.draw do
     end
     resources :organizations
     resources :subjects
-    post "stripe/webhook", to: "stripe_webhooks#create", as: :stripe_webhook
-  resources :purchases, only: :show
-
-  resources :courses do
-    resources :purchases, only: :create
+    resources :courses do
       member do
         get :report
         get   "certificate_layout", to: "courses#certificate_layout"
