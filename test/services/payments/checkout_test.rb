@@ -87,6 +87,61 @@ class Payments::CheckoutTest < ActiveSupport::TestCase
     assert_empty @client.keys
   end
 
+  test "legacy failed creation is retired before retrying with a new key" do
+    @client.fail_once = true
+    assert_raises(Payments::Error) { checkout }
+    old = Purchase.last
+    mark_legacy_request(old)
+    use_session_stripe
+
+    fresh = nil
+    assert_difference "Purchase.count", 1 do
+      fresh = checkout
+    end
+    assert_equal "expired", old.reload.payment_state
+    assert_not_equal old.attempt_key, fresh.attempt_key
+    assert_equal [ :get, "/checkout/sessions" ], @client.calls.first
+    assert_equal [ "card" ], @client.created_with[:allowed_payment_method_types]
+    assert_not @client.created_with.key?(:payment_method_types)
+    assert fresh.checkout_url.present?
+  end
+
+  test "legacy creation with a lost response expires recovered session before replacement" do
+    use_session_stripe
+    old = checkout
+    session_id = old.checkout_session_id
+    old.update!(checkout_session_id: nil, checkout_url: nil)
+    mark_legacy_request(old)
+    @client.calls.clear
+
+    fresh = checkout
+    assert_not_equal old.attempt_key, fresh.attempt_key
+    assert_equal "expired", @client.sessions[session_id]["status"]
+    assert_equal "expired", old.reload.payment_state
+    assert_operator @client.calls.index([ :post, "/checkout/sessions/#{session_id}/expire" ]), :<,
+      @client.calls.index([ :post, "/checkout/sessions" ])
+  end
+
+  test "legacy creation already paid is recovered without a second checkout" do
+    use_session_stripe
+    old = checkout
+    @client.sessions[old.checkout_session_id]["status"] = "complete"
+    old.update!(checkout_session_id: nil, checkout_url: nil)
+    mark_legacy_request(old)
+    @client.calls.clear
+    reconciled = []
+    fake = Object.new
+    fake.define_singleton_method(:call) { |purchase| reconciled << purchase.id; purchase }
+
+    Payments::Reconcile.stub(:new, ->(**) { fake }) do
+      assert_no_difference "Purchase.count" do
+        assert_equal old.id, checkout.id
+      end
+    end
+    assert_equal [ old.id ], reconciled
+    assert_not_includes @client.calls, [ :post, "/checkout/sessions" ]
+  end
+
   test "fractional minor units and unsupported currency cannot be saved" do
     @course.price_minor = "100.5"
     assert_not @course.valid?
@@ -106,7 +161,8 @@ class Payments::CheckoutTest < ActiveSupport::TestCase
     assert_equal "expired", first.reload.payment_state
     assert_equal "expired", @client.sessions[first.checkout_session_id]["status"]
     assert_equal 5000, second.amount_minor
-    assert_equal [ "card" ], @client.created_with[:payment_method_types]
+    assert_equal [ "card" ], @client.created_with[:allowed_payment_method_types]
+    assert_not @client.created_with.key?(:payment_method_types)
     assert_equal "open", @client.sessions[second.checkout_session_id]["status"]
   end
 
@@ -140,6 +196,12 @@ class Payments::CheckoutTest < ActiveSupport::TestCase
   end
 
   private
+
+  # Simulate an immutable snapshot written by the previous deployment.
+  def mark_legacy_request(purchase)
+    Purchase.where(id: purchase.id).update_all(eligibility: purchase.eligibility.except("checkout_request_version"))
+    purchase.reload
+  end
 
   def use_session_stripe
     @client = SessionStripe.new

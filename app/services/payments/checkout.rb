@@ -1,5 +1,8 @@
 module Payments
   class Checkout
+    # Bump when the session creation payload changes incompatibly with saved retries.
+    REQUEST_VERSION = 2
+
     def initialize(client: StripeClient.new)
       @client = client
     end
@@ -19,7 +22,7 @@ module Payments
       2.times do
         purchase = pending_purchase(user, course, settings)
         return nil unless purchase
-        if current_terms?(purchase, course, settings) && !ambiguous?(purchase)
+        if current_terms?(purchase, course, settings) && current_request?(purchase) && !ambiguous?(purchase)
           ensure_session(purchase)
           return purchase unless purchase.payment_state == "expired" || ambiguous?(purchase)
           next if purchase.payment_state == "expired"
@@ -61,7 +64,8 @@ module Payments
           # Card only, by design: fulfilment assumes payment is confirmed when
           # checkout completes. Delayed methods (SEPA debit, bank transfer) are not
           # supported, and Reconcile refuses to grant access for anything else.
-          mode: "payment", payment_method_types: [ "card" ], client_reference_id: purchase.attempt_key,
+          # Filter Dashboard-enabled methods; Endive no longer accepts payment_method_types.
+          mode: "payment", allowed_payment_method_types: [ "card" ], client_reference_id: purchase.attempt_key,
           metadata: metadata, payment_intent_data: { metadata: metadata },
           automatic_tax: { enabled: purchase.tax_mode == "automatic" },
           adaptive_pricing: { enabled: false },
@@ -92,6 +96,7 @@ module Payments
               currency: course.price_currency, tax_mode: settings.payment_tax_mode,
               tax_behavior: settings.payment_tax_behavior, return_base_url: Configuration.base_url,
               attempt_key: SecureRandom.uuid, eligibility: { "eligible" => true, "checked_at" => Time.current.iso8601,
+                "checkout_request_version" => REQUEST_VERSION,
                 "prerequisites" => course.prerequisite_course_ids })
         end
       end
@@ -105,6 +110,12 @@ module Payments
 
     def same_account?(purchase)
       purchase.account_id == Configuration.secret("account_id") && purchase.livemode == Configuration.livemode?
+    end
+
+    def current_request?(purchase)
+      # Existing sessions can still be used without replaying their creation request.
+      # Unknown/old payloads must go through recovery and retirement before a new key.
+      purchase.checkout_session_id.present? || purchase.eligibility["checkout_request_version"] == REQUEST_VERSION
     end
 
     def ambiguous?(purchase)
