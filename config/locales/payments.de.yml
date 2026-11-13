@@ -27,7 +27,7 @@
       "payment_support_email": "Support-E-Mail",
       "live_ready": "Ich habe Verkäufer, Stripe Tax, Belege, Kaufbedingungen, Aufbewahrung und Staging-Abnahme für Live-Verkäufe geprüft.",
       "currency_help": "Ein Währungswechsel erfordert neue Preise für kostenpflichtige Kurse. Frühere Käufe behalten Betrag und Währung.",
-      "tax_help": "Konfigurieren Sie Steuerregistrierungen und den Standard-Steuercode in Stripe. Wählen Sie exempt nur nach ausdrücklicher Bestätigung der Steuerfreiheit.",
+      "tax_help": "Konfigurieren Sie für automatische Steuern den Unternehmensstandort, erforderliche Registrierungen und den Standard-Steuercode in derselben Stripe-Umgebung, bei Tests auch in der Sandbox. Wählen Sie exempt nur nach ausdrücklicher Bestätigung, dass keine Steuer anfällt.",
       "recovery_at": "Letzter Wiederherstellungslauf: %{time}",
       "last_event": "Zuletzt verarbeitetes Ereignis: %{time}",
       "oldest_event": "Ältestes ausstehendes Ereignis: %{time}",
@@ -55,7 +55,7 @@
       "pricing": "Kurszugriff und Preise",
       "policy": "Zugriffsregel",
       "price_minor": "Preis in kleinster Währungseinheit (Ganzzahl)",
-      "price_help": "EUR/USD/GBP: 100 = 1,00. JPY: 100 = ¥100. Die Währung muss vor dem Kauf mit den Zahlungseinstellungen übereinstimmen.",
+      "price_help": "Geben Sie ganze kleinste Währungseinheiten ein: EUR/USD/GBP 100 = 1,00; JPY 100 = ¥100. LMS-Mindesteingaben: EUR 50 (0,50 €), USD 50 (0,50 $), GBP 30 (0,30 £), JPY 50 (¥50). Die Kurswährung muss den Zahlungseinstellungen entsprechen. Inclusive/exclusive bestimmt, ob Steuern enthalten sind oder im Checkout hinzukommen.",
       "conversion_help": "Beim Wechsel von kostenlos zu kostenpflichtig erhalten eingeschriebene Lernende protokollierte Zugriffsrechte. Der Wechsel zu kostenlos bewahrt den Kaufverlauf und löst keine Erstattungen aus.",
       "buy": "Kurs kaufen",
       "sign_in_buy": "Zum Kauf anmelden",
@@ -71,11 +71,11 @@
       "readiness_heading": "Konfiguration erforderlich",
       "readiness_account_not_linked": "Stripe-Konto nicht verknüpft: Stripe Secret Key hier speichern, um es zu verbinden",
       "health_heading": "Verarbeitungsstatus",
-      "payment_tax_mode_tooltip": "automatic = Stripe Tax; exempt = ausdrücklich steuerfrei",
+      "payment_tax_mode_tooltip": "automatic verwendet Stripe Tax; exempt erklärt ausdrücklich, dass keine Steuer anfällt. unconfigured blockiert neue Käufe.",
       "stripe_secret_key": "Geheimer Stripe-API-Schlüssel",
       "stripe_webhook_secret": "Stripe-Webhook-Geheimnis",
       "stripe_account_id": "Stripe-Konto-ID",
-      "credentials_help": "Zugangsdaten werden verschlüsselt gespeichert. Lassen Sie Felder leer, um vorhandene Werte beizubehalten. Änderungen werden vor dem Speichern mit Stripe geprüft und gelten ohne Neustart von Rails oder Sidekiq.",
+      "credentials_help": "Stripe-Zugangsdaten werden verschlüsselt gespeichert und nie erneut angezeigt. Leere Felder behalten gespeicherte Werte. Speichern Sie bei der ersten Verbindung API-Schlüssel und Webhook-Geheimnis zusammen. Das Speichern prüft API-Schlüssel und Konto, aber nicht die Webhook-Zustellung. Änderungen gelten ohne Prozessneustart.",
       "credential_placeholder": "Leer lassen, um den aktuellen Wert beizubehalten",
       "webhook_check_help": "Die Verbindungsprüfung prüft API-Schlüssel und Konto. Prüfen Sie das Webhook-Geheimnis mit einem signierten Testereignis von Stripe.",
       "credentials_required": "Geben Sie für die erste Verbindung API-Schlüssel und Webhook-Geheimnis zusammen ein.",
@@ -131,7 +131,17 @@
           "heading": "Der Kurszugriff ist",
           "accent": "gesperrt"
         }
-      }
+      },
+      "stripe_secret_key_help": "Öffnen Sie in der Stripe-Kontoauswahl die gewünschte Sandbox und dann API-Schlüssel. Kopieren Sie den geheimen API-Schlüssel (sk_test_ für Tests; sk_live_ für echte Zahlungen). Verwenden Sie hier weder den öffentlichen pk_-Schlüssel noch das whsec_-Webhook-Geheimnis. Eingeschränkte rk_-Schlüssel benötigen Berechtigungen für die Zahlungsintegration, einschließlich Lesezugriff auf /v1/account und /v1/balance für die Verbindungsprüfung. Geben Sie Geheimnisse nur in diesen Einstellungen ein, niemals in KI-Hilfe oder Support-Nachrichten.",
+      "stripe_webhook_secret_help": "Öffnen Sie in Stripe Workbench → Webhooks das Ziel für dieses LMS und kopieren Sie dessen Signaturgeheimnis mit dem Präfix whsec_. Ziel und API-Schlüssel müssen zum selben Konto und derselben Sandbox oder Live-Umgebung gehören. Das Präfix whsec_ allein kennzeichnet die Umgebung nicht. Verwenden Sie das Geheimnis des registrierten Ziels, nicht das eines lokalen Stripe-CLI-Listeners.",
+      "setup_help_heading": "Stripe-Einrichtung und Fehlerbehebung",
+      "webhook_setup_help": "Erstellen Sie in derselben Stripe-Umgebung wie der API-Schlüssel ein Webhook-Ziel für Ihr Konto (Your account) mit Snapshot-Daten. Verwenden Sie %{url} und API-Version %{version}. Abonnieren Sie diese Ereignisse: %{events}. Erfolgreiches Speichern prüft dieses Ziel nicht; kontrollieren Sie Zustellung und Verarbeitung nach einem Testkauf.",
+      "card_methods_help": "Aktivieren Sie Karten in den Stripe-Zahlungsmethodeneinstellungen derselben Umgebung. Das LMS beschränkt Checkout auf Kartenzahlungen; andere in Stripe aktivierte Methoden werden dadurch nicht im LMS unterstützt.",
+      "sandbox_help": "Verwenden Sie für einen Sandbox-Kauf im Kartenformular die Testkarte 4242 4242 4242 4242, ein zukünftiges Ablaufdatum und eine beliebige dreistellige Prüfziffer. Verwenden Sie keine echte Karte. Es fließt kein Geld. Testen Sie als Lernender ohne bestehenden Kurszugriff und prüfen Sie Zahlungserfolg, Rückkehr zum LMS und Kurszugriff. Dies ersetzt vor Live-Verkäufen keine Tests für Erstattungen, Streitfälle und Wiederherstellung.",
+      "checkout_help": "Wenn neue Käufe nicht verfügbar sind, prüfen Sie Zahlungen aktivieren, Konfigurationshinweise, übereinstimmende Kurswährung und die HTTPS-App-URL unter Integration. Ist die Einrichtung vollständig, prüfen Sie die fehlgeschlagene Anfrage in Stripe Workbench → Logs und teilen Sie dem Support nur Fehlercode und Fehlermeldung mit. Bei einem Idempotenzfehler muss der bestehende Versuch untersucht werden; löschen Sie keinen Kaufverlauf und ersetzen Sie seinen Schlüssel nicht manuell.",
+      "health_help": "Der Worker-Status zeigt, ob ein Worker für die Standardwarteschlange läuft, nicht ob eine Zahlung erfolgreich war. Das zuletzt verarbeitete Ereignis erfasst die Webhook-Verarbeitung; ein leerer Wert bedeutet, dass noch keine erfasst wurde. Der Wiederherstellungslauf erfasst den Scheduler. Live-Checkout erfordert einen Lauf innerhalb der letzten zehn Minuten. Untersuchen Sie alte ausstehende Ereignisse und zu prüfende Käufe, bevor Sie Lernende erneut zur Zahlung auffordern.",
+      "live_ready_help": "Die Live-Bestätigung dokumentiert eine Prüfung durch den Betreiber; sie schaltet nicht zwischen Sandbox und Live-Modus um. Der gespeicherte API-Schlüssel bestimmt die Umgebung. Im Testmodus ist diese Bestätigung nicht erforderlich. Bestätigen Sie Live-Bereitschaft erst nach Abschluss der Abnahmeprüfungen.",
+      "payment_tax_behavior_help": "Inclusive bedeutet, dass der Kurspreis anfallende Steuern enthält. Bei exclusive werden anfallende Steuern im Checkout hinzugefügt. Automatische Steuern hängen von Kundendaten und Stripe-Tax-Konfiguration ab; ein Steuerbetrag von null beweist keine vollständige Einrichtung."
     }
   }
 }

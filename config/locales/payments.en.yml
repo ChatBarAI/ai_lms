@@ -27,7 +27,7 @@
       "payment_support_email": "Support email",
       "live_ready": "I have verified seller, Stripe Tax, receipts, purchaser terms, retention and staging acceptance for live sales.",
       "currency_help": "Changing currency requires explicit repricing of paid courses. Historical purchases retain their original amounts and currency.",
-      "tax_help": "Configure Stripe Tax registrations and the default product tax code in Stripe. Select exempt only after explicitly confirming that no tax is due.",
+      "tax_help": "For automatic tax, configure business origin, applicable registrations and the default product tax code in the same Stripe environment, including the sandbox when testing. Select exempt only after explicitly confirming that no tax is due.",
       "recovery_at": "Last recovery dispatch: %{time}",
       "last_event": "Last processed event: %{time}",
       "oldest_event": "Oldest pending event: %{time}",
@@ -55,7 +55,7 @@
       "pricing": "Course access and pricing",
       "policy": "Access policy",
       "price_minor": "Price in minor units (integer)",
-      "price_help": "EUR/USD/GBP: 100 = 1.00. JPY: 100 = ¥100. The currency must match payment settings before checkout can be offered.",
+      "price_help": "Enter whole minor units: EUR/USD/GBP 100 = 1.00; JPY 100 = ¥100. LMS minimum inputs are EUR 50 (€0.50), USD 50 ($0.50), GBP 30 (£0.30), and JPY 50 (¥50). The course currency must match Payment settings. Inclusive/exclusive tax settings determine whether tax is included or added at Checkout.",
       "conversion_help": "Changing free to paid preserves existing enrolments through audited access grants. Changing paid to free keeps purchase history and does not issue refunds.",
       "buy": "Buy course",
       "sign_in_buy": "Sign in to buy",
@@ -71,11 +71,11 @@
       "readiness_heading": "Configuration needed",
       "readiness_account_not_linked": "Stripe account not linked: save the Stripe secret key here to connect it",
       "health_heading": "Processing health",
-      "payment_tax_mode_tooltip": "automatic = Stripe Tax; exempt = explicitly no tax",
+      "payment_tax_mode_tooltip": "automatic uses Stripe Tax; exempt explicitly declares that no tax is due. unconfigured blocks new purchases.",
       "stripe_secret_key": "Stripe secret key",
       "stripe_webhook_secret": "Stripe webhook secret",
       "stripe_account_id": "Stripe account ID",
-      "credentials_help": "Credentials are stored encrypted. Leave a field blank to keep its current value. Changes are checked with Stripe before saving and apply without restarting Rails or Sidekiq.",
+      "credentials_help": "Stripe credentials are stored encrypted and never redisplayed. Blank fields keep the saved values. For the initial connection, save the secret API key and webhook signing secret together. Saving checks the API key and account, but does not verify webhook delivery. Credential updates apply without a process restart.",
       "credential_placeholder": "Leave blank to keep the current value",
       "webhook_check_help": "The connection check verifies the API key and account. Verify the webhook secret by sending a signed test event from Stripe.",
       "credentials_required": "Provide the Stripe secret key and webhook secret together for the initial connection.",
@@ -131,7 +131,17 @@
           "heading": "Course access is",
           "accent": "locked"
         }
-      }
+      },
+      "stripe_secret_key_help": "In the Stripe account picker, open the intended sandbox, then API keys. Copy the secret API key (sk_test_ for testing; sk_live_ for real payments). Do not use the publishable pk_ key or the webhook whsec_ secret here. Restricted rk_ keys require permissions for the payment integration, including read access to /v1/account and /v1/balance for connection checks. Enter secrets only in these settings, never in AI help or support messages.",
+      "stripe_webhook_secret_help": "In Stripe Workbench → Webhooks, open the destination for this LMS and copy its signing secret beginning whsec_. The destination and secret API key must belong to the same account and sandbox or live environment. The whsec_ prefix alone does not identify the environment. Use the secret of the registered destination, not a local Stripe CLI listener secret.",
+      "setup_help_heading": "Stripe setup and troubleshooting",
+      "webhook_setup_help": "In the same Stripe environment as the API key, create a webhook destination for Your account with Snapshot payloads. Use %{url} and API version %{version}. Subscribe to these events: %{events}. A successful settings save does not verify this destination; check event delivery and processing after a test purchase.",
+      "card_methods_help": "Enable Cards in the Stripe payment-method settings for the same environment. The LMS filters Checkout to card payments; enabling other methods in Stripe does not add support for them in the LMS.",
+      "sandbox_help": "For a sandbox purchase, enter test card 4242 4242 4242 4242, a future expiry date and any three-digit security code in the card form. Do not use a real card. No money moves. Test as a student without existing course access, then verify successful payment, return to the LMS and course access. This does not replace refund, dispute and recovery testing before live sales.",
+      "checkout_help": "If new purchases are unavailable, check Enable payments, configuration warnings, matching course currency and the HTTPS App URL under Integration. If setup is complete, inspect the failed request in Stripe Workbench → Logs and share only the error code and message with support. An idempotency error needs investigation of the existing attempt; do not delete purchase history or manually replace its key.",
+      "health_help": "Payment worker status indicates whether the default queue worker is running, not whether a payment succeeded. Last processed event records webhook processing; a blank value means none has been recorded. Recovery dispatch records the recovery scheduler. Live checkout requires a dispatch within the last ten minutes. Investigate old pending events and purchases needing review before asking a learner to pay again.",
+      "live_ready_help": "Live readiness is an operator confirmation, not a switch between sandbox and live mode. The saved API key determines the environment. Test mode does not require this confirmation. Confirm it for live sales only after completing the deployment acceptance checks.",
+      "payment_tax_behavior_help": "Inclusive means the course price includes applicable tax. Exclusive means applicable tax is added at Checkout. Automatic tax depends on the customer details and Stripe Tax configuration; a zero tax amount alone does not prove tax setup is complete."
     }
   }
 }

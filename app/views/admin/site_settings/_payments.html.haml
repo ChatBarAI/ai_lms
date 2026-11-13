@@ -32,8 +32,8 @@
           %p.text-xs.text-gray-500.mt-1= t("payments.tax_help")
 
         %div
-          = f.label :payment_tax_behavior, t("payments.payment_tax_behavior"), class: "block text-sm font-medium mb-1"
-          = f.select :payment_tax_behavior, %w[inclusive exclusive], {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+          = f.label :payment_tax_behavior, t("payments.payment_tax_behavior"), title: t("payments.payment_tax_behavior_help"), class: "block text-sm font-medium mb-1"
+          = f.select :payment_tax_behavior, %w[inclusive exclusive], {}, title: t("payments.payment_tax_behavior_help"), aria: { describedby: "payment_tax_behavior_help" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
 
       .min-w-0.space-y-5
         %div
@@ -49,14 +49,15 @@
           = f.email_field :payment_support_email, class: "w-full border border-gray-300 rounded px-3 py-2"
 
         = toggle_switch_field f, :payment_live_ready, label: t("payments.live_ready")
+        %p.text-xs.text-gray-500= t("payments.live_ready_help")
 
     .mt-6.border-t.border-gray-200.pt-5
       %h3.font-semibold.text-gray-900{ title: t("payments.credentials_help"), tabindex: "0" }= t("payments.connection_heading")
       .mt-4.grid.grid-cols-1.gap-5.lg:grid-cols-2
         - %w[stripe_secret_key stripe_webhook_secret].each do |field|
           %div
-            = f.label field, t("payments.#{field}"), class: "block text-sm font-medium mb-1"
-            = f.password_field field, value: "", autocomplete: "new-password", spellcheck: false, placeholder: t("payments.credential_placeholder"), class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
+            = f.label field, t("payments.#{field}"), title: t("payments.#{field}_help"), class: "block text-sm font-medium mb-1"
+            = f.password_field field, value: "", autocomplete: "new-password", spellcheck: false, placeholder: t("payments.credential_placeholder"), title: t("payments.#{field}_help"), aria: { describedby: "#{field}_help" }, class: "w-full border border-gray-300 rounded px-3 py-2 font-mono text-sm"
       %p.mt-2.text-xs.text-gray-500= t("payments.webhook_check_help")
       .mt-4.grid.grid-cols-1.gap-6.lg:grid-cols-2
         .min-w-0
@@ -80,8 +81,18 @@
                 - problems.each do |problem|
                   %li= problem
 
+      %details.mt-4.rounded.border.border-gray-200.p-3
+        %summary.cursor-pointer.text-sm.font-medium= t("payments.setup_help_heading")
+        .mt-3.space-y-3.text-sm.text-gray-600
+          - %w[stripe_secret_key_help stripe_webhook_secret_help card_methods_help payment_tax_behavior_help sandbox_help checkout_help].each do |key|
+            %p{ id: key, data: { help_key: "payments.#{key}" } }= t("payments.#{key}")
+          %p.break-words{ data: { help_key: "payments.webhook_setup_help" } }= t("payments.webhook_setup_help", url: stripe_webhook_url, version: Payments::StripeClient::API_VERSION, events: Payments::Webhook::TYPES.join(", "))
+
     .mt-6.border-t.border-gray-200.pt-5
-      %h3.font-semibold.text-gray-900= t("payments.health_heading")
+      %h3.font-semibold.text-gray-900{ title: t("payments.health_help"), tabindex: "0", aria: { describedby: "payment_health_help" } }= t("payments.health_heading")
+      %details.mt-2.text-sm.text-gray-600
+        %summary.cursor-pointer= t("payments.health_heading")
+        %p.mt-2{ id: "payment_health_help", data: { help_key: "payments.health_help" } }= t("payments.health_help")
       .mt-4.grid.grid-cols-1.gap-x-6.gap-y-3.text-sm.text-gray-600.lg:grid-cols-2
         %p= t("payments.worker_status", status: @sidekiq_status.default_queue_running? ? t("payments.configured") : t("payments.missing"))
         %p= t("payments.recovery_at", time: @site_setting.payment_recovery_at || "—")
