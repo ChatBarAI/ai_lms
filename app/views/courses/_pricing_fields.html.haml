@@ -1,0 +1,10 @@
+.grid.grid-cols-1.gap-4.sm:grid-cols-3
+  %div
+    = f.label :access_policy, t("payments.policy"), title: t("payments.conversion_help"), tabindex: "0", class: "block text-sm font-medium mb-1"
+    = f.select :access_policy, [[t("payments.free"), "free"], [t("payments.paid"), "entitlement_required"]], {}, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+  %div
+    = f.label :price_currency, t("payments.payment_currency"), title: t("payments.price_help"), tabindex: "0", class: "block text-sm font-medium mb-1"
+    = f.select :price_currency, Payments::Currency::RULES.keys, { include_blank: true }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
+  %div
+    = f.label :price_minor, t("payments.price_minor"), title: t("payments.price_help"), tabindex: "0", class: "block text-sm font-medium mb-1"
+    = f.number_field :price_minor, min: 1, max: 99999999, step: 1, class: "w-full border border-gray-300 rounded px-3 py-2"

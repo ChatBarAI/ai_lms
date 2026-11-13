@@ -58,7 +58,9 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def destroy
-    @course.destroy
+    unless @course.destroy
+      return redirect_to course_path(@course), alert: @course.errors.full_messages.to_sentence
+    end
     redirect_to admin_courses_path, notice: "#{Course.model_name.human} deleted.", status: :see_other
   end
 
@@ -131,7 +133,7 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def course_params
-    permitted = params.require(:course).permit(:title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    permitted = params.require(:course).permit(:access_policy, :price_minor, :price_currency, :title, :description, :locale, :subject_id, :owner_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
     filter_prerequisite_course_ids!(permitted)
     permitted
   end

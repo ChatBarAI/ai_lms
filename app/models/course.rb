@@ -1,6 +1,38 @@
 require "csv"
 
 class Course < ApplicationRecord
+  has_many :purchases, dependent: :restrict_with_error
+  has_many :course_entitlements, dependent: :restrict_with_error
+  validates :access_policy, inclusion: { in: %w[free entitlement_required] }
+  validate :validate_course_price
+  around_update :grandfather_paid_conversion
+
+  def paid?
+    access_policy == "entitlement_required"
+  end
+
+  def validate_course_price
+    return unless paid?
+    integer_input = price_minor_before_type_cast.to_s.match?(/\A[0-9]+\z/)
+    errors.add(:price_minor, :invalid) unless integer_input && Payments::Currency.valid_amount?(price_currency, price_minor)
+  end
+
+  def grandfather_paid_conversion
+    if access_policy_change_to_be_saved == [ "free", "entitlement_required" ]
+      # The update and grants commit together; enrolment creation takes the same row lock.
+      self.class.where(id: id).lock.pick(:id)
+      yield
+      enrollments.find_each do |enrollment|
+        reference = "conversion:#{id}:#{enrollment.id}:#{SecureRandom.uuid}"
+        grant = course_entitlements.create!(user: enrollment.user, source: "manual",
+          source_reference: reference, starts_at: Time.current, reason: "free_to_paid")
+        grant.entitlement_events.create!(source: "manual", action: "grant", reason: "free_to_paid", correlation_reference: reference)
+      end
+    else
+      yield
+    end
+  end
+
   belongs_to :subject, optional: true
   belongs_to :owner, class_name: "User"
 

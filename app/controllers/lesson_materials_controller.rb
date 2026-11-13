@@ -29,7 +29,7 @@ class LessonMaterialsController < ApplicationController
   skip_authorize_resource only: [ :acknowledge, :reorder, :document, :copy ]
 
   def index
-    @lesson_materials = @lesson.lesson_materials
+    @lesson_materials = @lesson.lesson_materials.accessible_by(current_ability)
   end
 
   def show
@@ -124,7 +124,8 @@ class LessonMaterialsController < ApplicationController
   end
 
   def acknowledge
-    enrollment = current_user&.enrollments&.find_by(course_id: @course.id)
+    authorize! :read, @lesson_material
+    enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
     unless enrollment
       respond_to do |format|
         format.html { redirect_to course_lesson_path(@course, @lesson), alert: "Enrol to mark materials as complete." }

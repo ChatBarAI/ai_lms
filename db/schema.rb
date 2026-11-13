@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_11_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -84,6 +84,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
     t.index ["user_id"], name: "index_certificates_on_user_id"
   end
 
+  create_table "course_entitlements", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "course_id", null: false
+    t.bigint "purchase_id"
+    t.bigint "granted_by_id"
+    t.string "source", null: false
+    t.string "source_reference", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "expires_at"
+    t.string "reason", null: false
+    t.datetime "revoked_at"
+    t.datetime "suspended_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id"], name: "index_course_entitlements_on_course_id"
+    t.index ["granted_by_id"], name: "index_course_entitlements_on_granted_by_id"
+    t.index ["purchase_id"], name: "index_course_entitlements_on_purchase_id", unique: true
+    t.index ["source", "source_reference"], name: "index_course_entitlements_on_source_and_source_reference", unique: true
+    t.index ["user_id", "course_id", "status"], name: "effective_course_grants"
+    t.index ["user_id"], name: "index_course_entitlements_on_user_id"
+    t.check_constraint "expires_at IS NULL OR expires_at > starts_at", name: "entitlement_time_window"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'revoked'::character varying]::text[])", name: "entitlement_status"
+  end
+
   create_table "course_prerequisites", force: :cascade do |t|
     t.bigint "course_id", null: false
     t.bigint "prerequisite_course_id", null: false
@@ -109,10 +134,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
     t.string "locale", default: "en", null: false
     t.boolean "public_access_enabled", default: false, null: false
     t.integer "learning_order"
+    t.string "access_policy", default: "free", null: false
+    t.integer "price_minor"
+    t.string "price_currency"
     t.index ["learning_order"], name: "index_courses_on_learning_order"
     t.index ["owner_id"], name: "index_courses_on_owner_id"
     t.index ["slug"], name: "index_courses_on_slug", unique: true
     t.index ["subject_id"], name: "index_courses_on_subject_id"
+    t.check_constraint "access_policy::text = 'free'::text OR price_minor > 0 AND price_currency IS NOT NULL", name: "paid_course_price"
+    t.check_constraint "access_policy::text = ANY (ARRAY['free'::character varying, 'entitlement_required'::character varying]::text[])", name: "course_access_policy"
   end
 
   create_table "enrollments", force: :cascade do |t|
@@ -123,9 +153,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "completed_at"
+    t.datetime "archived_at"
     t.index ["course_id"], name: "index_enrollments_on_course_id"
     t.index ["user_id", "course_id"], name: "index_enrollments_on_user_id_and_course_id", unique: true
     t.index ["user_id"], name: "index_enrollments_on_user_id"
+  end
+
+  create_table "entitlement_events", force: :cascade do |t|
+    t.bigint "course_entitlement_id", null: false
+    t.bigint "actor_id"
+    t.string "source", null: false
+    t.string "action", null: false
+    t.string "reason", null: false
+    t.string "correlation_reference", null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_entitlement_events_on_actor_id"
+    t.index ["course_entitlement_id"], name: "index_entitlement_events_on_course_entitlement_id"
   end
 
   create_table "lesson_material_acknowledgements", force: :cascade do |t|
@@ -251,6 +294,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
     t.index ["sso_domain"], name: "index_organizations_on_sso_domain", unique: true, where: "(sso_domain IS NOT NULL)"
   end
 
+  create_table "payment_events", force: :cascade do |t|
+    t.string "provider_event_id", null: false
+    t.string "account_id", null: false
+    t.boolean "livemode", null: false
+    t.string "event_type", null: false
+    t.string "provider_object_id", null: false
+    t.string "state", default: "pending", null: false
+    t.integer "attempts", default: 0, null: false
+    t.string "error_summary"
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "livemode", "provider_event_id"], name: "payment_event_identity", unique: true
+    t.index ["state", "updated_at"], name: "index_payment_events_on_state_and_updated_at"
+  end
+
   create_table "progresses", force: :cascade do |t|
     t.bigint "enrollment_id", null: false
     t.bigint "lesson_id", null: false
@@ -264,6 +323,44 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
     t.index ["enrollment_id", "lesson_id"], name: "index_progresses_on_enrollment_id_and_lesson_id", unique: true
     t.index ["enrollment_id"], name: "index_progresses_on_enrollment_id"
     t.index ["lesson_id"], name: "index_progresses_on_lesson_id"
+  end
+
+  create_table "purchases", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "course_id", null: false
+    t.string "provider", default: "stripe", null: false
+    t.string "account_id", null: false
+    t.boolean "livemode", null: false
+    t.string "course_title", null: false
+    t.integer "amount_minor", null: false
+    t.string "currency", null: false
+    t.string "tax_mode", null: false
+    t.string "tax_behavior", null: false
+    t.string "return_base_url", null: false
+    t.string "attempt_key", null: false
+    t.jsonb "eligibility", default: {}, null: false
+    t.string "checkout_session_id"
+    t.string "checkout_url"
+    t.datetime "checkout_expires_at"
+    t.string "payment_intent_id"
+    t.string "payment_state", default: "pending", null: false
+    t.string "fulfilment_state", default: "pending", null: false
+    t.integer "base_minor"
+    t.integer "tax_minor"
+    t.integer "total_minor"
+    t.integer "refunded_minor", default: 0, null: false
+    t.string "exception_reason"
+    t.datetime "fulfilled_at"
+    t.datetime "reconciled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "livemode", "checkout_session_id"], name: "purchase_session_identity", unique: true
+    t.index ["account_id", "livemode", "payment_intent_id"], name: "purchase_payment_identity", unique: true
+    t.index ["attempt_key"], name: "index_purchases_on_attempt_key", unique: true
+    t.index ["course_id"], name: "index_purchases_on_course_id"
+    t.index ["user_id", "course_id"], name: "one_pending_course_purchase", unique: true, where: "((payment_state)::text = 'pending'::text)"
+    t.index ["user_id"], name: "index_purchases_on_user_id"
+    t.check_constraint "amount_minor > 0 AND refunded_minor >= 0", name: "purchase_amounts"
   end
 
   create_table "question_answers", force: :cascade do |t|
@@ -404,6 +501,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
     t.string "sendmail_arguments"
     t.boolean "smtp_ssl"
     t.boolean "smtp_tls"
+    t.boolean "payments_enabled", default: false, null: false
+    t.string "payment_currency", default: "eur", null: false
+    t.string "payment_tax_mode", default: "unconfigured", null: false
+    t.string "payment_tax_behavior", default: "exclusive", null: false
+    t.string "payment_terms_url"
+    t.string "payment_support_email"
+    t.string "payment_seller_name"
+    t.boolean "payment_live_ready", default: false, null: false
+    t.datetime "payment_recovery_at"
+    t.text "stripe_secret_key"
+    t.text "stripe_webhook_secret"
+    t.text "stripe_account_id"
   end
 
   create_table "subjects", force: :cascade do |t|
@@ -470,12 +579,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
   add_foreign_key "ai_model_configurations", "users", column: "created_by_id"
   add_foreign_key "certificates", "courses"
   add_foreign_key "certificates", "users"
+  add_foreign_key "course_entitlements", "courses"
+  add_foreign_key "course_entitlements", "purchases"
+  add_foreign_key "course_entitlements", "users"
+  add_foreign_key "course_entitlements", "users", column: "granted_by_id"
   add_foreign_key "course_prerequisites", "courses"
   add_foreign_key "course_prerequisites", "courses", column: "prerequisite_course_id"
   add_foreign_key "courses", "subjects"
   add_foreign_key "courses", "users", column: "owner_id"
   add_foreign_key "enrollments", "courses"
   add_foreign_key "enrollments", "users"
+  add_foreign_key "entitlement_events", "course_entitlements"
+  add_foreign_key "entitlement_events", "users", column: "actor_id"
   add_foreign_key "lesson_material_acknowledgements", "enrollments"
   add_foreign_key "lesson_material_acknowledgements", "lesson_materials"
   add_foreign_key "lesson_materials", "lesson_materials", column: "source_material_id", on_delete: :nullify
@@ -490,6 +605,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_120000) do
   add_foreign_key "material_design_revisions", "users", column: "created_by_id"
   add_foreign_key "progresses", "enrollments"
   add_foreign_key "progresses", "lessons"
+  add_foreign_key "purchases", "courses"
+  add_foreign_key "purchases", "users"
   add_foreign_key "question_answers", "enrollments"
   add_foreign_key "question_answers", "questions"
   add_foreign_key "question_generation_tasks", "lessons"

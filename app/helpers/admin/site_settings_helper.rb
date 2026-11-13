@@ -1,6 +1,7 @@
 module Admin::SiteSettingsHelper
   SECTION_NAV_ITEMS = [
     [ "general", "General", "Access and pass mark" ],
+    [ "payments", "Payments", "Stripe, access and processing health" ],
     [ "branding", "Branding", "Logo, favicon, brand name" ],
     [ "theme", "Theme", "Mode and base palette" ],
     [ "buttons", "Buttons", "Primary, success, danger" ],

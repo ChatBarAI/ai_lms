@@ -1,0 +1,16 @@
+.flex.flex-wrap.items-center.justify-between.gap-4.border-t.border-gray-200.bg-gray-50.px-5.py-4.sm:px-6
+  .min-w-0.flex-1
+    %p.text-base.font-semibold.text-gray-900= course_price_label(@course)
+    %p.mt-1.text-xs.text-gray-600= t("payments.tax_display_#{SiteSetting.current.payment_tax_behavior}")
+    %p.mt-2.text-sm.text-gray-600= t("payments.access_required")
+    - if current_user
+      - unless Payments::Configuration.checkout_ready? && @course.prerequisites_met_by?(current_user)
+        %p.mt-1.text-sm.text-gray-600= @course.prerequisites_met_by?(current_user) ? t("payments.unavailable") : t("payments.prerequisites")
+  .ml-auto.flex.flex-col.items-end.gap-3.self-start
+    - if SiteSetting.current.payment_terms_url.present?
+      = link_to t("payments.terms"), SiteSetting.current.payment_terms_url, class: "inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-white focus-visible:ring-2 focus-visible:ring-indigo-500"
+    - if current_user
+      - if Payments::Configuration.checkout_ready? && @course.prerequisites_met_by?(current_user)
+        = button_to t("payments.buy"), course_purchases_path(@course), method: :post, form: { data: { turbo: false } }, data: { disable_with: t("payments.processing") }, class: "inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 cursor-pointer"
+    - else
+      = link_to t("payments.sign_in_buy"), new_user_session_path, class: "inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"

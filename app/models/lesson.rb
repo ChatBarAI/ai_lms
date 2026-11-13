@@ -42,7 +42,7 @@ class Lesson < ApplicationRecord
   end
 
   def public_to_guests?
-    published? && course&.public_to_guests?
+    published? && course&.access_policy == "free" && course.public_to_guests?
   end
 
   def required_lesson_materials

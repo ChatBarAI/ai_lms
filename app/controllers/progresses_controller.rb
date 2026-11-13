@@ -4,6 +4,8 @@ class ProgressesController < ApplicationController
   def update
     @progress = current_user.progresses.find(params[:id])
     authorize! :read, @progress
+    authorize! :read, @progress.lesson
+    raise CanCan::AccessDenied if @progress.enrollment.archived_at?
 
     unless manual_completion_allowed?
       redirect_back fallback_location: root_path, alert: t("progresses.flash.cannot_mark_complete", **helpers.terms)

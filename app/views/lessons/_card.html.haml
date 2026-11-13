@@ -3,7 +3,11 @@
 - queued_for_marking_lesson_ids = local_assigns.fetch(:queued_for_marking_lesson_ids, [])
 - show_course_info = local_assigns.fetch(:show_course_info, true)
 
-= link_to course_lesson_path(lesson.course, lesson), class: "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-indigo-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-indigo-500" do
+- lesson_accessible = can?(:read, lesson)
+- card_classes = "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden dark:bg-gray-800 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500"
+- card_options = { class: card_classes }
+- card_options[:href] = course_lesson_path(lesson.course, lesson) if lesson_accessible
+= content_tag(:a, card_options) do
   .relative
     - if lesson.cover_image.attached?
       = image_tag lesson.cover_image, class: "w-full aspect-[728/320] object-cover"
@@ -35,4 +39,4 @@
     - if show_course_info
       %p.text-sm.text-gray-500.mt-1= subjects_enabled? && lesson.course.subject ? "#{lesson.course.title} · #{lesson.course.subject.name}" : lesson.course.title
     - if lesson.body.present?
-      %p.text-sm.text-gray-600.mt-2.line-clamp-2.dark:text-gray-400= lesson.body.to_plain_text
+      %p.text-sm.text-gray-600.mt-2.line-clamp-2.dark:text-gray-400= truncate(lesson.body.to_plain_text, length: 300)

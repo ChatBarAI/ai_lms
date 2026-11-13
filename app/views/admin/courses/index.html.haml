@@ -1,4 +1,5 @@
 - content_for :title, terms[:courses]
+- payments_enabled = SiteSetting.current.payments_enabled?
 
 .flex.items-center.justify-between.mb-4
   %div
@@ -24,6 +25,8 @@
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The instructor or administrator who owns this #{terms[:course_l]}." } Owner
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Shows whether this #{terms[:course_l]} is published or still a draft." } Status
       %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "Displays when a #{terms[:course]} and #{terms[:lessons]} are publicly viewable without sign in." } Access
+      - if payments_enabled
+        %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The price learners pay for this #{terms[:course_l]}, in its currency." } Price
       - if @sort == "learning_order"
         %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The position of this #{terms[:course_l]} in the learning sequence." } Learning order
       %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ title: "The number of #{terms[:lessons_l]} in this #{terms[:course_l]}." }= terms[:lessons]
@@ -43,6 +46,8 @@
             %span.inline-flex.items-center.px-2.5.py-0.5.rounded-full.text-xs.font-medium.bg-sky-100.text-sky-800 Public
           - else
             %span.text-xs.text-gray-400 —
+        - if payments_enabled
+          %td.px-3.py-2.text-sm.text-gray-600.whitespace-nowrap.tabular-nums= course_price_amount(c)
         - if @sort == "learning_order"
           %td.px-3.py-2.text-center.text-sm.text-gray-600= c.learning_order.presence || "—"
         %td.px-3.py-2.text-center.text-sm

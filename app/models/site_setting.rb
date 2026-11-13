@@ -1,4 +1,15 @@
 class SiteSetting < ApplicationRecord
+  encrypts :stripe_secret_key, :stripe_webhook_secret, :stripe_account_id
+  validates :stripe_secret_key, format: { with: /\A(?:sk|rk)_(?:test|live)_[A-Za-z0-9]+\z/ }, allow_blank: true
+  validates :stripe_webhook_secret, format: { with: /\Awhsec_[A-Za-z0-9]+\z/ }, allow_blank: true
+  validates :stripe_account_id, format: { with: /\Aacct_[A-Za-z0-9]+\z/ }, allow_blank: true
+
+  validates :payment_currency, inclusion: { in: Payments::Currency::RULES.keys }
+  validates :payment_tax_mode, inclusion: { in: %w[unconfigured automatic exempt] }
+  validates :payment_tax_behavior, inclusion: { in: %w[inclusive exclusive] }
+  validates :payment_support_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validates :payment_terms_url, format: { with: %r{\Ahttps://[^\s]+\z} }, allow_blank: true
+
   has_one_attached :logo
   has_one_attached :favicon
   has_one_attached :default_meta_card_image
@@ -63,6 +74,9 @@ class SiteSetting < ApplicationRecord
   before_validation :normalise_terminology
 
   after_commit :reapply_terminology
+  # Payment configuration is snapshotted per request/job; never serve it stale after a change.
+  after_save { Payments::Configuration.reset! }
+  after_rollback { Payments::Configuration.reset! }
 
   def self.current
     first_or_create!(brand_name: "ChatBar AI Learn", pass_mark: 70)

@@ -17,7 +17,7 @@ class Admin::UsersController < Admin::BaseController
                                   .completed
                                   .includes(:lesson)
                                   .order(completed_at: :desc).limit(20)
-    @enrollable_courses = Course.where.not(id: @user.courses.select(:id)).order(:title)
+    @enrollable_courses = Course.where.not(id: @user.enrollments.where(archived_at: nil).select(:course_id)).order(:title)
   end
 
   def new
@@ -55,7 +55,9 @@ class Admin::UsersController < Admin::BaseController
     if @user == current_user
       redirect_to admin_users_path, alert: "Cannot delete yourself."
     else
-      @user.destroy
+      unless @user.destroy
+        return redirect_to admin_user_path(@user), alert: @user.errors.full_messages.to_sentence
+      end
       redirect_to admin_users_path, notice: "User deleted.", status: :see_other
     end
   end
@@ -65,8 +67,17 @@ class Admin::UsersController < Admin::BaseController
     enrollment = Enrollment.find_or_initialize_by(user: @user, course: course)
     enrollment.role ||= :student
     enrollment.skip_prerequisite_check = ActiveModel::Type::Boolean.new.cast(params[:force])
-    enrollment.save!
+    course.with_lock do
+      if course.paid? && !CourseAccess.allowed?(@user, course)
+        Entitlements::Grant.call(user: @user, course: course, source: "manual", reference: SecureRandom.uuid,
+          reason: params[:grant_reason], actor: current_user)
+      end
+      enrollment.archived_at = nil
+      enrollment.save!
+    end
     redirect_to admin_user_path(@user), notice: "Enrolled in #{course.title}."
+  rescue ArgumentError
+    redirect_to admin_user_path(@user), alert: t("payments.admin_enrol_reason")
   rescue ActiveRecord::RecordInvalid => e
     redirect_to admin_user_path(@user), alert: e.record.errors.full_messages.to_sentence.presence || e.message
   end

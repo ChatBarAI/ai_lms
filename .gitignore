@@ -51,3 +51,7 @@ AGENTS.md
 
 # Local security review findings; never publish with application code.
 /SECURITY_REVIEW.md
+
+/config/credentials/development.key
+
+/config/credentials/environment.key

@@ -1,11 +1,24 @@
-= form_with model: course, class: "space-y-4 bg-white mt-3" do |f|
+= form_with model: course, class: "space-y-4 mb-6" do |f|
   - if course.errors.any?
     .bg-red-50.border.border-red-200.text-red-800.rounded.p-3.text-sm
       %ul.list-disc.pl-5
         - course.errors.full_messages.each do |msg|
           %li= msg
 
-  = render "courses/fields", f: f, course: course, admin: false
+  .bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
+    %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+      Main content
+      = collapsible_icon_badge
+    .mt-2{data: { collapsible_target: "content" }}
+      = render "courses/fields", f: f, course: course, admin: false
+
+  - if SiteSetting.current.payments_enabled?
+    .bg-white.border.border-gray-200.rounded-lg.p-4{data: { controller: "collapsible", expanded: "true" }}
+      %h2.text-base.font-semibold.cursor-pointer.flex.items-center.justify-between{data: { action: "click->collapsible#toggle" }}
+        = t("payments.pricing")
+        = collapsible_icon_badge
+      .mt-4{data: { collapsible_target: "content" }}
+        = render "courses/pricing_fields", f: f
 
   .flex.w-full.gap-2
     = f.submit class: "flex-1 px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-center"

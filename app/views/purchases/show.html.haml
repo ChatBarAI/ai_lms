@@ -1,0 +1,48 @@
+- content_for :title, t("payments.title")
+- status = purchase_status(@purchase)
+- support_email = SiteSetting.current.payment_support_email
+
+.max-w-xl.mx-auto.px-4.py-10.sm:py-14
+  .flex.justify-center.mb-8
+    = site_logo_tag(class: "h-10 w-auto")
+
+  .text-center.mb-10
+    %h1.text-3xl.sm:text-4xl.font-bold.tracking-tight.text-gray-900
+      = status[:heading]
+      %span{ class: status[:accent] }= status[:accent_text]
+    %p.mt-3.text-gray-500{ role: "status", "aria-live": "polite" }= status[:message]
+
+  .relative.bg-white.border-2.rounded-2xl.shadow-sm.px-6.pt-10.pb-6.sm:px-8{ class: status[:ring] }
+    %span{ class: "absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide shadow-sm #{status[:badge_class]}" }
+      = status[:badge]
+
+    .flex.flex-col.items-center.text-center
+      .flex.items-center.justify-center.w-14.h-14.rounded-full{ class: status[:icon] }
+        = purchase_status_icon(status[:key])
+      %h2.mt-4.text-xl.font-semibold.text-gray-900= @purchase.course_title
+
+    %dl.mt-6.border-t.border-gray-200.pt-4.space-y-2.text-sm
+      .flex.justify-between.gap-4
+        %dt.text-gray-500= t("payments.amount")
+        %dd.font-medium.text-gray-900.tabular-nums= purchase_amount_label(@purchase)
+      .flex.justify-between.gap-4
+        %dt.text-gray-500= t("payments.reference")
+        %dd.font-medium.text-gray-900.tabular-nums= "##{@purchase.id}"
+
+    .mt-6.space-y-3
+      - primary = "flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:from-indigo-600 hover:to-blue-700 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+      - secondary = "flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+      - if status[:key] == :success
+        = link_to t("payments.start_learning"), course_path(@purchase.course), class: primary
+      - elsif status[:key] == :processing
+        = link_to t("payments.refresh"), purchase_path(@purchase), class: primary
+        = link_to t("payments.back_course"), course_path(@purchase.course), class: secondary
+      - else
+        = link_to t("payments.back_course"), course_path(@purchase.course), class: primary
+      - if support_email.present?
+        = mail_to support_email, t("payments.support"), class: secondary
+
+  %p.mt-6.flex.items-center.justify-center.gap-1.5.text-xs.text-gray-400
+    %svg.w-3.5.h-3.5{ fill: "none", stroke: "currentColor", "stroke-width": "2", viewBox: "0 0 24 24", "aria-hidden": "true" }
+      %path{ d: "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z", "stroke-linecap": "round", "stroke-linejoin": "round" }
+    = t("payments.secure_checkout")

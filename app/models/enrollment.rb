@@ -12,6 +12,20 @@ class Enrollment < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :course_id }
   validate :prerequisites_must_be_met, on: :create
+  validate :paid_access_required, on: :create
+  around_create :serialize_paid_access
+
+  def serialize_paid_access
+    course.with_lock do
+      paid_access_required
+      raise ActiveRecord::RecordInvalid, self if errors.any?
+      yield
+    end
+  end
+
+  def paid_access_required
+    errors.add(:base, I18n.t("payments.access_required")) if course && !CourseAccess.allowed?(user, course)
+  end
 
   before_validation :set_enrolled_at, on: :create
 
@@ -27,7 +41,7 @@ class Enrollment < ApplicationRecord
       .where.not(incomplete_required_lessons.arel.exists)
       .or(where.not(completed_at: nil))
   }
-  scope :active, -> { joins(:progresses).where(progresses: { status: [ Progress.statuses[:in_progress], Progress.statuses[:completed] ] }).distinct }
+  scope :active, -> { where(archived_at: nil).joins(:progresses).where(progresses: { status: [ Progress.statuses[:in_progress], Progress.statuses[:completed] ] }).distinct }
 
   def completion_percentage
     return 100.0 if completed_at.present?

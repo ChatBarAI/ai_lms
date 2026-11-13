@@ -14,7 +14,7 @@ class HomeController < ApplicationController
           .group("subjects.id")
           .order(Arel.sql("MAX(courses.published_at) DESC"), id: :desc).limit(6)
       when "lessons"
-        Lesson.published.where(course_id: course_scope.select(:id))
+        Lesson.accessible_by(current_ability).published.where(course_id: course_scope.select(:id))
           .includes(:tags, :rich_text_body, :course, cover_image_attachment: :blob)
           .order(published_at: :desc, id: :desc).limit(6)
       else

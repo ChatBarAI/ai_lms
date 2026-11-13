@@ -1,0 +1,82 @@
+module Payments
+  class UpdateSettings
+    CREDENTIAL_FIELDS = %w[stripe_secret_key stripe_webhook_secret].freeze
+
+    def call(settings, attributes)
+      values = attributes.to_h.stringify_keys.except("stripe_account_id")
+      CREDENTIAL_FIELDS.each do |field|
+        next unless values.key?(field)
+        values[field] = values[field].to_s.strip
+        values.delete(field) if values[field].blank?
+      end
+      verified = verify_credentials(settings, values) if CREDENTIAL_FIELDS.any? { |field| values.key?(field) }
+      return false if verified == false
+      # Shared with checkout-attempt creation: switching identity cannot race
+      # the first purchase. Failed checks roll back the entire settings change.
+      # Stripe was contacted above, before this lock, so checkout never waits on it.
+      settings.with_lock do
+        previous_account = effective(settings, "account_id")
+        previous_mode = live?(effective(settings, "secret_key"))
+        settings.assign_attributes(values)
+        return false unless settings.valid?
+        if verified
+          key = effective(settings, "secret_key")
+          # Another save changed the credentials while Stripe was being contacted.
+          return reject(settings, "connection_failed") unless key == verified[:key]
+          account = verified[:account]
+          if history_for_other_identity?(account, live?(key))
+            return reject(settings, "identity_locked")
+          end
+          changed_identity = previous_account.present? && (previous_account != account || previous_mode != live?(key))
+          if changed_identity && !values.key?("stripe_webhook_secret")
+            return reject(settings, "new_webhook_required")
+          end
+          settings.stripe_account_id = account
+          settings.payment_live_ready = false if changed_identity
+        end
+        settings.save!
+        true
+      end
+    rescue Payments::Error
+      reject(settings, "connection_failed")
+    rescue ActiveRecord::Encryption::Errors::Base
+      reject(settings, "encryption_failed")
+    end
+
+    private
+
+    # Returns { key:, account: } for credentials Stripe confirmed, or false after
+    # adding the rejection error. Never called while a row lock is held.
+    def verify_credentials(settings, values)
+      key = values["stripe_secret_key"].presence || effective(settings, "secret_key")
+      webhook_secret = values["stripe_webhook_secret"].presence || effective(settings, "webhook_secret")
+      return reject(settings, "credentials_required") if [ key, webhook_secret ].any?(&:blank?)
+      client = StripeClient.new(secret_key: key)
+      account = client.request(:get, "/account")["id"]
+      balance = client.request(:get, "/balance")
+      unless account.is_a?(String) && account.match?(/\Aacct_[A-Za-z0-9]+\z/) && balance["livemode"] == live?(key)
+        return reject(settings, "connection_mismatch")
+      end
+      { key: key, account: account }
+    end
+
+    def effective(settings, name)
+      settings.public_send("stripe_#{name}").presence || Configuration.fallback_secret(name)
+    end
+
+    def live?(key)
+      key.to_s.start_with?("sk_live_", "rk_live_")
+    end
+
+    def history_for_other_identity?(account, mode)
+      [ Purchase, PaymentEvent ].any? do |model|
+        model.where.not(account_id: account).or(model.where.not(livemode: mode)).exists?
+      end
+    end
+
+    def reject(settings, message)
+      settings.errors.add(:base, I18n.t("payments.#{message}"))
+      false
+    end
+  end
+end
