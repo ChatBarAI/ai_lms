@@ -44,7 +44,7 @@
                   .flex.gap-2.items-start
                     %textarea.flex-1.min-h-10.border.border-gray-300.rounded-lg.px-3.py-2.text-sm.resize-none.overflow-hidden.leading-5{ name: "answers[#{q.id}]", rows: "1", placeholder: "Type your answer...", data: { controller: "auto-grow-textarea", auto_grow_textarea_target: "field", free_text_answer: true, action: "input->auto-grow-textarea#resize" } }
                     %button.px-3.py-2.rounded-lg.bg-indigo-600.text-white.text-sm.font-medium.hover:bg-indigo-700.transition-colors{ type: "button", data: { action: "click->quiz#textNext keydown->quiz#tabAdvance" } }= idx == questions.size - 1 ? "Done ✓" : "Next →"
-            %span.flex-shrink-0.text-green-500.font-medium.text-sm.hidden{ data: { checkmark: true } } ✓
+            %span.block.w-fit.ml-auto.mt-2.rounded-full.bg-slate-100.text-slate-600.px-2.py-0.5.text-xs.font-medium.hidden{ class: "dark:bg-slate-800 dark:text-slate-300", data: { checkmark: true } } Answered
 
       .mt-6.pt-4.border-t.border-gray-100.hidden{ data: { quiz_target: "submitContainer" } }
         .rounded-lg.bg-green-50.border.border-green-300.p-4.flex.items-center.justify-between.gap-3

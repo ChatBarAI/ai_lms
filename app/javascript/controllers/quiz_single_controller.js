@@ -159,7 +159,7 @@ export default class extends Controller {
     const checkmark = slide.querySelector("[data-checkmark]")
     if (checkmark) checkmark.classList.remove("hidden")
     slide.querySelector(".border.border-gray-200.rounded-lg")
-      ?.classList.add("border-green-300")
+      ?.classList.add("border-indigo-300")
   }
 
   _disableSubmit() {

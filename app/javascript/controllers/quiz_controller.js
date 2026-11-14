@@ -113,12 +113,12 @@ export default class extends Controller {
     return container.querySelector("textarea[data-free-text-answer='true'], textarea[name^='answers['], input[type='text']")
   }
 
-  // Visually marks a question card as answered (green border, ✓ revealed).
+  // Visually marks a question card as answered (neutral indigo border + "Answered" label — deliberately not green, so it is not mistaken for "correct").
   _markDone(questionEl) {
     const checkmark = questionEl.querySelector("[data-checkmark]")
     if (checkmark) checkmark.classList.remove("hidden")
     questionEl.classList.remove("ring-2", "ring-indigo-400", "shadow-sm")
-    questionEl.classList.add("border-green-300")
+    questionEl.classList.add("border-indigo-300")
     questionEl.classList.remove("opacity-40")
   }
 
