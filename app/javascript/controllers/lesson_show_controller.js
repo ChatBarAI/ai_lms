@@ -1,46 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-let ytApiReady = false
-let ytQueue = []
-let ytApiRequested = false
-
-function loadYouTubeAPI() {
-  if (ytApiRequested) return
-  if (document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-    ytApiRequested = true
-    return
-  }
-
-  ytApiRequested = true
-  const script = document.createElement("script")
-  script.src = "https://www.youtube.com/iframe_api"
-  document.head.appendChild(script)
-}
-
-function attachYTPlayer(iframe, onEnded) {
-  if (!window.YT || typeof window.YT.Player !== "function") return
-  new window.YT.Player(iframe, {
-    events: {
-      onStateChange: (event) => {
-        if (event.data === 0) onEnded()
-      }
-    }
-  })
-}
-
-const previousOnYTReady = window.onYouTubeIframeAPIReady
-window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
-  if (typeof previousOnYTReady === "function") previousOnYTReady()
-  ytApiReady = true
-  ytQueue.forEach(({ iframe, onEnded }) => attachYTPlayer(iframe, onEnded))
-  ytQueue = []
-}
-
 export default class extends Controller {
   connect() {
     this.bindVideoPosterClickToPlay()
-    this.bindNativeVideos()
-    this.bindYouTubeIframes()
     this.bindQuizStartButtons()
   }
 
@@ -75,37 +37,6 @@ export default class extends Controller {
     })
   }
 
-  scrollToQuiz = () => {
-    const quiz = document.getElementById("lesson-quiz")
-    this.smoothScrollSectionIntoView(quiz, 16)
-  }
-
-  bindNativeVideos() {
-    document.querySelectorAll("video").forEach((video) => {
-      if (video.dataset.quizScrollBound === "1") return
-      video.dataset.quizScrollBound = "1"
-      video.addEventListener("ended", this.scrollToQuiz)
-    })
-  }
-
-  bindYouTubeIframes() {
-    let needsApi = false
-
-    document.querySelectorAll('iframe[src*="youtube.com/embed"]').forEach((iframe) => {
-      if (iframe.dataset.ytBound === "1") return
-      iframe.dataset.ytBound = "1"
-
-      if (ytApiReady) {
-        attachYTPlayer(iframe, this.scrollToQuiz)
-      } else {
-        ytQueue.push({ iframe, onEnded: this.scrollToQuiz })
-        needsApi = true
-      }
-    })
-
-    if (needsApi) loadYouTubeAPI()
-  }
-
   activatePoster(el) {
     if (el.dataset.activated === "1") return
     const src = el.dataset.iframeSrc
@@ -123,16 +54,6 @@ export default class extends Controller {
     el.innerHTML = ""
     el.appendChild(iframe)
     el.classList.remove("cursor-pointer", "group")
-
-    if (src.includes("youtube.com/embed")) {
-      iframe.dataset.ytBound = "1"
-      if (ytApiReady) {
-        attachYTPlayer(iframe, this.scrollToQuiz)
-      } else {
-        ytQueue.push({ iframe, onEnded: this.scrollToQuiz })
-        loadYouTubeAPI()
-      }
-    }
   }
 
   bindVideoPosterClickToPlay() {
