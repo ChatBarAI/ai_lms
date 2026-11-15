@@ -273,3 +273,9 @@ en:
 
   validation_messages:
     required: "is required"
+
+  admin_users:
+    sso_reset_blocked: "No email sent. %{email} belongs to %{organization}, which requires single sign-on, so password reset isn't available. They must sign in through %{organization}'s SSO."
+    reset_sent: "Password reset email sent to %{email}."
+    setup_sent: "Password setup email sent to %{email}."
+    reset_failed: "The password reset email could not be sent. Check the email settings and server logs, then try again."

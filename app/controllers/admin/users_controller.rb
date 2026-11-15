@@ -83,8 +83,14 @@ class Admin::UsersController < Admin::BaseController
   end
 
   def reset_password
+    if @user.mandatory_sso?
+      return redirect_to admin_user_path(@user),
+                         alert: t("admin_users.sso_reset_blocked", email: @user.email, organization: @user.organization.name)
+    end
+
     @user.send_reset_password_instructions
-    redirect_to admin_user_path(@user), notice: "Password #{@user.initial_password_setup? ? 'setup' : 'reset'} email sent to #{@user.email}."
+    notice_key = @user.initial_password_setup? ? "admin_users.setup_sent" : "admin_users.reset_sent"
+    redirect_to admin_user_path(@user), notice: t(notice_key, email: @user.email)
   rescue StandardError => error
     Rails.logger.error(
       "Password reset email delivery failed " \
@@ -92,7 +98,7 @@ class Admin::UsersController < Admin::BaseController
       "error=#{error.class}: #{error.message}"
     )
     redirect_to admin_user_path(@user),
-                alert: "The password reset email could not be sent. Check the email settings and server logs, then try again."
+                alert: t("admin_users.reset_failed")
   end
 
   def import

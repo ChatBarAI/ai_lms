@@ -41,6 +41,11 @@ de:
         description: "Beschreibung"
       user:
         locale: "Sprache"
+        name: "Name"
+        email: "E-Mail"
+        password: "Passwort"
+        password_confirmation: "Passwortbestätigung"
+        current_password: "Aktuelles Passwort"
 
   common:
     draft: "Entwurf"
@@ -274,3 +279,9 @@ de:
 
   validation_messages:
     required: "ist erforderlich"
+
+  admin_users:
+    sso_reset_blocked: "Keine E-Mail gesendet. %{email} gehört zu %{organization}. Diese Organisation schreibt Single Sign-on vor, daher ist das Zurücksetzen des Passworts nicht möglich. Die Anmeldung muss über das SSO von %{organization} erfolgen."
+    reset_sent: "E-Mail zum Zurücksetzen des Passworts an %{email} gesendet."
+    setup_sent: "E-Mail zum Festlegen des Passworts an %{email} gesendet."
+    reset_failed: "Die E-Mail zum Zurücksetzen des Passworts konnte nicht gesendet werden. Prüfe die E-Mail-Einstellungen und die Server-Logs und versuche es dann erneut."
