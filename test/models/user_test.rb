@@ -1,6 +1,8 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  include ActionMailer::TestHelper
+
   test "fixtures load with expected roles" do
     assert users(:admin).admin?
     assert users(:instructor).instructor?
@@ -137,7 +139,17 @@ class UserTest < ActiveSupport::TestCase
     password = generated_password
     user.update!(password: password, organization: organizations(:sso_required_org))
     assert_not user.valid_password?(password)
-    assert_nil user.send_reset_password_instructions
+    assert_no_emails { assert_nil user.send_reset_password_instructions }
+    assert_includes user.errors[:base], I18n.t("devise.passwords.sso_required")
     assert_not user.reset_password(generated_password, generated_password)
+  end
+
+  test "Kinde-linked account without mandatory SSO keeps password sign-in and recovery" do
+    user = users(:student)
+    password = generated_password
+    user.update!(password: password, provider: "kinde", uid: "kp_linked_reset", organization: nil)
+    assert user.valid_password?(password)
+    assert_emails(1) { user.send_reset_password_instructions }
+    assert user.errors.empty?
   end
 end

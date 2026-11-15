@@ -59,4 +59,16 @@ class BrandedDeviseMailerTest < ActionMailer::TestCase
     assert_includes email.html_part.body.decoded, "Hello student@example.com,"
     assert_includes email.text_part.body.decoded, "Hello student@example.com,"
   end
+
+  test "password email uses the recipient's language, not the sender's" do
+    user = users(:student)
+    user.update!(sign_in_count: 1, locale: "de")
+    email = I18n.with_locale(:en) { BrandedDeviseMailer.reset_password_instructions(user, "reset-token") }
+    assert_equal "Passwort zurücksetzen", email.subject
+    assert_includes email.text_part.body.decoded, "Wenn du dies nicht angefordert hast"
+
+    user.update!(locale: "en")
+    email = I18n.with_locale(:de) { BrandedDeviseMailer.reset_password_instructions(user, "reset-token") }
+    assert_equal "Reset your password", email.subject
+  end
 end

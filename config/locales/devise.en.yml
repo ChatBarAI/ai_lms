@@ -14,7 +14,21 @@ en:
           heading: "Sign up"
           minimum_password_length: "(%{count} characters minimum)"
           submit: "Sign up"
+        edit:
+          heading: "Edit account"
+          awaiting_confirmation: "Currently waiting confirmation for: %{email}"
+          password_hint: "(leave blank if you don't want to change it)"
+          current_password: "Current password (required to change email or password)"
+          submit: "Update"
+          cancel_heading: "Cancel my account"
+          cancel_prompt: "Unhappy?"
+          cancel_button: "Cancel my account"
+          cancel_confirm: "Are you sure?"
+          back: "Back"
       passwords:
+        edit:
+          new_password: "New password"
+          confirm_new_password: "Confirm new password"
         new:
           heading: "Set or reset your password"
           submit: "Send password instructions"
@@ -71,6 +85,7 @@ en:
       no_token: "You can't access this page without coming from a password reset email. If you do come from a password reset email, please make sure you used the full URL provided."
       send_instructions: "You will receive an email with instructions on how to set or reset your password in a few minutes."
       send_paranoid_instructions: "If your email address exists in our database, you will receive a password recovery link at your email address in a few minutes."
+      sso_required: "Password reset isn't available for this account because your organisation requires single sign-on. Please sign in through your organisation's SSO, or contact your administrator if you need help."
       updated: "Your password has been changed successfully. You are now signed in."
       updated_not_active: "Your password has been changed successfully."
     registrations:
@@ -82,6 +97,8 @@ en:
       update_needs_confirmation: "You updated your account successfully, but we need to verify your new email address. Please check your email and follow the confirmation link to confirm your new email address."
       updated: "Your account has been updated successfully."
       updated_but_not_signed_in: "Your account has been updated successfully, but since your password was changed, you need to sign in again."
+      sso_email_locked: "Your email address can't be changed here because it is linked to your single sign-on account. Contact your administrator if it needs to change."
+      sso_password_locked: "Your organisation requires single sign-on, so your password is managed by your organisation and can't be changed here."
     sessions:
       signed_in: "Signed in successfully."
       signed_out: "Signed out successfully."
@@ -98,5 +115,5 @@ en:
       not_found: "not found"
       not_locked: "was not locked"
       not_saved:
-        one: "1 error prohibited this %{resource} from being saved:"
-        other: "%{count} errors prohibited this %{resource} from being saved:"
+        one: "Please check the following:"
+        other: "Please check the following %{count} issues:"

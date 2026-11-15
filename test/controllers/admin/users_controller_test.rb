@@ -170,6 +170,45 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Password setup email sent to #{user.email}.", flash[:notice]
   end
 
+  test "admin can send a password reset to a Kinde-linked user" do
+    user = users(:student)
+    user.update!(sign_in_count: 1, provider: "kinde", uid: "kp_admin_reset", organization: nil)
+    sign_in users(:admin)
+    assert_emails 1 do
+      post reset_password_admin_user_path(user)
+    end
+    assert_equal "Password reset email sent to #{user.email}.", flash[:notice]
+  end
+
+  test "admin is warned instead of told an email was sent for a mandatory-SSO user" do
+    user = users(:student)
+    user.update!(organization: organizations(:sso_required_org))
+    sign_in users(:admin)
+    assert_no_emails do
+      post reset_password_admin_user_path(user)
+    end
+    assert_redirected_to admin_user_path(user)
+    assert_nil flash[:notice]
+    assert_match "No email sent. #{user.email} belongs to Locked Corp, which requires single sign-on", flash[:alert]
+  end
+
+  test "admin SSO reset warning follows the admin's language" do
+    user = users(:student)
+    user.update!(organization: organizations(:sso_required_org))
+    users(:admin).update!(locale: "de")
+    sign_in users(:admin)
+    post reset_password_admin_user_path(user)
+    assert_match "Keine E-Mail gesendet. #{user.email} gehört zu Locked Corp.", flash[:alert]
+  end
+
+  test "admin password reset notice follows the admin's language" do
+    users(:student).update!(sign_in_count: 1)
+    users(:admin).update!(locale: "de")
+    sign_in users(:admin)
+    post reset_password_admin_user_path(users(:student))
+    assert_equal "E-Mail zum Zurücksetzen des Passworts an #{users(:student).email} gesendet.", flash[:notice]
+  end
+
   test "admin sees an error when a password reset email cannot be sent" do
     sign_in users(:admin)
     user = users(:student)

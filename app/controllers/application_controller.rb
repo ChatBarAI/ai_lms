@@ -70,10 +70,24 @@ class ApplicationController < ActionController::Base
     I18n.with_locale(current_locale, &action)
   end
 
+  # Signed-in users get their profile language; visitors get their browser's.
   def current_locale
     locale = current_user&.locale.presence
     return locale.to_sym if I18n.available_locales.map(&:to_s).include?(locale)
 
-    I18n.default_locale
+    browser_locale || I18n.default_locale
+  end
+
+  # Picks the highest-weighted supported language from Accept-Language,
+  # matching on the primary tag so "de-AT" selects :de.
+  def browser_locale
+    available = I18n.available_locales.map(&:to_s)
+    request.headers["Accept-Language"].to_s.split(",").filter_map do |entry|
+      tag, *params = entry.strip.split(";")
+      quality = params.find { |param| param.strip.start_with?("q=") }&.strip&.delete_prefix("q=")
+      weight = quality ? quality.to_f : 1.0
+      primary = tag.to_s.strip.downcase.split("-").first
+      [ primary, weight ] if weight.positive? && available.include?(primary)
+    end.max_by { |(_, weight)| weight }&.first&.to_sym
   end
 end

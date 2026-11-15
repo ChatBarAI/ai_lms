@@ -10,12 +10,21 @@ class Users::RegistrationsController < Devise::RegistrationsController
       attributes.delete(:password_confirmation) if attributes[:password_confirmation].blank?
     end
 
-    sensitive_change = attributes[:password].present? ||
-                       (attributes.key?(:email) && attributes[:email] != resource.email)
-    if sensitive_change && (resource.provider.present? || resource.mandatory_sso?)
-      resource.errors.add(:base, "SSO account credentials must be managed through your identity provider or an administrator.")
+    password_change = attributes[:password].present?
+    email_change = attributes.key?(:email) && attributes[:email] != resource.email
+
+    # Passwords follow the sign-in rule: only mandatory SSO blocks them. The email
+    # stays locked for any SSO-linked account because it identifies the SSO link.
+    if password_change && resource.mandatory_sso?
+      resource.errors.add(:base, t("devise.registrations.sso_password_locked"))
+    end
+    if email_change && resource.sso_email_locked?
+      resource.errors.add(:base, t("devise.registrations.sso_email_locked"))
+    end
+
+    if resource.errors.any?
       false
-    elsif sensitive_change
+    elsif password_change || email_change
       resource.update_with_password(params)
     else
       resource.update(attributes)

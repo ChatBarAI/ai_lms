@@ -72,19 +72,30 @@ class User < ApplicationRecord
     !admin? && organization&.sso_required?
   end
 
+  # The email of an SSO-linked account identifies that link, so users can't change it themselves.
+  def sso_email_locked?
+    provider.present? || mandatory_sso?
+  end
+
   def valid_password?(password)
     !mandatory_sso? && super
   end
 
+  # Password recovery follows the same rule as password sign-in (valid_password?):
+  # only mandatory SSO blocks it. An account linked to Kinde keeps its local
+  # password, so it must also be able to recover it.
   def send_reset_password_instructions
-    return if mandatory_sso? || provider.present?
+    if mandatory_sso?
+      errors.add(:base, I18n.t("devise.passwords.sso_required"))
+      return
+    end
 
     super
   end
 
   def reset_password(new_password, new_password_confirmation)
-    if mandatory_sso? || provider.present?
-      errors.add(:base, "Credentials are managed by your identity provider.")
+    if mandatory_sso?
+      errors.add(:base, I18n.t("devise.passwords.sso_required"))
       return false
     end
 

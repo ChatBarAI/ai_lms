@@ -1,31 +1,38 @@
 .max-w-md.mx-auto
-  %h1.text-2xl.font-semibold.mb-6
-    = "Edit #{resource_name.to_s.humanize}"
+  %h1.text-2xl.font-semibold.mb-6= t("devise.views.registrations.edit.heading")
   = form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put }) do |f|
     = render "devise/shared/error_messages", resource: resource
     .mb-4
       = f.label :email, class: "block text-sm font-medium text-gray-700 mb-1"
-      = f.email_field :email, autocomplete: "email", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+      - if resource.sso_email_locked?
+        = f.email_field :email, readonly: true, autocomplete: "email", aria: { describedby: "sso-email-note" }, class: "block w-full rounded border border-gray-300 bg-gray-100 px-3 py-2 text-gray-600 shadow-sm cursor-not-allowed"
+        %p#sso-email-note.mt-1.text-xs.text-amber-700= t("devise.registrations.sso_email_locked")
+      - else
+        = f.email_field :email, autocomplete: "email", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
     - if devise_mapping.confirmable? && resource.pending_reconfirmation?
       .mb-4.text-sm.text-amber-700
-        Currently waiting confirmation for:
-        = resource.unconfirmed_email
+        = t("devise.views.registrations.edit.awaiting_confirmation", email: resource.unconfirmed_email)
+    - if resource.mandatory_sso?
+      .mb-4.rounded.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-800= t("devise.registrations.sso_password_locked")
+    - else
+      .mb-4
+        = f.label :password, class: "block text-sm font-medium text-gray-700 mb-1"
+        %span.text-xs.text-gray-500= t("devise.views.registrations.edit.password_hint")
+        = f.password_field :password, autocomplete: "new-password", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+        - if @minimum_password_length
+          %span.text-xs.text-gray-500
+            = t("devise.views.registrations.new.minimum_password_length", count: @minimum_password_length)
+      .mb-4
+        = f.label :password_confirmation, class: "block text-sm font-medium text-gray-700 mb-1"
+        = f.password_field :password_confirmation, autocomplete: "new-password", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+      .mb-4
+        = f.label :current_password, t("devise.views.registrations.edit.current_password"), class: "block text-sm font-medium mb-1"
+        = f.password_field :current_password, autocomplete: "current-password", class: "block w-full rounded border border-gray-300 px-3 py-2 mb-4"
     .mb-4
-      = f.label :password, class: "block text-sm font-medium text-gray-700 mb-1"
-      %span.text-xs.text-gray-500 (leave blank if you don't want to change it)
-      = f.password_field :password, autocomplete: "new-password", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-      - if @minimum_password_length
-        %span.text-xs.text-gray-500
-          = "#{@minimum_password_length} characters minimum"
-    .mb-4
-      = f.label :password_confirmation, class: "block text-sm font-medium text-gray-700 mb-1"
-      = f.password_field :password_confirmation, autocomplete: "new-password", class: "block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-    .mb-4
-      = f.label :current_password, "Current password (required to change email or password)", class: "block text-sm font-medium mb-1"
-      = f.password_field :current_password, autocomplete: "current-password", class: "block w-full rounded border border-gray-300 px-3 py-2 mb-4"
-      = f.submit "Update", class: "inline-flex justify-center px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 cursor-pointer"
-  %h2.text-lg.font-semibold.mt-8.mb-2 Cancel my account
-  %p.text-sm.text-gray-700.mb-3 Unhappy?
-  = button_to "Cancel my account", registration_path(resource_name), data: { confirm: "Are you sure?", turbo_confirm: "Are you sure?" }, method: :delete, class: "inline-flex justify-center px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 cursor-pointer"
+      = f.submit t("devise.views.registrations.edit.submit"), class: "inline-flex justify-center px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-700 cursor-pointer"
+  %h2.text-lg.font-semibold.mt-8.mb-2= t("devise.views.registrations.edit.cancel_heading")
+  %p.text-sm.text-gray-700.mb-3= t("devise.views.registrations.edit.cancel_prompt")
+  - cancel_confirm = t("devise.views.registrations.edit.cancel_confirm")
+  = button_to t("devise.views.registrations.edit.cancel_button"), registration_path(resource_name), data: { confirm: cancel_confirm, turbo_confirm: cancel_confirm }, method: :delete, class: "inline-flex justify-center px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 cursor-pointer"
   .mt-6
-    = link_to "Back", :back, class: "text-sm text-indigo-600 hover:text-indigo-800"
+    = link_to t("devise.views.registrations.edit.back"), :back, class: "text-sm text-indigo-600 hover:text-indigo-800"

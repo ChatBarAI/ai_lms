@@ -12,7 +12,21 @@ de:
           heading: "Registrieren"
           minimum_password_length: "(mindestens %{count} Zeichen)"
           submit: "Registrieren"
+        edit:
+          heading: "Konto bearbeiten"
+          awaiting_confirmation: "Warte auf Bestätigung für: %{email}"
+          password_hint: "(leer lassen, wenn du es nicht ändern möchtest)"
+          current_password: "Aktuelles Passwort (erforderlich, um E-Mail oder Passwort zu ändern)"
+          submit: "Aktualisieren"
+          cancel_heading: "Konto löschen"
+          cancel_prompt: "Nicht zufrieden?"
+          cancel_button: "Mein Konto löschen"
+          cancel_confirm: "Bist du sicher? Dein Konto wird dauerhaft gelöscht."
+          back: "Zurück"
       passwords:
+        edit:
+          new_password: "Neues Passwort"
+          confirm_new_password: "Neues Passwort bestätigen"
         new:
           heading: "Passwort festlegen oder zurücksetzen"
           submit: "Passwort-Anweisungen senden"
@@ -69,6 +83,7 @@ de:
       no_token: "Du kannst diese Seite nur über einen Link aus einer Passwort-Zurücksetzen-E-Mail öffnen. Falls du aus einer solchen E-Mail kommst, prüfe bitte, ob du die vollständige URL verwendet hast."
       send_instructions: "Du erhältst in wenigen Minuten eine E-Mail mit Anweisungen zum Festlegen oder Zurücksetzen deines Passworts."
       send_paranoid_instructions: "Falls deine E-Mail-Adresse in unserer Datenbank existiert, erhältst du in wenigen Minuten einen Link zur Passwort-Wiederherstellung."
+      sso_required: "Für dieses Konto ist das Zurücksetzen des Passworts nicht möglich, da deine Organisation Single Sign-on vorschreibt. Bitte melde dich über das SSO deiner Organisation an oder wende dich an deinen Administrator, falls du Hilfe brauchst."
       updated: "Dein Passwort wurde erfolgreich geändert. Du bist jetzt angemeldet."
       updated_not_active: "Dein Passwort wurde erfolgreich geändert."
     registrations:
@@ -80,6 +95,8 @@ de:
       update_needs_confirmation: "Du hast dein Konto erfolgreich aktualisiert, aber wir müssen deine neue E-Mail-Adresse bestätigen."
       updated: "Dein Konto wurde erfolgreich aktualisiert."
       updated_but_not_signed_in: "Dein Konto wurde erfolgreich aktualisiert. Da dein Passwort geändert wurde, musst du dich erneut anmelden."
+      sso_email_locked: "Deine E-Mail-Adresse kann hier nicht geändert werden, da sie mit deinem Single-Sign-on-Konto verknüpft ist. Wende dich an deinen Administrator, falls sie geändert werden muss."
+      sso_password_locked: "Deine Organisation schreibt Single Sign-on vor. Dein Passwort wird daher von deiner Organisation verwaltet und kann hier nicht geändert werden."
     sessions:
       signed_in: "Erfolgreich angemeldet."
       signed_out: "Erfolgreich abgemeldet."
@@ -95,6 +112,16 @@ de:
       expired: "ist abgelaufen, bitte fordere eine neue an"
       not_found: "nicht gefunden"
       not_locked: "war nicht gesperrt"
+      blank: "muss ausgefüllt werden"
+      confirmation: "stimmt nicht mit %{attribute} überein"
+      invalid: "ist nicht gültig"
+      taken: "ist bereits vergeben"
+      too_short:
+        one: "ist zu kurz (mindestens 1 Zeichen)"
+        other: "ist zu kurz (mindestens %{count} Zeichen)"
+      too_long:
+        one: "ist zu lang (höchstens 1 Zeichen)"
+        other: "ist zu lang (höchstens %{count} Zeichen)"
       not_saved:
-        one: "1 Fehler verhinderte das Speichern von %{resource}:"
-        other: "%{count} Fehler verhinderten das Speichern von %{resource}:"
+        one: "Bitte prüfe Folgendes:"
+        other: "Bitte prüfe die folgenden %{count} Punkte:"
