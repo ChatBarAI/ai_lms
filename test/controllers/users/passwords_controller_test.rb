@@ -1,6 +1,16 @@
 require "test_helper"
 
 class Users::PasswordsControllerTest < ActionDispatch::IntegrationTest
+  test "completing a reset link verifies the email" do
+    user = users(:student)
+    user.update_column(:email_verified_at, nil)
+    token = user.send(:set_reset_password_token)
+    password = generated_password
+    put user_password_path, params: { user: { reset_password_token: token, password: password, password_confirmation: password } }
+    assert_response :redirect
+    assert user.reload.email_verified?
+  end
+
   test "public pages offer both password setup and recovery" do
     get new_user_session_path
     assert_select "a", text: "Set or reset password"

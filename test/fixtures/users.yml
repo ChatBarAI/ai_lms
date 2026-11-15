@@ -2,23 +2,28 @@ admin:
   email: admin@example.com
   role: 2
   name: Admin
+  email_verified_at: <%= Time.current %>
 
 instructor:
   email: instructor@example.com
   role: 1
   name: Instructor One
+  email_verified_at: <%= Time.current %>
 
 other_instructor:
   email: instructor2@example.com
   role: 1
   name: Instructor Two
+  email_verified_at: <%= Time.current %>
 
 student:
   email: student@example.com
   role: 0
   name: Student One
+  email_verified_at: <%= Time.current %>
 
 other_student:
   email: student2@example.com
   role: 0
   name: Student Two
+  email_verified_at: <%= Time.current %>

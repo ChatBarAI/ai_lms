@@ -134,6 +134,65 @@ class UserTest < ActiveSupport::TestCase
     assert_nil user.reload.provider
   end
 
+  # --- email verification (account pre-hijacking) ---
+
+  test "from_kinde refuses to link an existing account with an unverified email" do
+    user = users(:student)
+    user.update_column(:email_verified_at, nil)
+    assert_raises(User::UnverifiedEmailLinkError) do
+      User.from_kinde(KINDE_USER.merge(preferred_email: user.email, id: "kp_planted_1"))
+    end
+    assert_nil user.reload.provider
+    assert_nil user.uid
+  end
+
+  test "from_kinde links an existing account with a verified email" do
+    user = users(:student)
+    assert user.email_verified?
+    linked = User.from_kinde(KINDE_USER.merge(preferred_email: user.email, id: "kp_verified_1"))
+    assert_equal user.id, linked.id
+    assert_equal [ "kinde", "kp_verified_1" ], [ user.reload.provider, user.uid ]
+  end
+
+  test "users created through Kinde or Google sign-in are verified" do
+    assert User.from_kinde(KINDE_USER).email_verified?
+    auth = OmniAuth::AuthHash.new(provider: "google_oauth2", uid: "g_verified_1",
+                                  info: { email: "google-new@example.com", name: "Google User" })
+    assert User.from_omniauth(auth).email_verified?
+  end
+
+  test "self-registered accounts start unverified" do
+    user = User.create!(email: "self@example.com", password: generated_password)
+    assert_not user.email_verified?
+  end
+
+  test "completing a password reset verifies the email" do
+    user = users(:student)
+    user.update_column(:email_verified_at, nil)
+    password = generated_password
+    assert user.reset_password(password, password)
+    assert user.reload.email_verified?
+  end
+
+  test "a failed password reset does not persist verification" do
+    user = users(:student)
+    user.update_column(:email_verified_at, nil)
+    assert_not user.reset_password(generated_password, "different")
+    assert_not user.reload.email_verified?
+  end
+
+  test "changing the email clears verification unless the same save verifies it" do
+    user = users(:student)
+    user.update!(email: "changed@example.com")
+    assert_not user.email_verified?
+
+    user.update!(email: "admin-set@example.com", email_verified_at: Time.current)
+    assert user.email_verified?
+
+    user.update!(name: "Renamed")
+    assert user.email_verified?
+  end
+
   test "mandatory SSO rejects local passwords and password recovery" do
     user = users(:student)
     password = generated_password

@@ -80,6 +80,7 @@ de:
         subject: "Passwort geändert"
     omniauth_callbacks:
       failure: "Authentifizierung über %{kind} fehlgeschlagen: \"%{reason}\"."
+      kinde_unverified_email: "Mit dieser E-Mail-Adresse besteht bereits ein Konto. Melde dich mit deinem Passwort an oder bestätige deine E-Mail-Adresse über „Passwort festlegen oder zurücksetzen“ und versuche es dann erneut."
       success: "Erfolgreich über %{kind} authentifiziert."
     passwords:
       no_token: "Du kannst diese Seite nur über einen Link aus einer Passwort-Zurücksetzen-E-Mail öffnen. Falls du aus einer solchen E-Mail kommst, prüfe bitte, ob du die vollständige URL verwendet hast."

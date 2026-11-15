@@ -202,7 +202,7 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
     # Pre-create the user (as if an admin invited them via email/password)
     existing = User.create!(email: KINDE_USER_PAYLOAD[:preferred_email],
                             password: Devise.friendly_token[0, 20],
-                            organization: org)
+                            organization: org, email_verified_at: Time.current)
 
     stub_auth_url(connection_id: org.kinde_connection_id) do
       get org_sso_login_path(org_slug: org.slug)
@@ -215,6 +215,26 @@ class KindeAuthControllerTest < ActionDispatch::IntegrationTest
       assert_response :redirect   # signed in, not rejected
       assert_not_equal new_user_session_path, response.location
     end
+  end
+
+  test "callback refuses to link an existing account whose email is unverified" do
+    # e.g. someone self-registered or changed their own email to this address
+    planted = User.create!(email: KINDE_USER_PAYLOAD[:preferred_email], password: Devise.friendly_token[0, 20])
+
+    stub_auth_url do
+      get kinde_login_path(provider: "microsoft")
+    end
+
+    stub_callback(KINDE_USER_PAYLOAD) do
+      assert_no_difference -> { User.count } do
+        get kinde_callback_path, params: { code: "test_code", state: session[:kinde_transaction]["state"] }
+      end
+      assert_redirected_to new_user_session_path
+      assert_equal I18n.t("devise.omniauth_callbacks.kinde_unverified_email"), flash[:alert]
+      assert_nil session["warden.user.user.key"]
+    end
+    assert_nil planted.reload.provider
+    assert_nil planted.uid
   end
 
   # ─── helpers ─────────────────────────────────────────────────────────────────

@@ -34,7 +34,13 @@ class User < ApplicationRecord
   validates :course_locales, presence: true
   validate :course_locales_are_supported
 
+  # Raised when Kinde sign-in matches a local account whose email has not been
+  # verified. Linking it would give the Kinde user an account whose password
+  # someone else may know (account pre-hijacking).
+  class UnverifiedEmailLinkError < StandardError; end
+
   before_validation :normalise_course_locales
+  before_save :clear_email_verification, if: :email_changed_without_verification?
 
   scope :with_role, ->(role) { role.present? ? where(role: roles[role.to_s]) : all }
   scope :in_organization, ->(org_id) { org_id.present? ? where(organization_id: org_id) : all }
@@ -93,13 +99,20 @@ class User < ApplicationRecord
     super
   end
 
+  # Completing a reset or setup link proves control of the inbox, so it also
+  # verifies the email.
   def reset_password(new_password, new_password_confirmation)
     if mandatory_sso?
       errors.add(:base, I18n.t("devise.passwords.sso_required"))
       return false
     end
 
+    self.email_verified_at ||= Time.current
     super
+  end
+
+  def email_verified?
+    email_verified_at.present?
   end
 
   def initial_password_setup?
@@ -123,15 +136,19 @@ class User < ApplicationRecord
     user.email ||= auth.info.email
     user.name  ||= auth.info.name
     user.image_url ||= auth.info.image
-    user.password ||= Devise.friendly_token[0, 20] if user.new_record?
+    if user.new_record?
+      user.password ||= Devise.friendly_token[0, 20]
+      user.email_verified_at = Time.current
+    end
     user.save
     user
   end
 
   # Used by KindeAuthController. kinde_user is a Hash with symbol keys returned by
   # client.oauth.get_user: { id:, preferred_email:, first_name:, last_name:, picture: }
-  # A verified email may link an existing local account; existing provider links
-  # cannot be overwritten through email matching.
+  # A verified Kinde email may link an existing local account only when that
+  # account's own email is verified too; existing provider links cannot be
+  # overwritten through email matching.
   # Pass organization: org to auto-assign the user to an org on first sign-in.
   def self.from_kinde(kinde_user, organization: nil)
     user = find_by(provider: "kinde", uid: kinde_user[:id])
@@ -140,6 +157,9 @@ class User < ApplicationRecord
       if existing && (kinde_user[:email_verified] != true || existing.provider.present?)
         raise ArgumentError, "Account linking requires a verified email and an unlinked account"
       end
+      if existing && !existing.email_verified?
+        raise UnverifiedEmailLinkError, "Existing account #{existing.id} has an unverified email"
+      end
       user = existing
     end
     user ||= new
@@ -147,6 +167,7 @@ class User < ApplicationRecord
     user.provider  = "kinde"
     user.uid       = kinde_user[:id]
     user.email     = kinde_user[:preferred_email] if user.email.blank?
+    user.email_verified_at ||= Time.current
     user.name      = [ kinde_user[:first_name], kinde_user[:last_name] ].compact.join(" ").presence if user.name.blank?
     user.image_url = kinde_user[:picture] if user.image_url.blank?
     user.password  = Devise.friendly_token[0, 20] if user.new_record?
@@ -164,6 +185,16 @@ class User < ApplicationRecord
   end
 
   private
+
+  # A new email is unverified unless the same save verifies it (for example an
+  # admin setting it, see Admin::UsersController#update).
+  def email_changed_without_verification?
+    persisted? && will_save_change_to_email? && !will_save_change_to_email_verified_at?
+  end
+
+  def clear_email_verification
+    self.email_verified_at = nil
+  end
 
   def normalise_course_locales
     self.course_locales = Array(course_locales).reject(&:blank?).uniq

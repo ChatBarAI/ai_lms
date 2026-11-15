@@ -16,6 +16,7 @@ class UserCsvImportServiceTest < ActiveSupport::TestCase
     assert user.student?
     assert_nil user.organization
     assert user.encrypted_password.present?
+    assert user.email_verified?
   end
 
   test "imports full names roles and organizations by name or slug" do

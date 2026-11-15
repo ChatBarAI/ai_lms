@@ -26,6 +26,8 @@ class Admin::UsersController < Admin::BaseController
 
   def create
     @user = User.new(user_params)
+    # The admin chose this email, so it can't have been planted by someone else.
+    @user.email_verified_at = Time.current
     @user.role = permitted_role if permitted_role
     @user.organization_id = permitted_organization_id
     if @user.save
@@ -44,7 +46,10 @@ class Admin::UsersController < Admin::BaseController
     attrs[:role] = permitted_role if permitted_role
     attrs[:organization_id] = permitted_organization_id if organization_id_param_present?
     attrs.delete(:password) if attrs[:password].blank?
-    if @user.update(attrs)
+    @user.assign_attributes(attrs)
+    # An email set by an admin counts as verified; one a user sets themselves does not.
+    @user.email_verified_at = Time.current if @user.will_save_change_to_email?
+    if @user.save
       redirect_to admin_user_path(@user), notice: "User updated."
     else
       render :edit, status: :unprocessable_entity

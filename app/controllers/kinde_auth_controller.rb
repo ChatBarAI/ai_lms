@@ -170,6 +170,9 @@ class KindeAuthController < ApplicationController
       redirect_to new_user_registration_path,
                   alert: @user.errors.full_messages.join("\n")
     end
+  rescue User::UnverifiedEmailLinkError => e
+    Rails.logger.warn("[Kinde] Refused to link Kinde identity: #{e.message}")
+    redirect_to new_user_session_path, alert: t("devise.omniauth_callbacks.kinde_unverified_email")
   rescue StandardError => e
     Rails.logger.error("Kinde auth callback error: #{e.message}")
     redirect_to new_user_session_path, alert: "Sign in failed. Please try again."

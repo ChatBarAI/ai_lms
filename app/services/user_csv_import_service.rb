@@ -83,7 +83,8 @@ class UserCsvImportService
     end
 
     user = User.new(email: email, name: (row["full_name"] || row["name"]).to_s.strip.presence,
-                    role: role, organization: organization, password: Devise.friendly_token(32))
+                    role: role, organization: organization, password: Devise.friendly_token(32),
+                    email_verified_at: Time.current)
     if user.save
       @result.created += 1
     else

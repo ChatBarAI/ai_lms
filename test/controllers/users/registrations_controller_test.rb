@@ -41,6 +41,19 @@ class Users::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_password, user.encrypted_password
   end
 
+  test "changing your own email clears its verification" do
+    user = users(:student)
+    current_password = generated_password
+    user.update!(password: current_password)
+    sign_in user
+
+    patch user_registration_path, params: { user: { email: "self-chosen@example.com", current_password: current_password } }
+
+    assert_response :redirect
+    assert_equal "self-chosen@example.com", user.reload.email
+    assert_not user.email_verified?
+  end
+
   test "anonymous user cannot change a password" do
     user = users(:student)
     original_password = user.encrypted_password

@@ -21,15 +21,15 @@ student_password = resolve_seed_password.call("SEED_STUDENT_PASSWORD", "student"
 
 puts "Seeding users..."
 admin = User.find_or_initialize_by(email: admin_email)
-admin.assign_attributes(name: admin_name, role: :admin, password: admin_password)
+admin.assign_attributes(name: admin_name, role: :admin, password: admin_password, email_verified_at: admin.email_verified_at || Time.current)
 admin.save!
 
 instructor = User.find_or_initialize_by(email: "instructor@example.com")
-instructor.assign_attributes(name: "Ivy Instructor", role: :instructor, password: instructor_password)
+instructor.assign_attributes(name: "Ivy Instructor", role: :instructor, password: instructor_password, email_verified_at: instructor.email_verified_at || Time.current)
 instructor.save!
 
 student = User.find_or_initialize_by(email: "student@example.com")
-student.assign_attributes(name: "Sam Student", role: :student, password: student_password)
+student.assign_attributes(name: "Sam Student", role: :student, password: student_password, email_verified_at: student.email_verified_at || Time.current)
 student.save!
 
 puts "Seeding site settings..."

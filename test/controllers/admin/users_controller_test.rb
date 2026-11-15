@@ -89,6 +89,17 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
         user: { email: "new@example.com", name: "New", role: "student", password: generated_password }
       }
     end
+    assert User.find_by!(email: "new@example.com").email_verified?
+  end
+
+  test "an email set by an admin stays verified" do
+    sign_in users(:admin)
+    student = users(:student)
+    student.update_column(:email_verified_at, nil)
+    patch admin_user_path(student), params: { user: { email: "admin-chosen@example.com", password: "" } }
+    assert_redirected_to admin_user_path(student)
+    assert_equal "admin-chosen@example.com", student.reload.email
+    assert student.email_verified?
   end
 
   test "admin sees errors when creating a user without a password" do
