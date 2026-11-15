@@ -34,10 +34,12 @@ de:
           heading: "Passwort festlegen"
           submit: "Passwort festlegen"
           request: "Über den folgenden Link kannst du ein Passwort für dein Konto bei %{brand} festlegen."
+          subject: "%{brand}: Anfrage zum Festlegen des Passworts"
         reset:
           heading: "Passwort zurücksetzen"
           submit: "Passwort zurücksetzen"
           request: "Wir haben eine Anfrage zum Zurücksetzen des Passworts für dein Konto bei %{brand} erhalten."
+          subject: "%{brand}: Anfrage zum Zurücksetzen des Passworts"
         greeting: "Hallo %{name},"
         ignore: "Wenn du dies nicht angefordert hast, kannst du diese E-Mail ignorieren."
         unchanged: "Dein Passwort wird erst geändert, wenn du den Link oben verwendest und ein neues wählst."

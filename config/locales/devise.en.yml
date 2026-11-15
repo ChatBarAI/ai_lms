@@ -36,10 +36,12 @@ en:
           heading: "Set your password"
           submit: "Set password"
           request: "Use the link below to set a password for your %{brand} account."
+          subject: "%{brand}: Password setup request"
         reset:
           heading: "Reset your password"
           submit: "Reset password"
           request: "We received a request to reset the password for your %{brand} account."
+          subject: "%{brand}: Password reset request"
         greeting: "Hello %{name},"
         ignore: "If you did not request this, you can safely ignore this email."
         unchanged: "Your password will not change until you use the link above and choose a new one."

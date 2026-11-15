@@ -7,7 +7,7 @@ class BrandedDeviseMailer < Devise::Mailer
     I18n.with_locale(recipient_locale(record)) do
       prepare_branding(record)
       @password_action = record.initial_password_setup? ? "set" : "reset"
-      opts = opts.merge(subject: I18n.t("devise.views.passwords.#{@password_action}.heading")) unless opts.key?(:subject)
+      opts = opts.merge(subject: I18n.t("devise.views.passwords.#{@password_action}.subject", brand: @brand_name)) unless opts.key?(:subject)
       super(record, token, opts)
     end
   end
