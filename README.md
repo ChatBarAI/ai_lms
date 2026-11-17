@@ -1,7 +1,7 @@
 # AI LMS
 
 An AI centric open-source Rails LMS/e-learning system with a built-in AI tutor on every lesson,
-powered by [ChatBar AI](https://chatbar-ai.com). [Anam](https://https://anam.ai/) or your own embeded custom AI.
+powered by [ChatBar AI](https://chatbar-ai.com). [Anam](https://anam.ai/) or your own embedded custom AI.
 Instructors author courses and lessons, students enrol,
 work through lesson videos and quizzes, and can ask the lesson-scoped AI tutor
 follow-up questions in a popup or slide-in drawer.
