@@ -127,6 +127,7 @@ Rails.application.routes.draw do
         get :export
         get :import
         post :import, action: :create_import
+        post :new_user
       end
     end
     resources :organizations
