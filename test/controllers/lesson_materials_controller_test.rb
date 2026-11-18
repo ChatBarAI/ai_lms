@@ -821,6 +821,17 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to course_lesson_path(@course, @lesson,
                                             anchor: "material-#{@material.id}")
+    assert_equal "“Pre-read” marked as complete.", flash[:notice]
+  end
+
+  test "acknowledge notice names the material in German" do
+    student = users(:student)
+    student.update!(locale: "de")
+    sign_in student
+
+    post acknowledge_course_lesson_lesson_material_path(@course, @lesson, @material)
+
+    assert_equal "„Pre-read“ als abgeschlossen markiert.", flash[:notice]
   end
 
   test "double-acknowledge is idempotent" do
