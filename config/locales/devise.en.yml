@@ -45,6 +45,9 @@ en:
         greeting: "Hello %{name},"
         ignore: "If you did not request this, you can safely ignore this email."
         unchanged: "Your password will not change until you use the link above and choose a new one."
+      password_field:
+        show_password: "Show password"
+        hide_password: "Hide password"
       links:
         log_in: "Log in"
         sign_up: "Sign up"

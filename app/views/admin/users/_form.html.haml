@@ -19,7 +19,7 @@
     = f.collection_select :organization_id, Organization.by_name, :id, :name, { include_blank: "—" }, class: "w-full border border-gray-300 rounded px-3 py-2 bg-white"
   %div
     = f.label :password, (user.persisted? ? "New password (leave blank to keep current)" : "Password"), class: "block text-sm font-medium mb-1"
-    = f.password_field :password, class: "border border-gray-300 rounded px-3 py-2"
+    = render "devise/shared/password_field", f: f, field: :password, autocomplete: "new-password"
   .flex.gap-2
     = f.submit class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
     = link_to "Cancel", admin_users_path, class: "px-4 py-2 rounded border border-gray-300 hover:bg-gray-50"
