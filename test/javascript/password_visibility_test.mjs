@@ -13,21 +13,33 @@ function classList(initial = []) {
   }
 }
 
+function eventTarget() {
+  const listeners = {}
+  return {
+    addEventListener: (type, fn) => { (listeners[type] ||= new Set()).add(fn) },
+    removeEventListener: (type, fn) => { listeners[type]?.delete(fn) },
+    dispatch: type => { for (const fn of listeners[type] || []) fn() },
+    count: type => listeners[type]?.size || 0
+  }
+}
+
 function controller() {
+  const document = eventTarget()
+  const form = eventTarget()
   const PasswordVisibility = vm.runInNewContext(source
     .replace(/^import .*\n/gm, "")
-    .replace("export default class", "globalThis.PasswordVisibility = class"), { Controller: class {} })
+    .replace("export default class", "globalThis.PasswordVisibility = class"), { Controller: class {}, document })
   const attributes = {}
   let focused = 0
   const instance = Object.assign(new PasswordVisibility(), {
-    inputTarget: { type: "password", focus: () => { focused += 1 } },
+    inputTarget: { type: "password", form, focus: () => { focused += 1 } },
     buttonTarget: { title: "", setAttribute: (name, value) => { attributes[name] = value } },
     showIconTarget: { classList: classList() },
     hideIconTarget: { classList: classList(["hidden"]) },
     showLabelValue: "Show password",
     hideLabelValue: "Hide password"
   })
-  return { instance, attributes, focusCount: () => focused }
+  return { instance, attributes, document, form, focusCount: () => focused }
 }
 
 test("starts hidden with a show label", () => {
@@ -56,4 +68,36 @@ test("toggle reveals then hides the password and keeps focus in the field", () =
   assert.equal(instance.inputTarget.type, "password")
   assert.equal(attributes["aria-label"], "Show password")
   assert.equal(focusCount(), 2)
+})
+
+test("re-masks a revealed password before Turbo caches the page", () => {
+  const { instance, attributes, document } = controller()
+  instance.connect()
+  instance.toggle()
+  assert.equal(instance.inputTarget.type, "text")
+
+  document.dispatch("turbo:before-cache")
+  assert.equal(instance.inputTarget.type, "password")
+  assert.equal(attributes["aria-pressed"], "false")
+  assert.equal(instance.hideIconTarget.classList.contains("hidden"), true)
+})
+
+test("re-masks a revealed password when the form is submitted", () => {
+  const { instance, form } = controller()
+  instance.connect()
+  instance.toggle()
+
+  form.dispatch("submit")
+  assert.equal(instance.inputTarget.type, "password")
+})
+
+test("removes its listeners on disconnect", () => {
+  const { instance, document, form } = controller()
+  instance.connect()
+  assert.equal(document.count("turbo:before-cache"), 1)
+  assert.equal(form.count("submit"), 1)
+
+  instance.disconnect()
+  assert.equal(document.count("turbo:before-cache"), 0)
+  assert.equal(form.count("submit"), 0)
 })

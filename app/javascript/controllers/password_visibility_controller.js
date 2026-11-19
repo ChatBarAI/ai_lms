@@ -7,6 +7,18 @@ export default class extends Controller {
 
   connect() {
     this.render(false)
+    // Re-mask before submit and before Turbo snapshots the page: Turbo only
+    // blanks input[type=password] in its cache, so a revealed (type=text)
+    // field would otherwise keep the plaintext password in the snapshot.
+    this.conceal = () => this.render(false)
+    this.form = this.inputTarget.form
+    this.form?.addEventListener("submit", this.conceal)
+    document.addEventListener("turbo:before-cache", this.conceal)
+  }
+
+  disconnect() {
+    this.form?.removeEventListener("submit", this.conceal)
+    document.removeEventListener("turbo:before-cache", this.conceal)
   }
 
   toggle() {
