@@ -1,0 +1,13 @@
+-# locals: course, admin (true on /admin pages, so links stay inside the admin area)
+- subject = course.subject
+%nav#course-breadcrumb.min-w-0.text-sm.text-gray-600.dark:text-gray-300{ "aria-label": t("common.breadcrumb") }
+  %ol.flex.flex-wrap.items-center.gap-x-2.gap-y-1
+    - if admin
+      %li.flex.items-center.gap-2
+        = link_to terms[:courses], admin_courses_path, class: "hover:text-indigo-700 hover:underline"
+        %span.text-gray-400{ "aria-hidden": "true" } ›
+    - if subjects_enabled? && subject && can?(:read, subject)
+      %li.flex.items-center.gap-2
+        = link_to subject.name, (admin ? edit_admin_subject_path(subject) : subject_path(subject)), class: "hover:text-indigo-700 hover:underline"
+        %span.text-gray-400{ "aria-hidden": "true" } ›
+    %li.font-medium.text-gray-900.dark:text-gray-100{ "aria-current": "page" }= course.title
