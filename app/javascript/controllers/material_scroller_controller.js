@@ -60,32 +60,19 @@ export default class extends Controller {
     const url = slide?.dataset.materialScrollerAcknowledgeUrl
     if (!url) return false
 
-    const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "X-CSRF-Token": csrfToken
-      },
-      credentials: "same-origin"
-    })
+    const material = slide.querySelector("[data-controller~='material-completion']")
+    const completion = this.application.getControllerForElementAndIdentifier(material, "material-completion")
+    if (!completion) throw new Error("Material completion controller is unavailable")
 
-    if (!response.ok) throw new Error(`Material acknowledgement failed (${response.status})`)
-
-    this.completionChanged = true
-    slide.removeAttribute("data-material-scroller-acknowledge-url")
-    this.showCompletedState(slide)
-    return true
+    return completion.complete()
   }
 
-  showCompletedState(slide) {
-    const form = slide.querySelector("form[action*='/acknowledge']")
-    if (!form) return
+  materialCompleted(event) {
+    const slide = event.target.closest("[data-material-scroller-target='slide']")
+    if (!slide) return
 
-    const completed = document.createElement("span")
-    completed.className = "inline-flex items-center gap-1 text-sm text-green-700"
-    completed.textContent = "✓ Marked as complete"
-    form.replaceWith(completed)
+    slide.removeAttribute("data-material-scroller-acknowledge-url")
+    this.completionChanged = true
   }
 
   clearStatus() {

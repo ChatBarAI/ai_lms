@@ -44,6 +44,11 @@ export default class extends Controller {
     this.saveState()
   }
 
+  complete() {
+    this.collapse()
+    this.saveState()
+  }
+
   collapse() {
     this.contentTarget.classList.add("hidden")
     if (this.hasIconTarget) {

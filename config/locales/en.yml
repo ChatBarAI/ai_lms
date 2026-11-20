@@ -121,6 +121,10 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    materials:
+      mark_complete: "Mark as complete"
+      marked_complete: "Marked as complete"
+      completion_failed: "The material could not be marked complete. Please try again."
     edit:
       delete: "Delete %{lesson_l}"
       delete_confirm: "Delete this %{lesson_l} and all learner progress for it? This cannot be undone."
@@ -197,6 +201,7 @@ en:
       answers_pending_manual_marking: "Your written responses were saved. The instructor will be notified to mark your answers."
       answers_scored: "You scored %{score}%. %{message}"
       lesson_marked_complete: "%{lesson} marked complete."
+      material_marked_complete: "“%{material}” marked as complete."
       keep_practising: "Keep practising - pass mark is %{pass_mark}%."
       created: "%{lesson} created."
       updated: "%{lesson} updated."

@@ -145,7 +145,7 @@ class LessonMaterialsController < ApplicationController
     respond_to do |format|
       format.html do
         redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
-                    notice: "Marked as complete."
+                    notice: t("lessons.flash.material_marked_complete", material: @lesson_material.title)
       end
       format.json { render json: { acknowledged: true } }
     end

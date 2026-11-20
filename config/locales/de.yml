@@ -127,6 +127,10 @@ de:
       update_failed: "Profil konnte nicht gespeichert werden."
 
   lessons:
+    materials:
+      mark_complete: "Als abgeschlossen markieren"
+      marked_complete: "Als abgeschlossen markiert"
+      completion_failed: "Das Material konnte nicht als abgeschlossen markiert werden. Bitte versuche es erneut."
     edit:
       delete: "%{lesson} löschen"
       delete_confirm: "%{lesson} und den gesamten Lernfortschritt dazu löschen? Dies kann nicht rückgängig gemacht werden."
@@ -203,6 +207,7 @@ de:
       answers_pending_manual_marking: "Deine schriftlichen Antworten wurden gespeichert. Der Kursleiter wird benachrichtigt, deine Antworten zu bewerten."
       answers_scored: "Du hast %{score}% erreicht. %{message}"
       lesson_marked_complete: "%{lesson} als abgeschlossen markiert."
+      material_marked_complete: "„%{material}“ als abgeschlossen markiert."
       keep_practising: "Übe weiter - die Bestehensgrenze liegt bei %{pass_mark}%."
       created: "%{lesson} erstellt."
       updated: "%{lesson} aktualisiert."

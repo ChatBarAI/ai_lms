@@ -1,6 +1,6 @@
 - acknowledged = local_assigns.fetch(:acknowledged, material.acknowledged_by?(enrollment))
 - collapsed = local_assigns.fetch(:collapsed, !material.open_by_default?)
-%section.bg-white.border.border-gray-200.rounded-lg.p-4.mb-4{ id: "material-#{material.id}", data: { controller: "collapsible", expanded: (collapsed ? "false" : "true"), collapsible_storage_key_value: "material-expanded:#{current_user&.id || 'guest'}:#{material.id}" } }
+%section.bg-white.border.border-gray-200.rounded-lg.p-4.mb-4{ id: "material-#{material.id}", data: { controller: "collapsible material-completion", action: "material-completion:completed->collapsible#complete", expanded: (collapsed ? "false" : "true"), collapsible_storage_key_value: "material-expanded:#{current_user&.id || 'guest'}:#{material.id}", material_completion_completed_value: "✓ #{t('lessons.materials.marked_complete')}", material_completion_error_value: t("lessons.materials.completion_failed") } }
   .flex.items-center.justify-between.gap-3
     .flex-1.cursor-pointer{ data: { action: "click->collapsible#toggle keydown.enter->collapsible#toggle keydown.space->collapsible#toggle:prevent" }, role: "button", tabindex: "0", "aria-label": "Toggle #{material.title}" }
       %h3.font-semibold= material.title
@@ -9,11 +9,13 @@
         - if acknowledged
           %span.inline-flex.items-center.gap-1.text-sm.text-green-700
             %span.text-base ✓
-            Marked as complete
+            = t("lessons.materials.marked_complete")
         - else
-          = button_to "Mark as complete", acknowledge_course_lesson_lesson_material_path(course, lesson, material), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-sm"
+          = button_to t("lessons.materials.mark_complete"), acknowledge_course_lesson_lesson_material_path(course, lesson, material), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer text-sm", data: { material_completion_target: "button" }, form: { data: { turbo: false, action: "submit->material-completion#submit", material_completion_target: "form" } }
       %button{ type: "button", class: "inline-flex", data: { action: "click->collapsible#toggle" }, "aria-label": "Toggle #{material.title}" }
         = collapsible_icon_badge
+
+  %p.text-sm.text-red-700{ role: "alert", data: { material_completion_target: "status" } }
 
   %div.mt-4{ data: { collapsible_target: "content" } }
     %hr.border-gray-200.mb-3
