@@ -160,6 +160,9 @@ de:
       in_progress: "In Bearbeitung"
       not_started: "Nicht begonnen"
       back: "Zurück zum %{course_l}"
+    breadcrumb:
+      label: "Navigationspfad"
+      position: "%{lesson} %{number} von %{total}"
     index:
       heading: "%{lessons}"
       add: "%{lesson_l} hinzufügen"
