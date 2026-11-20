@@ -1,0 +1,37 @@
+-# Ask Us slide-in panel — same structure as chatbar-ai-search-fullstack layouts/admin/_help_panel.
+-# Must NOT sit inside <nav>; render at end of layout body.
+-# Inline transform (not Tailwind translate-x-full): that utility isn't in our built CSS.
+- return unless site_setting.ask_help_available_for?(namespace)
+
+- token = site_setting.ask_help_token_for(namespace)
+- ctx = ask_help_context_string(namespace: namespace)
+- iframe_url = ask_help_iframe_url(token: token, context: ctx)
+
+-# Overlay (click to close)
+.fixed.inset-0.z-40.hidden.transition-opacity.duration-300{
+  style: "background-color: rgba(0, 0, 0, 0.25);",
+  data: { ask_help_panel_target: "overlay", action: "click->ask-help-panel#close" }
+}
+
+-# Slide-in panel (starts off-screen; JS toggles transform + pointer-events)
+.fixed.top-0.right-0.z-50.h-full.bg-white.shadow-2xl.transition-transform.duration-300.ease-in-out{
+  style: "width: 768px; max-width: 80vw; transform: translateX(100%); pointer-events: none;",
+  data: { ask_help_panel_target: "panel" }
+}
+  .flex.items-center.justify-between.bg-gray-100.px-4.py-3
+    %h3.font-semibold.text-gray-900 Chatbar AI Help Assistant
+    %button.cursor-pointer.rounded.p-1.text-gray-700.hover:bg-gray-200.focus:outline-none{
+      type: "button",
+      "aria-label": "Close help panel",
+      data: { action: "click->ask-help-panel#close" }
+    }
+      %svg.w-5.h-5{ xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", "stroke-width": "1.5", stroke: "currentColor" }
+        %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "M6 18L18 6M6 6l12 12" }
+
+  .h-full{ style: "height: calc(100% - 52px);" }
+    %iframe.h-full.w-full.border-0{
+      src: iframe_url,
+      title: "Chatbar AI Help Assistant",
+      allow: "microphone; clipboard-write",
+      referrerpolicy: "no-referrer-when-downgrade"
+    }
