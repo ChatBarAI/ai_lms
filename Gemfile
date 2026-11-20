@@ -71,7 +71,7 @@ gem "cancancan"
 gem "ransack"
 
 # Pagination
-gem "pagy", "~> 43.5"
+gem "pagy", "~> 43.6"
 
 # Date grouping for dashboards (group_by_day / group_by_week)
 gem "groupdate", "~> 6.4"
