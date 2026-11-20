@@ -127,6 +127,10 @@ de:
       update_failed: "Profil konnte nicht gespeichert werden."
 
   lessons:
+    materials:
+      mark_complete: "Als abgeschlossen markieren"
+      marked_complete: "Als abgeschlossen markiert"
+      completion_failed: "Das Material konnte nicht als abgeschlossen markiert werden. Bitte versuche es erneut."
     edit:
       delete: "%{lesson} löschen"
       delete_confirm: "%{lesson} und den gesamten Lernfortschritt dazu löschen? Dies kann nicht rückgängig gemacht werden."

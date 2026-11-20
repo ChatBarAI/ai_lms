@@ -121,6 +121,10 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    materials:
+      mark_complete: "Mark as complete"
+      marked_complete: "Marked as complete"
+      completion_failed: "The material could not be marked complete. Please try again."
     edit:
       delete: "Delete %{lesson_l}"
       delete_confirm: "Delete this %{lesson_l} and all learner progress for it? This cannot be undone."
