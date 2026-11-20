@@ -172,6 +172,33 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_select "nav#lesson-breadcrumb li", count: 2
   end
 
+  test "show breadcrumb numbers published lessons only for visitors" do
+    get course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "nav#lesson-breadcrumb a[href=?]", course_path(courses(:algebra)), text: "Algebra"
+    assert_select "nav#lesson-breadcrumb [aria-current='page']", text: /Lesson 2 of 2\s*·\s*Quadratic equations/
+  end
+
+  test "show breadcrumb number matches the Progress sidebar number" do
+    sign_in users(:student)
+
+    get course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "nav#lesson-breadcrumb [aria-current='page']", text: /Lesson 2 of 2/
+    assert_select "#lesson-course-sidebar a[aria-current='page'] > span:first-child", text: "2"
+  end
+
+  test "show breadcrumb counts drafts for the course owner" do
+    sign_in users(:instructor)
+
+    get course_lesson_path(courses(:algebra), lessons(:draft_lesson))
+
+    assert_response :success
+    assert_select "nav#lesson-breadcrumb [aria-current='page']", text: /Lesson 3 of 3/
+  end
+
   test "owner can edit draft lesson" do
     sign_in users(:instructor)
     get edit_course_lesson_path(courses(:algebra), lessons(:draft_lesson))
