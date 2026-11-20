@@ -138,6 +138,40 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "edit shows breadcrumb with subject, course and lesson position" do
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "nav#lesson-breadcrumb" do
+      assert_select "a[href=?]", subject_path(subjects(:math)), text: "Mathematics"
+      assert_select "a[href=?]", course_path(courses(:algebra)), text: "Algebra"
+      assert_select "[aria-current='page']", text: /Lesson 2 of 3\s*·\s*Quadratic equations/
+    end
+  end
+
+  test "edit breadcrumb counts the draft for its owner like the sidebar" do
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(courses(:algebra), lessons(:draft_lesson))
+
+    assert_response :success
+    assert_select "nav#lesson-breadcrumb [aria-current='page']", text: /Lesson 3 of 3\s*·\s*Draft Lesson/
+  end
+
+  test "edit breadcrumb hides the subject when the course has none" do
+    courses(:algebra).update!(subject: nil)
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "nav#lesson-breadcrumb a", count: 1
+    assert_select "nav#lesson-breadcrumb a[href=?]", course_path(courses(:algebra))
+    assert_select "nav#lesson-breadcrumb li", count: 2
+  end
+
   test "owner can edit draft lesson" do
     sign_in users(:instructor)
     get edit_course_lesson_path(courses(:algebra), lessons(:draft_lesson))

@@ -96,6 +96,7 @@ class LessonsController < ApplicationController
   end
 
   def edit
+    @course_lessons = visible_course_lessons.to_a
     load_cbai_name
   end
 
@@ -104,6 +105,7 @@ class LessonsController < ApplicationController
     if assign_lesson_form_attributes && @lesson.save
       redirect_to course_lesson_path(@course, @lesson), notice: t("lessons.flash.updated", **helpers.terms)
     else
+      @course_lessons = visible_course_lessons.to_a
       render :edit, status: :unprocessable_entity
     end
   end
@@ -227,9 +229,14 @@ class LessonsController < ApplicationController
     @lesson.cbai_name = nil
   end
 
+  # Lessons the viewer can see, in course order. The Progress sidebar and the
+  # breadcrumb both number lessons from this list, so their numbers match.
+  def visible_course_lessons
+    can?(:update, @course) ? @course.lessons : @course.lessons.published
+  end
+
   def prepare_course_sidebar
-    visible_lessons = can?(:update, @course) ? @course.lessons : @course.lessons.published
-    @course_lessons = visible_lessons
+    @course_lessons = visible_course_lessons
       .with_attached_cover_image
       .with_rich_text_body
       .includes(:tags)
