@@ -1,5 +1,8 @@
 - content_for :title, t("catalog_ui.edit_course", **terms)
 
+.mb-2
+  = render "breadcrumb", course: @course, admin: false
+
 %h1.text-2xl.font-bold.mb-4= t("catalog_ui.edit_course_title", **terms, title: @course.title)
 
 = render "form", course: @course

@@ -1,7 +1,7 @@
 -# locals: course, lesson, lessons (Array of Lesson, same list as the Progress sidebar)
 - position = lesson_position_label(lesson, lessons)
 - subject = course.subject
-%nav#lesson-breadcrumb.min-w-0.text-sm.text-gray-600.dark:text-gray-300{ "aria-label": t("lessons.breadcrumb.label") }
+%nav#lesson-breadcrumb.min-w-0.text-sm.text-gray-600.dark:text-gray-300{ "aria-label": t("common.breadcrumb") }
   %ol.flex.flex-wrap.items-center.gap-x-2.gap-y-1
     - if subjects_enabled? && subject && can?(:read, subject)
       %li.flex.items-center.gap-2

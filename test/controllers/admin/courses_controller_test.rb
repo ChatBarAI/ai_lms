@@ -213,4 +213,28 @@ class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", edit_admin_course_path(courses(:algebra))
     assert_select "a[href=?]", admin_course_path(courses(:algebra)), count: 0
   end
+
+  test "edit shows breadcrumb that stays inside admin" do
+    sign_in users(:admin)
+
+    get edit_admin_course_path(courses(:algebra))
+
+    assert_response :success
+    assert_select "nav#course-breadcrumb" do
+      assert_select "a[href=?]", admin_courses_path, text: "Courses"
+      assert_select "a[href=?]", edit_admin_subject_path(subjects(:math)), text: "Mathematics"
+      assert_select "[aria-current='page']", text: "Algebra"
+    end
+  end
+
+  test "edit breadcrumb hides the subject when subjects are turned off" do
+    SiteSetting.current.update!(subjects_enabled: false)
+    sign_in users(:admin)
+
+    get edit_admin_course_path(courses(:algebra))
+
+    assert_response :success
+    assert_select "nav#course-breadcrumb a", count: 1
+    assert_select "nav#course-breadcrumb li", count: 2
+  end
 end

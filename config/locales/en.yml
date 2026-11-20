@@ -42,6 +42,7 @@ en:
         locale: "Language"
 
   common:
+    breadcrumb: "Breadcrumb"
     draft: "draft"
     published: "published"
     edit: "Edit"
@@ -155,7 +156,6 @@ en:
       not_started: "Not started"
       back: "Back to %{course_l}"
     breadcrumb:
-      label: "Breadcrumb"
       position: "%{lesson} %{number} of %{total}"
     index:
       heading: "%{lessons}"

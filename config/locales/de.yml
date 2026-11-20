@@ -48,6 +48,7 @@ de:
         current_password: "Aktuelles Passwort"
 
   common:
+    breadcrumb: "Navigationspfad"
     draft: "Entwurf"
     published: "veröffentlicht"
     edit: "Bearbeiten"
@@ -161,7 +162,6 @@ de:
       not_started: "Nicht begonnen"
       back: "Zurück zum %{course_l}"
     breadcrumb:
-      label: "Navigationspfad"
       position: "%{lesson} %{number} von %{total}"
     index:
       heading: "%{lessons}"
