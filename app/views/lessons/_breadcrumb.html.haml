@@ -3,7 +3,7 @@
 - subject = course.subject
 %nav#lesson-breadcrumb.min-w-0.text-sm.text-gray-600.dark:text-gray-300{ "aria-label": t("lessons.breadcrumb.label") }
   %ol.flex.flex-wrap.items-center.gap-x-2.gap-y-1
-    - if subject && can?(:read, subject)
+    - if subjects_enabled? && subject && can?(:read, subject)
       %li.flex.items-center.gap-2
         = link_to subject.name, subject_path(subject), class: "hover:text-indigo-700 hover:underline"
         %span.text-gray-400{ "aria-hidden": "true" } ›
