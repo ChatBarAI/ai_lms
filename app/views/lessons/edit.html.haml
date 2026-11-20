@@ -1,4 +1,4 @@
-- content_for :title, t("catalog_ui.edit_lesson", **terms)
+- content_for :title, "#{t("common.edit")} · #{lesson_page_title(@lesson, @course_lessons)}"
 
 .mb-2
   = render "breadcrumb", course: @course, lesson: @lesson, lessons: @course_lessons

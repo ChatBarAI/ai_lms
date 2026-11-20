@@ -210,6 +210,22 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_select "nav#lesson-breadcrumb li", count: 2
   end
 
+  test "edit tab title shows the lesson position and title" do
+    sign_in users(:instructor)
+
+    get edit_course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "title", "Edit · Lesson 2 of 3: Quadratic equations"
+  end
+
+  test "show tab title shows the lesson position and title" do
+    get course_lesson_path(courses(:algebra), lessons(:advanced))
+
+    assert_response :success
+    assert_select "title", "Lesson 2 of 2: Quadratic equations"
+  end
+
   test "owner can edit draft lesson" do
     sign_in users(:instructor)
     get edit_course_lesson_path(courses(:algebra), lessons(:draft_lesson))

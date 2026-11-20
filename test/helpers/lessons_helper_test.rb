@@ -23,6 +23,16 @@ class LessonsHelperTest < ActionView::TestCase
     I18n.backend.store_translations(:en, activerecord: { models: { lesson: { one: "Lesson" } } })
   end
 
+  test "lesson_page_title puts the position before the title" do
+    lessons = [ lessons(:intro), lessons(:advanced) ]
+
+    assert_equal "Lesson 2 of 2: Quadratic equations", lesson_page_title(lessons(:advanced), lessons)
+  end
+
+  test "lesson_page_title is just the title when the lesson is not in the list" do
+    assert_equal "Draft Lesson", lesson_page_title(lessons(:draft_lesson), [ lessons(:intro) ])
+  end
+
   test "lesson_position_label is translated to German" do
     lessons = [ lessons(:intro), lessons(:advanced) ]
 

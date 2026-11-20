@@ -24,6 +24,11 @@ module LessonsHelper
     t("lessons.breadcrumb.position", number: index + 1, total: lessons.size, **terms)
   end
 
+  # Browser tab title, e.g. "Lesson 3 of 12: Course Overview", so open tabs can be told apart.
+  def lesson_page_title(lesson, lessons)
+    [ lesson_position_label(lesson, lessons), lesson.title ].compact.join(": ")
+  end
+
   def lesson_progress_ring(progress, classes: nil)
     pct = progress.completion_percentage.round
     circ = (2 * Math::PI * 20).round(2)

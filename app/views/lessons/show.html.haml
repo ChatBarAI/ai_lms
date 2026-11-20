@@ -1,4 +1,4 @@
-- content_for :title, @lesson.title
+- content_for :title, lesson_page_title(@lesson, @course_lessons)
 - content_for :body_controllers, "lesson-sidebar"
 - content_for :header_actions do
   = render "course_sidebar_button"
