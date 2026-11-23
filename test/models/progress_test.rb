@@ -86,6 +86,49 @@ class ProgressTest < ActiveSupport::TestCase
     assert progress.completed?
   end
 
+  test "adding a required material keeps credit for optional materials already read" do
+    progress = content_progress
+    read = add_material(progress.lesson, required: false)
+    add_material(progress.lesson, required: false)
+    acknowledge(read, progress)
+    progress.refresh_material_progress!
+    assert_equal 50, progress.completion_percentage
+
+    required = add_material(progress.lesson)
+    progress.lesson.lesson_materials.reset
+    assert_equal 50, progress.completion_percentage
+    assert progress.in_progress?
+
+    acknowledge(required, progress)
+    progress.refresh_material_progress!
+    assert progress.reload.completed?
+  end
+
+  test "optional reading counts alongside required materials but is never needed for completion" do
+    progress = content_progress
+    required = add_material(progress.lesson)
+    optional = add_material(progress.lesson, required: false)
+
+    acknowledge(optional, progress)
+    progress.refresh_material_progress!
+    assert_equal 50, progress.completion_percentage
+    assert progress.in_progress?
+
+    acknowledge(required, progress)
+    progress.refresh_material_progress!
+    assert progress.reload.completed?
+  end
+
+  test "required materials alone complete a lesson that also has unread optional ones" do
+    progress = content_progress
+    required = add_material(progress.lesson)
+    add_material(progress.lesson, required: false)
+
+    acknowledge(required, progress)
+    progress.refresh_material_progress!
+    assert progress.reload.completed?
+  end
+
   test "empty lessons need explicit completion and other enrollments do not count" do
     progress = content_progress
     progress.refresh_material_progress!

@@ -17,4 +17,4 @@
         %p.hidden.mt-2.text-sm.text-red-700{ role: "alert", data: { material_scroller_target: "status" } }
     - else
       - @lesson.lesson_materials.each do |m|
-        = render "lesson_materials/material", material: m, course: @course, lesson: @lesson, enrollment: @enrollment, reload_when_complete: true
+        = render "lesson_materials/material", material: m, course: @course, lesson: @lesson, enrollment: @enrollment, reload_on_quiz_unlock: true

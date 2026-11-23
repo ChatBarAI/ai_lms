@@ -32,10 +32,6 @@ class Progress < ApplicationRecord
     [ percentage.round(1), 99.0 ].min
   end
 
-  def materials_complete?
-    materials_completion_fraction == 1.0
-  end
-
   def refresh_material_progress!
     return if completed?
     return if materials_completion_fraction.zero?
@@ -55,17 +51,25 @@ class Progress < ApplicationRecord
   end
 
   def completion_materials
-    materials = lesson.lesson_materials.to_a
-    required = materials.select(&:required?)
-    required.presence || materials
+    lesson.lesson_materials.to_a
   end
 
+  # Required materials set the bar. Optional materials count when the lesson has no
+  # required ones, and otherwise only once this learner has read them, so a material
+  # made required later lowers progress in proportion instead of discarding the
+  # optional reading already done. All required materials read still means 1.0.
   def materials_completion_fraction
-    ids = completion_materials.map(&:id)
-    return 0.0 if ids.empty?
+    materials = completion_materials
+    return 0.0 if materials.empty?
 
-    acknowledged = enrollment.lesson_material_acknowledgements.where(lesson_material_id: ids).count
-    acknowledged.to_f / ids.size
+    acknowledged_ids = enrollment.lesson_material_acknowledgements
+      .where(lesson_material_id: materials.map(&:id))
+      .pluck(:lesson_material_id)
+      .to_set
+    required, optional = materials.partition(&:required?)
+    counted = required.empty? ? optional : required + optional.select { |material| acknowledged_ids.include?(material.id) }
+
+    counted.count { |material| acknowledged_ids.include?(material.id) }.to_f / counted.size
   end
 
   def stamp_completed_at

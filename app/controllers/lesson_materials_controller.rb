@@ -134,16 +134,23 @@ class LessonMaterialsController < ApplicationController
       return
     end
 
-    ack = LessonMaterialAcknowledgement.find_or_initialize_by(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
-    authorize! :create, ack
-    materials_completed = false
+    quiz_unlocked = false
+    progress_changed = false
     LessonMaterialAcknowledgement.transaction do
       progress = enrollment.progresses.find_or_create_by!(lesson: @lesson)
       progress.with_lock do
-        was_complete = progress.materials_complete?
+        # Looked up under the lock so a concurrent click on the same material finds
+        # the saved acknowledgement instead of failing on a duplicate insert.
+        ack = LessonMaterialAcknowledgement.find_or_initialize_by(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
+        authorize! :create, ack
+        # Same rule the quiz section uses, so lessons whose quiz was never locked
+        # (no required materials) are not reloaded over a half-answered quiz.
+        quiz_was_unlocked = @lesson.lesson_materials_complete_for?(enrollment)
+        percentage_before = progress.completion_percentage
         ack.save!
         progress.refresh_material_progress!
-        materials_completed = !was_complete && progress.materials_complete?
+        quiz_unlocked = !quiz_was_unlocked && @lesson.lesson_materials_complete_for?(enrollment) && @lesson.questions.exists?
+        progress_changed = progress.completion_percentage != percentage_before
       end
     end
 
@@ -152,7 +159,7 @@ class LessonMaterialsController < ApplicationController
         redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
                     notice: t("lessons.flash.material_marked_complete", material: @lesson_material.title)
       end
-      format.json { render json: { acknowledged: true, materials_completed: materials_completed } }
+      format.json { render json: { acknowledged: true, quiz_unlocked: quiz_unlocked, progress_changed: progress_changed } }
     end
   end
 
