@@ -1,6 +1,46 @@
 require "test_helper"
 
 class LessonsHelperTest < ActionView::TestCase
+  include TerminologyHelper
+
+  test "lesson_position_label gives position and total" do
+    lessons = [ lessons(:intro), lessons(:advanced), lessons(:draft_lesson) ]
+
+    assert_equal "Lesson 1 of 3", lesson_position_label(lessons(:intro), lessons)
+    assert_equal "Lesson 3 of 3", lesson_position_label(lessons(:draft_lesson), lessons)
+  end
+
+  test "lesson_position_label is nil when the lesson is not in the list" do
+    assert_nil lesson_position_label(lessons(:draft_lesson), [ lessons(:intro), lessons(:advanced) ])
+  end
+
+  test "lesson_position_label follows renamed terminology" do
+    I18n.backend.store_translations(:en, activerecord: { models: { lesson: { one: "Module" } } })
+    lessons = [ lessons(:intro), lessons(:advanced) ]
+
+    assert_equal "Module 2 of 2", lesson_position_label(lessons(:advanced), lessons)
+  ensure
+    I18n.backend.store_translations(:en, activerecord: { models: { lesson: { one: "Lesson" } } })
+  end
+
+  test "lesson_page_title puts the position before the title" do
+    lessons = [ lessons(:intro), lessons(:advanced) ]
+
+    assert_equal "Lesson 2 of 2: Quadratic equations", lesson_page_title(lessons(:advanced), lessons)
+  end
+
+  test "lesson_page_title is just the title when the lesson is not in the list" do
+    assert_equal "Draft Lesson", lesson_page_title(lessons(:draft_lesson), [ lessons(:intro) ])
+  end
+
+  test "lesson_position_label is translated to German" do
+    lessons = [ lessons(:intro), lessons(:advanced) ]
+
+    I18n.with_locale(:de) do
+      assert_equal "Lektion 2 von 2", lesson_position_label(lessons(:advanced), lessons)
+    end
+  end
+
   test "returns nil for blank or unrecognized URLs" do
     assert_nil lesson_video_embed(nil)
     assert_nil lesson_video_embed("")

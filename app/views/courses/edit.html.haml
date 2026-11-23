@@ -1,6 +1,11 @@
 - content_for :title, t("catalog_ui.edit_course", **terms)
 
-%h1.text-2xl.font-bold.mb-4= t("catalog_ui.edit_course_title", **terms, title: @course.title)
+.mb-2.flex.flex-wrap.items-center.justify-between.gap-3
+  = render "breadcrumb", course: @course, admin: false
+  = link_to course_path(@course), class: "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors" do
+    = t("catalog_ui.back_to_course", **terms)
+
+%h1.text-2xl.font-bold.mb-4= t("catalog_ui.edit_course", **terms)
 
 = render "form", course: @course
 

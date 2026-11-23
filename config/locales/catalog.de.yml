@@ -11,7 +11,6 @@ de:
     add_lesson: "%{lesson} hinzufügen"
     new_course: "%{course} erstellen"
     edit_course: "%{course} bearbeiten"
-    edit_course_title: "%{course} bearbeiten · %{title}"
     lessons_in_course: "%{lessons} innerhalb von %{course}"
     lesson_number: "%{lesson} %{number}"
     no_lessons_add_first: "Noch keine %{lessons}. Füge den ersten Eintrag für %{course} hinzu."

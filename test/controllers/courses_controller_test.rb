@@ -167,4 +167,17 @@ class CoursesControllerTest < ActionDispatch::IntegrationTest
     assert_select "img[class~=?]", "aspect-[728/320]"
     assert_select "img[class~=h-40]", count: 0
   end
+
+  test "owner edit page shows subject and course breadcrumb" do
+    sign_in users(:instructor)
+
+    get edit_course_path(courses(:algebra))
+
+    assert_response :success
+    assert_select "nav#course-breadcrumb" do
+      assert_select "a", count: 1
+      assert_select "a[href=?]", subject_path(subjects(:math)), text: "Mathematics"
+      assert_select "[aria-current='page']", text: "Algebra"
+    end
+  end
 end

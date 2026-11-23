@@ -1,0 +1,12 @@
+-# locals: course, lesson, lessons (Array of Lesson, same list as the Progress sidebar)
+- position = lesson_position_label(lesson, lessons)
+- subject = course.subject
+- links = []
+- if subjects_enabled? && subject && can?(:read, subject)
+  - links << [subject.name, subject_path(subject)]
+- links << [course.title, course_path(course)]
+= render layout: "shared/breadcrumb", locals: { id: "lesson-breadcrumb", links: links } do
+  - if position
+    %span= position
+    %span.text-gray-500.dark:text-gray-400{ "aria-hidden": "true" } ·
+  %span= lesson.title

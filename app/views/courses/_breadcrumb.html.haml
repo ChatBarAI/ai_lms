@@ -1,0 +1,8 @@
+-# locals: course, admin (true on /admin pages, so links stay inside the admin area)
+- subject = course.subject
+- links = []
+- links << [terms[:courses], admin_courses_path] if admin
+- if subjects_enabled? && subject && can?(:read, subject)
+  - links << [subject.name, (admin ? edit_admin_subject_path(subject) : subject_path(subject))]
+= render layout: "shared/breadcrumb", locals: { id: "course-breadcrumb", links: links } do
+  = course.title

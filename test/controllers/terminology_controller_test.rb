@@ -22,7 +22,7 @@ class TerminologyControllerTest < ActionDispatch::IntegrationTest
 
     get edit_course_path(@course)
     assert_response :success
-    assert_select "h1", text: "Edit Module · Algebra"
+    assert_select "h1", text: "Edit module"
     assert_select "a", text: "Add activity"
 
     get new_course_path
