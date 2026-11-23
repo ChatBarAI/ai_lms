@@ -1,0 +1,40 @@
+# One edge proxy per server. It alone binds ports 80/443 and routes each
+# instance's domains to that instance's web container over the external
+# ai_lms_edge network. Installed by deploy/server into /opt/ai_lms/edge.
+name: ai_lms_edge
+
+services:
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  edge:
+    name: ai_lms_edge
+    external: true
+
+# The pre-multi-instance proxy stored certificates in these volumes; reusing
+# them means existing domains keep their certificates when the edge takes over.
+volumes:
+  caddy_data:
+    name: ai_lms_caddy_data
+    external: true
+  caddy_config:
+    name: ai_lms_caddy_config
+    external: true

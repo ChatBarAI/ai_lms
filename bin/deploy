@@ -4,7 +4,7 @@ set -Eeuo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  bin/deploy [--dirty] [--change-domain] [--skip-dns-check] HOST CANONICAL_DOMAIN [ALIAS_DOMAIN...]
+  bin/deploy [--instance NAME] [--dirty] [--change-domain] [--skip-dns-check] HOST CANONICAL_DOMAIN [ALIAS_DOMAIN...]
 
 Examples:
   bin/deploy root@203.0.113.10 learn.example.com
@@ -13,6 +13,13 @@ Examples:
   bin/deploy --dirty --change-domain root@203.0.113.10 new.example.com
   bin/deploy --skip-dns-check root@203.0.113.10 proxied.example.com
   SSH_PORT=2222 bin/deploy root@server.example.com learn.example.com
+  bin/deploy --instance acme root@203.0.113.10 learn.acme.com
+
+Several instances can share one server. Each --instance NAME gets its own
+containers, database, uploads and deployment root (/opt/ai_lms/instances/NAME);
+one shared Caddy proxy (/opt/ai_lms/edge) routes every instance's domains.
+Without --instance, the "default" instance in /opt/ai_lms is deployed, exactly
+as before multi-instance support. NAME: lowercase letters, digits, hyphens.
 
 By default, the deploy contains exactly the committed HEAD. Use --dirty while
 developing the deployment mechanism to include tracked modifications and
@@ -23,6 +30,11 @@ Container health and verified public HTTPS checks still run.
 USAGE
 }
 
+app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+# shellcheck source=deploy/lib/instance.sh
+source "$app_root/deploy/lib/instance.sh"
+
+instance=$LMS_DEFAULT_INSTANCE
 dirty=false
 change_domain=false
 skip_dns_check=false
@@ -31,6 +43,12 @@ while [[ ${1:-} == --* ]]; do
     --dirty) dirty=true ;;
     --change-domain) change_domain=true ;;
     --skip-dns-check) skip_dns_check=true ;;
+    --instance)
+      [[ $# -ge 2 ]] || { echo "--instance requires a name." >&2; exit 2; }
+      instance=$2
+      shift
+      ;;
+    --instance=*) instance=${1#--instance=} ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
   shift
@@ -42,7 +60,8 @@ host=$1
 domain=$2
 shift 2
 aliases=("$@")
-deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+lms_require_instance "$instance" || exit 2
+deploy_root=${DEPLOY_ROOT:-$(lms_instance_root "$instance")}
 ssh_port=${SSH_PORT:-22}
 key_file=${RAILS_PRODUCTION_KEY_FILE:-config/credentials/production.key}
 
@@ -147,7 +166,7 @@ remote_stage=$(ssh "${ssh_args[@]}" "$host" 'umask 077; mktemp -d /tmp/ai_lms-de
 remote_archive="$remote_stage/source.tar.gz"
 remote_key="$remote_stage/production.key"
 
-echo "Uploading commit $release..."
+echo "Uploading commit $release for instance '$instance' ($deploy_root)..."
 scp "${scp_args[@]}" "$archive" "$host:$remote_archive"
 
 if [[ -f $key_file ]]; then
@@ -159,7 +178,7 @@ else
 fi
 
 printf -v remote_command \
-  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q %q; rm -f %q' \
-  "$deploy_root" "$release" "$remote_archive" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$skip_dns_check" "$remote_archive"
+  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q %q %q; rm -f %q' \
+  "$deploy_root" "$release" "$remote_archive" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$skip_dns_check" "$instance" "$remote_archive"
 
 ssh "${ssh_args[@]}" "$host" "$remote_command"

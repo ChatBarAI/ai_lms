@@ -1,4 +1,7 @@
-name: ai_lms
+# One Compose project per LMS instance. deploy/lib/instance.sh derives the
+# project name: "ai_lms" for the default instance, "ai_lms_<instance>" otherwise.
+# Scripts always pass -p as well; the fallback keeps manual commands safe.
+name: "${COMPOSE_PROJECT_NAME:-ai_lms}"
 
 x-app: &app
   image: "${APP_IMAGE:?APP_IMAGE must identify the release image}"
@@ -58,8 +61,11 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - frontend
-      - backend
+      edge:
+        # The shared edge proxy reaches this instance by this alias.
+        aliases:
+          - "${EDGE_UPSTREAM:-lms-default-web}"
+      backend: {}
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:3000/up"]
       interval: 10s
@@ -78,44 +84,19 @@ services:
     networks:
       - backend
 
-  proxy:
-    image: caddy:2
-    environment:
-      APP_DOMAINS: "${APP_DOMAINS:?APP_DOMAINS is required}"
-      ACME_EMAIL: "${ACME_EMAIL:?ACME_EMAIL is required}"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      web:
-        condition: service_healthy
-    networks:
-      - frontend
-    healthcheck:
-      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 5s
-    restart: unless-stopped
-
 networks:
-  frontend:
+  # Created by deploy/server and shared with the edge proxy (deploy/edge).
+  edge:
+    name: ai_lms_edge
+    external: true
   backend:
 
+# Prefixed with the project name so instances never share data. The default
+# instance keeps the original ai_lms_* names.
 volumes:
   postgres:
-    name: ai_lms_postgres
+    name: "${COMPOSE_PROJECT_NAME:-ai_lms}_postgres"
   redis:
-    name: ai_lms_redis
+    name: "${COMPOSE_PROJECT_NAME:-ai_lms}_redis"
   storage:
-    name: ai_lms_storage
-  caddy_data:
-    name: ai_lms_caddy_data
-  caddy_config:
-    name: ai_lms_caddy_config
+    name: "${COMPOSE_PROJECT_NAME:-ai_lms}_storage"

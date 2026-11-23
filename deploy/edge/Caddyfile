@@ -1,0 +1,4 @@
+# Shared HTTPS proxy for every LMS instance on this server.
+# deploy/server writes one sites/<instance>.caddy file per instance and reloads
+# Caddy; this file only collects them.
+import sites/*.caddy

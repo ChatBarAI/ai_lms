@@ -7,9 +7,9 @@ shift
 usage() {
   cat <<USAGE
 Usage:
-  bin/backup USER@HOST [LOCAL_OUTPUT.tar.gz]
-  bin/export USER@HOST [LOCAL_OUTPUT.tar.gz]
-  bin/restore --force USER@HOST LOCAL_ARCHIVE.tar.gz
+  bin/backup [--instance NAME] USER@HOST [LOCAL_OUTPUT.tar.gz]
+  bin/export [--instance NAME] USER@HOST [LOCAL_OUTPUT.tar.gz]
+  bin/restore [--instance NAME] --force USER@HOST LOCAL_ARCHIVE.tar.gz
 
 Run these commands on your computer, like bin/deploy.
 Backup/export create a remote database + uploads archive and download it.
@@ -20,14 +20,19 @@ For an isolated local Docker destination:
   bin/local-clone restore --force LOCAL_ARCHIVE.tar.gz
 For native local development, use deploy/restore (see its --help).
 
+--instance NAME targets an instance deployed with bin/deploy --instance NAME
+(remote root /opt/ai_lms/instances/NAME). Without it, the default instance in
+/opt/ai_lms is used. An archive from one instance can be restored into another.
+
 Environment:
   SSH_PORT=22                 SSH/SCP port, as with bin/deploy
-  DEPLOY_ROOT=/opt/ai_lms      Remote Docker deployment root
+  DEPLOY_ROOT=/opt/ai_lms      Remote Docker deployment root (overrides --instance)
 
 Examples:
   SSH_PORT=51760 bin/backup root@148.72.159.88
   SSH_PORT=51760 bin/export root@148.72.159.88 ./ai-lms-clone-copy.tar.gz
   SSH_PORT=51760 bin/restore --force root@148.72.159.88 ./ai-lms-clone-copy.tar.gz
+  bin/backup --instance acme root@203.0.113.10
 
 Remote scripts run from DEPLOY_ROOT/current on an existing Docker deployment.
 Both download commands use deploy/export (older deploy/backup writes two files).
@@ -38,7 +43,24 @@ never overwritten. Archives contain private user data and stored credentials.
 No automatic backups are created by bin/deploy. See README.md for details.
 USAGE
 }
-if [[ ${1:-} == --help ]]; then usage; exit 0; fi
+# shellcheck source=deploy/lib/instance.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/instance.sh"
+instance=$LMS_DEFAULT_INSTANCE
+arguments=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help) usage; exit 0 ;;
+    --instance)
+      [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+      instance=$2
+      shift 2
+      ;;
+    --instance=*) instance=${1#--instance=}; shift ;;
+    *) arguments+=("$1"); shift ;;
+  esac
+done
+set -- "${arguments[@]}"
+lms_require_instance "$instance" || exit 2
 if [[ $operation == restore ]]; then
   [[ ${1:-} == --force && $# -eq 3 ]] || { usage >&2; exit 2; }
   shift
@@ -47,7 +69,7 @@ else
 fi
 host=$1
 ssh_port=${SSH_PORT:-22}
-deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+deploy_root=${DEPLOY_ROOT:-$(lms_instance_root "$instance")}
 [[ $host =~ ^[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+$ ]] || {
   echo 'HOST must have the form USER@HOSTNAME_OR_IP.' >&2; exit 2;
 }

@@ -15,7 +15,8 @@ Use deploy/restore --force ARCHIVE on a prepared destination to import it.
 
 Environment:
   DEPLOY_MODE=auto|docker|native      # default auto-detects the source
-  DEPLOY_ROOT=/opt/ai_lms            # Docker deployment configuration
+  DEPLOY_ROOT=/opt/ai_lms            # Docker deployment; default: the one
+                                     # this script was deployed into
   RAILS_ENV=production               # native; development for a local source
   STORAGE_PATH=/path/to/storage      # native; default APP_ROOT/storage
   NATIVE_WRITES_STOPPED=1             # required after stopping native writers
@@ -38,11 +39,13 @@ fi
 [[ $# -le 1 ]] || { echo 'Expected at most one output path.' >&2; exit 2; }
 
 app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+# shellcheck source=deploy/lib/instance.sh
+source "$app_root/deploy/lib/instance.sh"
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
 output=${1:-"$app_root/ai-lms-clone-$timestamp.tar.gz"}
 output=$(readlink -m "$output")
 mode=${DEPLOY_MODE:-auto}
-deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+deploy_root=${DEPLOY_ROOT:-$(lms_default_deploy_root "$app_root")}
 env_file="$deploy_root/shared/.env"
 [[ ! -e $output ]] || { echo "Output already exists: $output" >&2; exit 1; }
 mkdir -p "$(dirname "$output")"
@@ -72,12 +75,7 @@ docker_available() {
 
 if [[ $mode == auto ]]; then
   if docker_available; then
-    export DEPLOY_ROOT="$deploy_root"
-    export APP_IMAGE="ai_lms:$(basename "$app_root")"
-    compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
-    if [[ -f "$app_root/compose.mail.yaml" ]] && grep -qx 'COMPOSE_PROFILES=local-mail' "$env_file"; then
-      compose+=(-f "$app_root/compose.mail.yaml" --profile local-mail)
-    fi
+    lms_instance_compose "$app_root" "$deploy_root" "$env_file"
     if [[ -n $("${compose[@]}" ps -q db 2>/dev/null) ]]; then
       mode=docker
     else
@@ -91,12 +89,7 @@ fi
 case "$mode" in
   docker)
     docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
-    export DEPLOY_ROOT="$deploy_root"
-    export APP_IMAGE="ai_lms:$(basename "$app_root")"
-    compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
-    if [[ -f "$app_root/compose.mail.yaml" ]] && grep -qx 'COMPOSE_PROFILES=local-mail' "$env_file"; then
-      compose+=(-f "$app_root/compose.mail.yaml" --profile local-mail)
-    fi
+    lms_instance_compose "$app_root" "$deploy_root" "$env_file"
 
     echo "Pausing Docker web and worker services for a consistent snapshot..."
     running=$("${compose[@]}" ps --status running --services)
@@ -115,7 +108,7 @@ case "$mode" in
       -U ai_lms -d ai_lms_production > "$work_dir/database.dump"
 
     docker run --rm \
-      -v ai_lms_storage:/source:ro \
+      -v "${COMPOSE_PROJECT_NAME}_storage:/source:ro" \
       -v "$work_dir:/backup" \
       alpine:3.22 tar -czf /backup/storage.tar.gz -C /source .
     ;;

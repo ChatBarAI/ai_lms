@@ -16,7 +16,8 @@ matching or compatible newer application code, dependencies, database, and
 required Rails keys first. Native PostgreSQL client tools must be compatible
 with the source database (the Docker deployment uses PostgreSQL 16).
 
-Docker: stops web/worker/proxy, restores data, migrates, then restarts them.
+Docker: stops web/worker, restores data, migrates, then restarts them. The
+shared edge proxy keeps running and returns 502 for this instance meanwhile.
 If restore fails after stopping services, they remain stopped for inspection.
 Native: stop Rails/background workers before running; restart after success.
 The native database role must own the destination database and have CREATEDB.
@@ -34,7 +35,7 @@ Set SEED_ADMIN_EMAIL or SEED_ADMIN_PASSWORD to choose the account or password.
 
 Environment:
   DEPLOY_MODE=auto|docker|native
-  DEPLOY_ROOT=/opt/ai_lms
+  DEPLOY_ROOT=/opt/ai_lms             # default: the deployment this script is in
   RAILS_ENV=production               # native; use development locally
   STORAGE_PATH=/path/to/storage       # native only
   NATIVE_WRITES_STOPPED=1             # required for native restore
@@ -48,6 +49,7 @@ Local development example (Rails and background workers must be stopped):
 
 Docker destination example (deploy application code first):
   /opt/ai_lms/current/deploy/restore --force /tmp/ai-lms-clone.tar.gz
+  /opt/ai_lms/instances/acme/current/deploy/restore --force /tmp/ai-lms-clone.tar.gz
 
 Check the destination database configuration, including DATABASE_URL: --force
 authorizes replacing its contents and the target storage files.
@@ -73,8 +75,10 @@ bundle=$(readlink -f "$1")
 [[ -f $bundle ]] || { echo "Clone bundle not found: $1" >&2; exit 1; }
 
 app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+# shellcheck source=deploy/lib/instance.sh
+source "$app_root/deploy/lib/instance.sh"
 mode=${DEPLOY_MODE:-auto}
-deploy_root=${DEPLOY_ROOT:-/opt/ai_lms}
+deploy_root=${DEPLOY_ROOT:-$(lms_default_deploy_root "$app_root")}
 env_file="$deploy_root/shared/.env"
 work_dir=$(mktemp -d)
 docker_stopped=false
@@ -82,7 +86,7 @@ restore_succeeded=false
 
 cleanup() {
   if $docker_stopped && $restore_succeeded; then
-    "${compose[@]}" up -d web worker proxy >/dev/null
+    "${compose[@]}" up -d web worker >/dev/null
   fi
   rm -rf -- "$work_dir"
 }
@@ -111,14 +115,10 @@ fi
 case "$mode" in
   docker)
     docker_available || { echo "Docker deployment configuration was not found." >&2; exit 1; }
-    export APP_IMAGE="ai_lms:$(basename "$app_root")"
-    compose=(docker compose --env-file "$env_file" -f "$app_root/compose.yaml")
-    if [[ -f "$app_root/compose.mail.yaml" ]] && grep -qx 'COMPOSE_PROFILES=local-mail' "$env_file"; then
-      compose+=(-f "$app_root/compose.mail.yaml" --profile local-mail)
-    fi
+    lms_instance_compose "$app_root" "$deploy_root" "$env_file"
 
     echo "Stopping the target application..."
-    "${compose[@]}" stop web worker proxy
+    "${compose[@]}" stop web worker
     docker_stopped=true
     "${compose[@]}" up -d db redis
 
@@ -147,10 +147,10 @@ case "$mode" in
 
     echo "Replacing Active Storage files..."
     docker run --rm \
-      -v ai_lms_storage:/target \
+      -v "${COMPOSE_PROJECT_NAME}_storage:/target" \
       alpine:3.22 sh -c 'find /target -mindepth 1 -delete'
     docker run --rm \
-      -v ai_lms_storage:/target \
+      -v "${COMPOSE_PROJECT_NAME}_storage:/target" \
       -v "$work_dir:/backup:ro" \
       alpine:3.22 sh -c 'tar -xzf /backup/storage.tar.gz -C /target && chown -R 1000:1000 /target && find /target -type d -exec chmod 700 {} + && find /target -type f -exec chmod 600 {} +'
 

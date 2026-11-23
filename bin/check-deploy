@@ -4,24 +4,45 @@ set -Eeuo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  bin/check-deploy USER@HOST [GIT_REF]
+  bin/check-deploy [--instance NAME] USER@HOST [GIT_REF]
 
 USER@HOST is required. Defaults: SSH_PORT=22, local main.
 Examples:
   bin/check-deploy root@server.example.com
   SSH_PORT=2222 bin/check-deploy root@server.example.com main
   bin/check-deploy root@server.example.com HEAD
+  bin/check-deploy --instance acme root@server.example.com
 
+--instance NAME checks an instance deployed with bin/deploy --instance NAME;
+the default instance is checked otherwise.
 Read-only: compares web/worker container image tags with a local Git commit
 and checks that both containers are running. Does not fetch or deploy code.
 Exit codes: 0 = matching and running, 1 = mismatch or not running, 2 = check failed.
 USAGE
 }
 
-if [[ ${1:-} == --help || ${1:-} == -h ]]; then
-  usage
-  exit 0
-fi
+project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# shellcheck source=deploy/lib/instance.sh
+source "$project_root/deploy/lib/instance.sh"
+instance=$LMS_DEFAULT_INSTANCE
+arguments=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h) usage; exit 0 ;;
+    --instance)
+      [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+      instance=$2
+      shift 2
+      ;;
+    --instance=*) instance=${1#--instance=}; shift ;;
+    *) arguments+=("$1"); shift ;;
+  esac
+done
+set -- "${arguments[@]}"
+lms_require_instance "$instance" || exit 2
+project=$(lms_instance_project "$instance")
+web_container="$project-web-1"
+worker_container="$project-worker-1"
 [[ $# -ge 1 && $# -le 2 ]] || { usage >&2; exit 2; }
 
 target=$1
@@ -36,15 +57,14 @@ ssh_port=${SSH_PORT:-22}
   exit 2
 }
 
-project_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 if ! commit=$(git -C "$project_root" rev-parse --verify --end-of-options "${ref}^{commit}"); then
   echo "Cannot resolve local Git ref: $ref" >&2
   exit 2
 fi
 echo "Expected ($ref): $commit"
-echo "Checking $target on SSH port $ssh_port..."
+echo "Checking instance '$instance' on $target (SSH port $ssh_port)..."
 if ! containers=$(ssh -p "$ssh_port" -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 "$target" \
-  "docker inspect --format '{{.Name}}|{{.Config.Image}}|{{.State.Status}}|{{.State.StartedAt}}' ai_lms-web-1 ai_lms-worker-1"); then
+  "docker inspect --format '{{.Name}}|{{.Config.Image}}|{{.State.Status}}|{{.State.StartedAt}}' $web_container $worker_container"); then
   echo "Check failed: could not inspect both production containers." >&2
   exit 2
 fi
@@ -53,7 +73,7 @@ result=0
 declare -A seen=()
 while IFS='|' read -r name image status started; do
   case "$name" in
-    /ai_lms-web-1|/ai_lms-worker-1) ;;
+    "/$web_container"|"/$worker_container") ;;
     *) echo "Check failed: unexpected Docker output." >&2; exit 2 ;;
   esac
   if [[ -n ${seen[$name]:-} || -z $image || -z $status || -z $started ]]; then
