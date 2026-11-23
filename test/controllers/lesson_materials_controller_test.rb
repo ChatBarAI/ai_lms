@@ -859,6 +859,41 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 20, progresses(:student_intro).completion_percentage
   end
 
+  test "JSON acknowledgement reports only the click that completes the lesson's materials" do
+    lesson = @course.lessons.create!(title: "Two readings", position: 98, published_at: Time.current)
+    first = lesson.lesson_materials.create!(title: "First", kind: :html, body: "One", required: true)
+    second = lesson.lesson_materials.create!(title: "Second", kind: :html, body: "Two", required: true)
+    optional = lesson.lesson_materials.create!(title: "Extra", kind: :html, body: "Three", required: false)
+    sign_in users(:student)
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, first), as: :json
+    assert_response :success
+    assert_equal false, response.parsed_body["materials_completed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, second), as: :json
+    assert_response :success
+    assert_equal true, response.parsed_body["materials_completed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, second), as: :json
+    assert_equal false, response.parsed_body["materials_completed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, optional), as: :json
+    assert_equal false, response.parsed_body["materials_completed"]
+  end
+
+  test "JSON acknowledgement completes the materials of a lesson without required materials" do
+    lesson = @course.lessons.create!(title: "Optional readings", position: 97, published_at: Time.current)
+    first = lesson.lesson_materials.create!(title: "First", kind: :html, body: "One", required: false)
+    second = lesson.lesson_materials.create!(title: "Second", kind: :html, body: "Two", required: false)
+    sign_in users(:student)
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, first), as: :json
+    assert_equal false, response.parsed_body["materials_completed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, second), as: :json
+    assert_equal true, response.parsed_body["materials_completed"]
+  end
+
   test "last material acknowledgement completes a lesson without a quiz" do
     lesson = @course.lessons.create!(title: "Reading only", position: 99, published_at: Time.current)
     material = lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this", required: true)

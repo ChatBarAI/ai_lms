@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["form", "button", "status"]
-  static values = { completed: String, error: String }
+  static values = { completed: String, error: String, reloadWhenComplete: Boolean }
 
   async submit(event) {
     event.preventDefault()
@@ -49,9 +49,17 @@ export default class extends Controller {
       completed.setAttribute("role", "status")
       form.replaceWith(completed)
       this.dispatch("completed")
+      if (this.reloadWhenCompleteValue && result.materials_completed === true) this.showLessonProgress()
       return true
     } finally {
       button.disabled = false
     }
+  }
+
+  // The quiz lock and progress ring are rendered server-side, so fetch the lesson again once its materials are done.
+  showLessonProgress() {
+    const url = new URL(window.location.href)
+    url.hash = document.getElementById("lesson-quiz") ? "lesson-quiz" : "lesson-status"
+    window.Turbo.visit(url.toString(), { action: "replace" })
   }
 }

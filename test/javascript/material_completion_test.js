@@ -4,13 +4,14 @@ const assert = require("node:assert/strict")
 const fs = require("node:fs")
 const vm = require("node:vm")
 
-function setup(fetch) {
+function setup(fetch, { window = {}, elementIds = [] } = {}) {
   let Controller
   const context = {
-    Controller: class {}, fetch,
+    Controller: class {}, fetch, window, URL,
     document: {
       querySelector: () => ({ content: "csrf-token" }),
-      createElement: () => ({ style: {}, setAttribute() {} })
+      createElement: () => ({ style: {}, setAttribute() {} }),
+      getElementById: (id) => (elementIds.includes(id) ? {} : null)
     }
   }
   const source = fs.readFileSync("app/javascript/controllers/material_completion_controller.js", "utf8")
@@ -140,4 +141,54 @@ test("completion collapses the material through the existing persisted state mec
   assert.equal(classes.has("hidden"), true)
   assert.equal(event, "collapsed")
   assert.equal(saved, true)
+})
+
+function turboWindow() {
+  const visits = []
+  return {
+    visits,
+    location: { href: "http://localhost/courses/algebra/lessons/1" },
+    Turbo: { visit: (url, options) => visits.push({ url, options }) }
+  }
+}
+
+const completeResponse = async () => ({ ok: true, json: async () => ({ acknowledged: true, materials_completed: true }) })
+
+test("stacked materials refresh the lesson at the quiz once the required materials are complete", async () => {
+  const window = turboWindow()
+  const controller = setup(completeResponse, { window, elementIds: ["lesson-quiz", "lesson-status"] })
+  controller.reloadWhenCompleteValue = true
+  await controller.submit({ preventDefault() {} })
+  assert.equal(window.visits.length, 1)
+  assert.equal(window.visits[0].url, "http://localhost/courses/algebra/lessons/1#lesson-quiz")
+  assert.equal(window.visits[0].options.action, "replace")
+})
+
+test("a lesson without a quiz refreshes at the lesson status", async () => {
+  const window = turboWindow()
+  const controller = setup(completeResponse, { window, elementIds: ["lesson-status"] })
+  controller.reloadWhenCompleteValue = true
+  await controller.submit({ preventDefault() {} })
+  assert.equal(window.visits[0].url, "http://localhost/courses/algebra/lessons/1#lesson-status")
+})
+
+test("materials stay in place while required materials remain", async () => {
+  const window = turboWindow()
+  const controller = setup(
+    async () => ({ ok: true, json: async () => ({ acknowledged: true, materials_completed: false }) }),
+    { window, elementIds: ["lesson-quiz"] }
+  )
+  controller.reloadWhenCompleteValue = true
+  await controller.submit({ preventDefault() {} })
+  assert.equal(controller.event, "completed")
+  assert.deepEqual(window.visits, [])
+})
+
+test("materials without the refresh option, such as scroller slides, never refresh the lesson", async () => {
+  const window = turboWindow()
+  const controller = setup(completeResponse, { window, elementIds: ["lesson-quiz"] })
+  controller.reloadWhenCompleteValue = false
+  await controller.submit({ preventDefault() {} })
+  assert.equal(controller.event, "completed")
+  assert.deepEqual(window.visits, [])
 })

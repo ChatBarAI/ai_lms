@@ -32,6 +32,10 @@ class Progress < ApplicationRecord
     [ percentage.round(1), 99.0 ].min
   end
 
+  def materials_complete?
+    materials_completion_fraction == 1.0
+  end
+
   def refresh_material_progress!
     return if completed?
     return if materials_completion_fraction.zero?

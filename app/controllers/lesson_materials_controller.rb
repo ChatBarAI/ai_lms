@@ -136,10 +136,15 @@ class LessonMaterialsController < ApplicationController
 
     ack = LessonMaterialAcknowledgement.find_or_initialize_by(lesson_material_id: @lesson_material.id, enrollment_id: enrollment.id)
     authorize! :create, ack
+    materials_completed = false
     LessonMaterialAcknowledgement.transaction do
-      ack.save!
       progress = enrollment.progresses.find_or_create_by!(lesson: @lesson)
-      progress.with_lock { progress.refresh_material_progress! }
+      progress.with_lock do
+        was_complete = progress.materials_complete?
+        ack.save!
+        progress.refresh_material_progress!
+        materials_completed = !was_complete && progress.materials_complete?
+      end
     end
 
     respond_to do |format|
@@ -147,7 +152,7 @@ class LessonMaterialsController < ApplicationController
         redirect_to course_lesson_path(@course, @lesson, anchor: "material-#{@lesson_material.id}"),
                     notice: t("lessons.flash.material_marked_complete", material: @lesson_material.title)
       end
-      format.json { render json: { acknowledged: true } }
+      format.json { render json: { acknowledged: true, materials_completed: materials_completed } }
     end
   end
 

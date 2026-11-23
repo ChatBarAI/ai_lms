@@ -182,6 +182,28 @@ class LessonsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button[data-action='material-scroller#next']", text: /Next/
   end
 
+  test "stacked materials refresh the lesson once the required materials are complete" do
+    lesson = lessons(:intro)
+    material = lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this")
+
+    get course_lesson_path(courses(:algebra), lesson)
+
+    assert_response :success
+    assert_select "#material-#{material.id}[data-material-completion-reload-when-complete-value='true']"
+  end
+
+  test "scroller materials leave the refresh to the scroller" do
+    lesson = lessons(:intro)
+    lesson.update!(material_layout: "scroller")
+    material = lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this")
+
+    get course_lesson_path(courses(:algebra), lesson)
+
+    assert_response :success
+    assert_select "#material-#{material.id}"
+    assert_select "#material-#{material.id}[data-material-completion-reload-when-complete-value]", count: 0
+  end
+
   test "instructor cannot configure a custom tutor script" do
     lesson = lessons(:intro)
     assert_nil lesson.custom_tutor_embed_script
