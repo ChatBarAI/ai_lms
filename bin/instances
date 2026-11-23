@@ -1,0 +1,301 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Lists the LMS instances deployed on a server, their domains, release and
+# container health, and flags anything inconsistent. Read-only.
+
+require "json"
+require "open3"
+require "optparse"
+
+REQUIRED_SERVICES = %w[web worker db redis].freeze
+# Report a problem when less than this fraction of disk or memory is free.
+LOW_FREE_FRACTION = 0.10
+LOW_DISK_BYTES = 2 * 1024**3
+INVENTORY_SCRIPT = File.expand_path("../deploy/list-instances", __dir__)
+
+options = { json: false }
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/instances [--json] USER@HOST"
+  opts.on("--json", "Print the inventory as JSON") { options[:json] = true }
+  opts.on("-h", "--help", "Show help") do
+    puts opts
+    puts <<~HELP
+
+      Lists every LMS instance deployed on the server with bin/deploy: its
+      domains, deployed release, edge proxy site and container health, and
+      reports problems such as stopped services, low disk or memory, leftover folders from a failed
+      first deploy, or proxy sites without an instance. Read-only.
+
+      SSH_PORT defaults to 22. Exit: 0 = no problems, 1 = problems found,
+      2 = the check could not run.
+      Example: SSH_PORT=2222 bin/instances root@server.example.com
+    HELP
+    exit 0
+  end
+end
+
+begin
+  parser.parse!
+  target = ARGV.shift
+  raise ArgumentError unless target && ARGV.empty?
+  raise ArgumentError unless target.match?(/\A[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+\z/)
+  ssh_port = Integer(ENV.fetch("SSH_PORT", "22"), 10)
+  raise ArgumentError unless ssh_port.between?(1, 65_535)
+rescue OptionParser::ParseError, ArgumentError
+  warn "Invalid arguments. Run bin/instances --help."
+  exit 2
+end
+
+begin
+  output, status = Open3.capture2(
+    "ssh", "-p", ssh_port.to_s, "-o", "ConnectTimeout=15", target, "bash -s",
+    stdin_data: File.read(INVENTORY_SCRIPT)
+  )
+rescue SystemCallError => e
+  warn "Could not start SSH: #{e.message}"
+  exit 2
+end
+unless status.success?
+  warn "Could not read the inventory from #{target} (SSH exit #{status.exitstatus})."
+  exit 2
+end
+
+def project_for(name)
+  name == "default" ? "ai_lms" : "ai_lms_#{name}"
+end
+
+UNITS = { "B" => 1, "kB" => 1000, "KiB" => 1024, "MB" => 1000**2, "MiB" => 1024**2,
+          "GB" => 1000**3, "GiB" => 1024**3, "TB" => 1000**4, "TiB" => 1024**4 }.freeze
+
+# "312.4MiB / 3.828GiB" (docker stats) -> bytes used.
+def parse_memory_usage(text)
+  match = text.to_s.match(/\A\s*([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z]+)/)
+  match && UNITS[match[2]] ? (Float(match[1]) * UNITS[match[2]]).round : nil
+end
+
+def human_bytes(bytes)
+  value = bytes.to_f
+  %w[B KiB MiB GiB TiB].each do |unit|
+    return format(unit == "B" ? "%d %s" : "%.1f %s", value, unit) if value < 1024 || unit == "TiB"
+    value /= 1024
+  end
+end
+
+def parse_status(state, text)
+  health = text[/\((healthy|unhealthy|health: starting)\)/, 1]
+  { state: state, health: health, status: text,
+    ok: state == "running" && health != "unhealthy" && health != "health: starting" }
+end
+
+instances = {}
+containers = Hash.new { |hash, key| hash[key] = {} }
+sites = []
+errors = []
+server = { disks: [] }
+container_memory = Hash.new(0)
+output.each_line(chomp: true) do |line|
+  kind, *fields = line.split("\t", -1)
+  case kind
+  when "I"
+    name, root, has_env, domains, release, deployed, site = fields
+    instances[name] = {
+      name: name, root: root, project: project_for(name), configured: has_env == "1",
+      domains: domains.to_s.split(",").map(&:strip).reject(&:empty?).uniq,
+      release: release.to_s.empty? ? nil : release,
+      deployed_at: deployed.to_s.empty? ? nil : Time.at(Integer(deployed, 10)).utc,
+      site: site == "1"
+    }
+  when "C"
+    project, service, state, text = fields
+    containers[project][service] = parse_status(state, text.to_s)
+  when "S" then sites << fields.first
+  when "H"
+    cpus, *load = fields
+    server[:cpus] = cpus
+    server[:load] = load
+  when "M"
+    # /proc/meminfo values in kB, passed through as text by the server script.
+    total, available, swap_total, swap_free = fields.map { |value| value.to_s.empty? ? 0 : Integer(value, 10) * 1024 }
+    server[:memory] = { total: total, available: available, swap_total: swap_total, swap_free: swap_free }
+  when "D"
+    path, size, used, available, device = fields
+    server[:disks] << { path: path, size: Integer(size, 10), used: Integer(used, 10),
+                        available: Integer(available, 10), device: device }
+  when "U"
+    name, usage = fields
+    bytes = parse_memory_usage(usage)
+    # Container names are PROJECT-SERVICE-N.
+    container_memory[name.sub(/-[a-z0-9]+-\d+\z/, "")] += bytes if bytes
+  when "X" then errors << fields.first
+  end
+end
+
+problems = errors.dup
+server[:disks].each do |disk|
+  if disk[:available] < LOW_DISK_BYTES || disk[:available] < disk[:size] * LOW_FREE_FRACTION
+    problems << "low disk space on #{disk[:path]}: #{human_bytes(disk[:available])} free of #{human_bytes(disk[:size])}"
+  end
+end
+if (memory = server[:memory]) && memory[:available] < memory[:total] * LOW_FREE_FRACTION
+  problems << "low memory: #{human_bytes(memory[:available])} available of #{human_bytes(memory[:total])}"
+end
+instances.each_value do |instance|
+  services = containers[instance[:project]]
+  instance[:services] = services
+  instance[:memory_bytes] = container_memory[instance[:project]] if container_memory.key?(instance[:project])
+  label = instance[:name]
+  unless instance[:configured]
+    problems << "#{label}: no shared/.env in #{instance[:root]}; a first deploy probably failed (safe to delete if unused)"
+    next
+  end
+  problems << "#{label}: never completed a deploy (no current release)" unless instance[:release]
+  problems << "#{label}: not published on the edge proxy (no sites/#{label}.caddy)" unless instance[:site]
+  REQUIRED_SERVICES.each do |service|
+    info = services[service]
+    if info.nil?
+      problems << "#{label}: #{service} container is missing"
+    elsif !info[:ok]
+      problems << "#{label}: #{service} is #{info[:health] || info[:state]} (#{info[:status]})"
+    end
+  end
+  if (mail = services["mail"]) && !mail[:ok]
+    problems << "#{label}: mail is #{mail[:health] || mail[:state]} (#{mail[:status]})"
+  end
+  problems << "#{label}: still runs its own proxy container; redeploy it to move onto the edge proxy" if services["proxy"]
+end
+(sites - instances.keys).each { |site| problems << "edge proxy site sites/#{site}.caddy has no matching instance" }
+known_projects = instances.values.map { |instance| instance[:project] } + [ "ai_lms_edge" ]
+(containers.keys - known_projects).sort.each do |project|
+  problems << "containers for #{project} have no instance folder (#{containers[project].keys.sort.join(', ')})"
+end
+edge = containers.fetch("ai_lms_edge", {})["caddy"]
+# A server not yet upgraded to multi-instance has no edge proxy, only its own.
+legacy_proxy = instances.values.any? { |instance| instance[:services]&.key?("proxy") }
+if edge.nil? && instances.any? && !legacy_proxy
+  problems << "edge proxy container (ai_lms_edge-caddy-1) is missing"
+elsif edge && !edge[:ok]
+  problems << "edge proxy is #{edge[:health] || edge[:state]} (#{edge[:status]})"
+end
+
+if options[:json]
+  puts JSON.pretty_generate(
+    server: target,
+    host: server,
+    edge_proxy: edge,
+    instances: instances.values.map do |instance|
+      instance.merge(deployed_at: instance[:deployed_at]&.iso8601)
+    end,
+    problems: problems
+  )
+  exit(problems.empty? ? 0 : 1)
+end
+
+color = $stdout.tty? && !ENV.key?("NO_COLOR")
+paint = ->(text, code) { color ? "\e[#{code}m#{text}\e[0m" : text }
+green = ->(text) { paint.(text, 32) }
+yellow = ->(text) { paint.(text, 33) }
+red = ->(text) { paint.(text, 31) }
+dim = ->(text) { paint.(text, 2) }
+bold = ->(text) { paint.(text, 1) }
+
+def ago(time)
+  seconds = (Time.now.utc - time).to_i
+  return "just now" if seconds < 60
+  [ [ 86_400, "day" ], [ 3600, "hour" ], [ 60, "minute" ] ].each do |size, unit|
+    count = seconds / size
+    return "#{count} #{unit}#{'s' unless count == 1} ago" if count.positive?
+  end
+end
+
+def service_word(info)
+  return "missing" unless info
+  return info[:health] if info[:health]
+  info[:state] == "running" ? "up" : info[:state]
+end
+
+edge_summary =
+  if edge.nil? && legacy_proxy then yellow.("no edge proxy (not yet upgraded)")
+  elsif edge.nil? then red.("edge proxy missing")
+  elsif edge[:ok] then green.("edge proxy #{service_word(edge)}") + dim.(" (#{edge[:status].sub(/ \(.*\)\z/, '').downcase})")
+  else red.("edge proxy #{service_word(edge)}")
+  end
+count = instances.size
+puts "#{bold.(target)} · #{count} instance#{'s' unless count == 1} · #{edge_summary}"
+
+# Colour a free amount by how much remains.
+level = lambda do |free, total, text|
+  fraction = total.positive? ? free.to_f / total : 1
+  if fraction < LOW_FREE_FRACTION then red.(text)
+  elsif fraction < LOW_FREE_FRACTION * 2 then yellow.(text)
+  else green.(text)
+  end
+end
+if server[:cpus]
+  puts "  #{dim.('Server'.ljust(10))}#{server[:cpus]} CPU#{'s' unless server[:cpus] == '1'} · load #{server[:load].join(' ')}"
+end
+if (memory = server[:memory])
+  used = memory[:total] - memory[:available]
+  line = "#{human_bytes(used)} used of #{human_bytes(memory[:total])} · " +
+         level.(memory[:available], memory[:total], "#{human_bytes(memory[:available])} available")
+  if memory[:swap_total].positive?
+    line += dim.(" · swap #{human_bytes(memory[:swap_total] - memory[:swap_free])} of #{human_bytes(memory[:swap_total])} used")
+  end
+  puts "  #{dim.('Memory'.ljust(10))}#{line}"
+end
+server[:disks].each do |disk|
+  percent = disk[:size].positive? ? (100.0 * disk[:used] / disk[:size]).round : 0
+  label = disk[:path] == "/" ? "Disk" : "Docker"
+  puts "  #{dim.(label.ljust(10))}" +
+       level.(disk[:available], disk[:size], "#{human_bytes(disk[:available])} free") +
+       " of #{human_bytes(disk[:size])} (#{percent}% used)" +
+       (disk[:path] == "/" ? "" : dim.(" #{disk[:path]}"))
+end
+
+instances.values.sort_by { |instance| [ instance[:name] == "default" ? 0 : 1, instance[:name] ] }.each do |instance|
+  services = instance[:services] || {}
+  web = services["web"]
+  dot =
+    if !instance[:configured] || web.nil? || web[:state] != "running" then red.("●")
+    elsif REQUIRED_SERVICES.all? { |name| services[name]&.dig(:ok) } && instance[:site] then green.("●")
+    else yellow.("●")
+    end
+  puts
+  puts "#{dot} #{bold.(instance[:name].ljust(10))} #{instance[:domains].first || dim.('(no domain)')}"
+  instance[:domains].drop(1).each { |domain| puts "  #{' ' * 10} #{domain}" }
+  puts "  #{dim.('Root'.ljust(10))}#{instance[:root]}"
+  next puts("  #{dim.('Status'.ljust(10))}#{red.('incomplete: no shared/.env')}") unless instance[:configured]
+
+  release =
+    if instance[:release]
+      commit = instance[:release][/\A[0-9a-f]{40}/] ? instance[:release][0, 7] + instance[:release][40..].to_s : instance[:release]
+      at = instance[:deployed_at]
+      at ? "#{commit} · deployed #{at.strftime('%Y-%m-%d %H:%M UTC')} (#{ago(at)})" : commit
+    else
+      red.("none")
+    end
+  puts "  #{dim.('Release'.ljust(10))}#{release}"
+  puts "  #{dim.('Proxy'.ljust(10))}#{instance[:site] ? "sites/#{instance[:name]}.caddy" : red.('not published')}"
+  names = REQUIRED_SERVICES + (services.keys - REQUIRED_SERVICES).sort
+  line = names.map do |name|
+    info = services[name]
+    word = service_word(info)
+    text = "#{name} #{word}"
+    if info.nil? then red.(text)
+    elsif info[:ok] then text.sub(word, green.(word))
+    else text.sub(word, red.(word))
+    end
+  end.join(dim.(" · "))
+  puts "  #{dim.('Services'.ljust(10))}#{line}"
+  puts "  #{dim.('Uptime'.ljust(10))}web #{web[:status].sub(/ \(.*\)\z/, '').downcase}" if web
+  puts "  #{dim.('Memory'.ljust(10))}#{human_bytes(instance[:memory_bytes])}" if instance[:memory_bytes]
+end
+
+puts
+if problems.empty?
+  puts green.("No problems found.")
+else
+  puts yellow.("Problems")
+  problems.each { |problem| puts "  #{yellow.('!')} #{problem}" }
+end
+exit(problems.empty? ? 0 : 1)

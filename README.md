@@ -432,6 +432,7 @@ on the machine where they run.
 | Command | Purpose |
 | --- | --- |
 | `bin/deploy [--instance NAME] root@HOST DOMAIN` | Deploy application code to the remote server; no automatic data backup. |
+| `bin/instances [--json] USER@HOST` | List the instances on a server: domains, release, proxy site, container health, and problems. |
 | `bin/check-deploy USER@HOST [GIT_REF]` | Compare production web/worker image tags with local `main` and check both are running. |
 | `bin/backup USER@HOST [FILE]` | Create a remote snapshot and download one archive locally. |
 | `bin/export USER@HOST [FILE]` | Same portable archive as `bin/backup`. |
@@ -485,6 +486,10 @@ its web container over the `ai_lms_edge` Docker network) and reloads Caddy
 without interrupting the other sites. The deploy validates the whole edge
 configuration first, so a domain already used by another instance stops the
 deploy before anything changes.
+
+Run `bin/instances root@SERVER_IP` to see every instance on a server, its
+domains, deployed release and container health, plus anything inconsistent
+(for example a folder left by a failed first deploy). Add `--json` for scripts.
 
 Pass the same `--instance NAME` to the other commands, for example
 `bin/backup --instance acme root@SERVER_IP`. On the server, the `deploy/`
@@ -625,6 +630,7 @@ Standalone readiness checks (no Rails boot or database access):
 ruby test/deploy/readiness_test.rb
 ruby test/deploy/deploy_options_test.rb
 ruby test/deploy/multi_instance_test.rb
+ruby test/deploy/instances_test.rb
 ```
 
 While developing the deployment mechanism itself, an explicit development mode
