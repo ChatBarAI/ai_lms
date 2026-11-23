@@ -859,6 +859,61 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 20, progresses(:student_intro).completion_percentage
   end
 
+  test "JSON acknowledgement reports only the click that unlocks the quiz" do
+    lesson = @course.lessons.create!(title: "Two readings", position: 98, published_at: Time.current)
+    first = lesson.lesson_materials.create!(title: "First", kind: :html, body: "One", required: true)
+    second = lesson.lesson_materials.create!(title: "Second", kind: :html, body: "Two", required: true)
+    optional = lesson.lesson_materials.create!(title: "Extra", kind: :html, body: "Three", required: false)
+    Question.create!(lesson: lesson, prompt: "What did you read?", kind: :free_text)
+    sign_in users(:student)
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, first), as: :json
+    assert_response :success
+    assert_equal false, response.parsed_body["quiz_unlocked"]
+    assert_equal true, response.parsed_body["progress_changed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, second), as: :json
+    assert_response :success
+    assert_equal true, response.parsed_body["quiz_unlocked"]
+    assert_equal true, response.parsed_body["progress_changed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, second), as: :json
+    assert_equal false, response.parsed_body["quiz_unlocked"]
+    assert_equal false, response.parsed_body["progress_changed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, optional), as: :json
+    assert_equal false, response.parsed_body["quiz_unlocked"]
+    assert_equal false, response.parsed_body["progress_changed"]
+  end
+
+  test "JSON acknowledgement never reports an unlock when the quiz had no required materials to lock it" do
+    lesson = @course.lessons.create!(title: "Optional readings", position: 97, published_at: Time.current)
+    first = lesson.lesson_materials.create!(title: "First", kind: :html, body: "One", required: false)
+    second = lesson.lesson_materials.create!(title: "Second", kind: :html, body: "Two", required: false)
+    sign_in users(:student)
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, first), as: :json
+    assert_equal false, response.parsed_body["quiz_unlocked"]
+    assert_equal true, response.parsed_body["progress_changed"]
+
+    post acknowledge_course_lesson_lesson_material_path(@course, lesson, second), as: :json
+    assert_equal false, response.parsed_body["quiz_unlocked"]
+    assert_equal true, response.parsed_body["progress_changed"]
+  end
+
+  test "JSON acknowledgement of an already saved material succeeds without a duplicate" do
+    sign_in users(:student)
+    LessonMaterialAcknowledgement.create!(lesson_material: @material, enrollment: enrollments(:student_in_algebra))
+
+    assert_no_difference("LessonMaterialAcknowledgement.count") do
+      post acknowledge_course_lesson_lesson_material_path(@course, @lesson, @material), as: :json
+    end
+
+    assert_response :success
+    assert_equal true, response.parsed_body["acknowledged"]
+    assert_equal false, response.parsed_body["quiz_unlocked"]
+  end
+
   test "last material acknowledgement completes a lesson without a quiz" do
     lesson = @course.lessons.create!(title: "Reading only", position: 99, published_at: Time.current)
     material = lesson.lesson_materials.create!(title: "Reading", kind: :html, body: "Read this", required: true)
@@ -867,6 +922,8 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
     post acknowledge_course_lesson_lesson_material_path(@course, lesson, material), as: :json
 
     assert_response :success
+    assert_equal false, response.parsed_body["quiz_unlocked"], "a lesson without a quiz has nothing to unlock"
+    assert_equal true, response.parsed_body["progress_changed"]
     progress = enrollments(:student_in_algebra).progresses.find_by!(lesson: lesson)
     assert progress.completed?
     assert_not_nil progress.completed_at

@@ -33,10 +33,11 @@ export default class extends Controller {
     this.nextTarget.textContent = "Completing…"
 
     try {
-      const acknowledged = await this.completeCurrentMaterial()
+      await this.completeCurrentMaterial()
       const isLast = this.currentIndex === this.slideTargets.length - 1
 
-      if (isLast && (acknowledged || this.completionChanged)) {
+      // Reload only when an acknowledgement unlocked the quiz; an already-open quiz may hold answers.
+      if (isLast && this.quizUnlocked) {
         const destination = new URL(window.location.href)
         destination.hash = "lesson-quiz"
         window.sessionStorage.setItem("material-scroller-open-quiz", "true")
@@ -72,7 +73,7 @@ export default class extends Controller {
     if (!slide) return
 
     slide.removeAttribute("data-material-scroller-acknowledge-url")
-    this.completionChanged = true
+    if (event.detail?.quizUnlocked) this.quizUnlocked = true
   }
 
   clearStatus() {

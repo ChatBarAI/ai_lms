@@ -11,7 +11,9 @@ export default class extends Controller {
     this.onBeforeCache = this.finishAnimation.bind(this)
     this.onBeforeRender = this.prepareNavigation.bind(this)
     this.onResize = this.applyPresentation.bind(this)
+    this.onFrameRender = this.refreshProgress.bind(this)
     document.addEventListener("turbo:before-cache", this.onBeforeCache)
+    document.addEventListener("turbo:frame-render", this.onFrameRender)
     document.addEventListener("turbo:before-render", this.onBeforeRender)
     window.addEventListener("resize", this.onResize)
     let open = this.overlayTarget.getAttribute("aria-hidden") === "false"
@@ -97,6 +99,7 @@ export default class extends Controller {
     document.removeEventListener("keydown", this.onKeydown)
     document.removeEventListener("turbo:before-cache", this.onBeforeCache)
     document.removeEventListener("turbo:before-render", this.onBeforeRender)
+    document.removeEventListener("turbo:frame-render", this.onFrameRender)
     window.removeEventListener("resize", this.onResize)
     this.unlockPage()
   }
@@ -118,6 +121,26 @@ export default class extends Controller {
     event.detail.newBody.classList.toggle("overflow-hidden", open && !this.inlineAvailable)
     event.detail.newBody.querySelector('[data-lesson-sidebar-target="openButton"]')
       ?.setAttribute("aria-expanded", String(open))
+  }
+
+  // Marking a material complete reloads only the lesson status frame. Its response is the
+  // whole lesson page, so take the sidebar's progress pieces from it as well, leaving the
+  // open lesson details and scroll position untouched.
+  async refreshProgress(event) {
+    if (event.target?.id !== "lesson-status-frame") return
+
+    const html = await event.detail?.fetchResponse?.responseHTML
+    if (!html) return
+
+    const incoming = new DOMParser().parseFromString(html, "text/html").getElementById(this.overlayTarget.id)
+    if (!incoming) return
+
+    this.panelTarget.querySelectorAll("[data-lesson-sidebar-progress]").forEach((current) => {
+      const key = current.dataset.lessonSidebarProgress
+      const replacement = Array.from(incoming.querySelectorAll("[data-lesson-sidebar-progress]"))
+        .find((element) => element.dataset.lessonSidebarProgress === key)
+      if (replacement) current.replaceWith(document.importNode(replacement, true))
+    })
   }
 
   finishAnimation() {

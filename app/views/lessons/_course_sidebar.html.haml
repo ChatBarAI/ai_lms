@@ -23,7 +23,7 @@
           %p.text-sm.leading-5.text-gray-600.dark:text-gray-400= truncate(@course.description, length: 180)
 
         - if @enrollment
-          .mt-4
+          .mt-4{ data: { lesson_sidebar_progress: "course" } }
             .flex.items-center.justify-between.text-xs.font-medium.text-gray-600.dark:text-gray-300{ class: "mb-1.5" }
               %span= t("lessons.course_sidebar.progress", course: terms[:course])
               %span= t("lessons.course_sidebar.percent_complete", percent: @course_progress_percentage)
@@ -51,12 +51,13 @@
                       - unless lesson.published?
                         %span.shrink-0.rounded.bg-amber-100.text-xs.text-amber-800{ class: "px-1.5 py-0.5" }= t("common.draft")
                   - if @enrollment
-                    - if progress&.completed?
-                      %span.shrink-0.text-green-600{ title: t("lessons.course_sidebar.completed"), "aria-label": t("lessons.course_sidebar.completed") } ✓
-                    - elsif progress&.in_progress?
-                      %span.shrink-0.text-indigo-600{ title: t("lessons.course_sidebar.in_progress"), "aria-label": t("lessons.course_sidebar.in_progress") } ●
-                    - else
-                      %span.shrink-0.text-gray-400{ title: t("lessons.course_sidebar.not_started"), "aria-label": t("lessons.course_sidebar.not_started") } ○
+                    %span.shrink-0{ data: { lesson_sidebar_progress: "lesson-#{lesson.id}" } }
+                      - if progress&.completed?
+                        %span.text-green-600{ title: t("lessons.course_sidebar.completed"), "aria-label": t("lessons.course_sidebar.completed") } ✓
+                      - elsif progress&.in_progress?
+                        %span.text-indigo-600{ title: t("lessons.course_sidebar.in_progress"), "aria-label": t("lessons.course_sidebar.in_progress") } ●
+                      - else
+                        %span.text-gray-400{ title: t("lessons.course_sidebar.not_started"), "aria-label": t("lessons.course_sidebar.not_started") } ○
                 %button.my-auto.mr-2.rounded.p-1.text-gray-400.transition-colors.hover:text-gray-700.cursor-pointer.dark:hover:text-gray-200{ class: "hover:bg-black/5 dark:hover:bg-white/5", type: "button", data: { action: "lesson-accordion#toggle", lesson_accordion_target: "button" }, "aria-controls": panel_id, "aria-expanded": current.to_s, "aria-label": t("lessons.course_sidebar.details_for", title: lesson.title) }
                   %svg.h-4.w-4.transition-transform{ class: (current ? "rotate-180" : ""), xmlns: "http://www.w3.org/2000/svg", fill: "none", viewbox: "0 0 24 24", stroke: "currentColor", "stroke-width": "2", "aria-hidden": "true", data: { lesson_accordion_chevron: true } }
                     %path{ "stroke-linecap": "round", "stroke-linejoin": "round", d: "m6 9 6 6 6-6" }

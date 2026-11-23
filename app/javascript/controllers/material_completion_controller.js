@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["form", "button", "status"]
-  static values = { completed: String, error: String }
+  static values = { completed: String, error: String, reloadOnQuizUnlock: Boolean }
 
   async submit(event) {
     event.preventDefault()
@@ -48,10 +48,37 @@ export default class extends Controller {
       completed.textContent = this.completedValue
       completed.setAttribute("role", "status")
       form.replaceWith(completed)
-      this.dispatch("completed")
+      this.dispatch("completed", { detail: { quizUnlocked: result.quiz_unlocked === true } })
+      if (this.reloadOnQuizUnlockValue && result.quiz_unlocked === true) {
+        this.showUnlockedQuiz()
+      } else if (result.progress_changed === true) {
+        this.refreshLessonStatus()
+      }
       return true
     } finally {
       button.disabled = false
+    }
+  }
+
+  // The quiz was locked until now, so no answers can be lost by fetching the whole lesson again.
+  // "replace" makes Turbo fetch the page instead of only scrolling to the anchor on the same URL.
+  showUnlockedQuiz() {
+    const url = new URL(window.location.href)
+    url.hash = document.getElementById("lesson-quiz") ? "lesson-quiz" : "lesson-status"
+    window.Turbo.visit(url.toString(), { action: "replace" })
+  }
+
+  // Reload only the progress card so a quiz in progress keeps its answers.
+  refreshLessonStatus() {
+    const frame = document.getElementById("lesson-status-frame")
+    if (!frame) return
+
+    const url = new URL(window.location.href)
+    url.hash = ""
+    if (frame.getAttribute("src") === url.toString()) {
+      frame.reload()
+    } else {
+      frame.setAttribute("src", url.toString())
     }
   }
 }

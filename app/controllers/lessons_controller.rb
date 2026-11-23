@@ -48,7 +48,8 @@ class LessonsController < ApplicationController
     @user_rating = current_user && Rating.find_by(user_id: current_user.id, lesson_id: @lesson.id)
 
     @anam_session_token = nil
-    @anam_session_token = fetch_anam_session_token if @lesson.anam_enabled?
+    # Frame refreshes (e.g. the lesson status after a material is marked complete) never render the avatar.
+    @anam_session_token = fetch_anam_session_token if @lesson.anam_enabled? && !turbo_frame_request?
 
     prepare_course_sidebar
     current_lesson_index = @course_lessons.index(@lesson)
