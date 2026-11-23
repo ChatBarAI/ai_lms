@@ -44,9 +44,37 @@ project=$(lms_instance_project "$instance")
 edge_upstream=$(lms_edge_upstream "$instance")
 edge_root="$LMS_BASE_ROOT/edge"
 
+remove_key=false
+first_deploy=false
+services_started=false
+
+# Undo a first deployment that failed before any container started (for
+# example a domain already used by another instance, or a DNS mismatch), so
+# the rejected instance leaves no folder behind. Only files this deploy created
+# are removed, and directories only when empty: the default instance's root
+# also holds other instances and the edge proxy.
+undo_first_deploy() {
+  echo "First deployment of instance '$instance' failed before any service started; removing the files it created." >&2
+  rm -f -- "$env_file"
+  rmdir -- "$shared_dir" 2>/dev/null || true
+  rm -rf -- "$release_dir" "$deploy_root/.edge-stage"
+  rmdir -- "$deploy_root/releases" 2>/dev/null || true
+  rm -f -- "$deploy_root/.deploy.lock"
+  rmdir -- "$deploy_root" 2>/dev/null || true
+}
+
+on_exit() {
+  local status=$?
+  if $remove_key; then rm -f -- "$rails_key_file"; fi
+  if [[ $status -ne 0 ]] && $first_deploy && ! $services_started; then
+    undo_first_deploy
+  fi
+}
+trap on_exit EXIT
+
 if [[ -n $rails_key_file && -e $rails_key_file ]]; then
   chmod 600 "$rails_key_file"
-  trap 'rm -f -- "$rails_key_file"' EXIT
+  remove_key=true
 fi
 
 install_docker() {
@@ -105,6 +133,11 @@ flock -n 9 || {
   echo "Another deployment of instance '$instance' is already running." >&2
   exit 1
 }
+# Decided only while holding the lock, so a concurrent deploy that was refused
+# above can never undo files the running one is creating.
+if [[ ! -f $env_file && ! -e "$deploy_root/current" ]]; then
+  first_deploy=true
+fi
 
 # Refuse to point a deployment root at another instance's data, or two roots
 # at the same Compose project (which would share containers and volumes).
@@ -240,7 +273,7 @@ if [[ $instance != "$LMS_DEFAULT_INSTANCE" ]] && ! grep -q '^MAIL_NETWORK=' "$en
 fi
 
 rm -f "$rails_key_file"
-trap - EXIT
+remove_key=false
 
 # --- Shared edge proxy -------------------------------------------------------
 # One Caddy per server (deploy/edge) owns ports 80/443. Each instance owns one
@@ -321,6 +354,8 @@ export COMPOSE_PROFILES=
 
 cd "$release_dir"
 "${compose[@]}" build web
+# From here containers and volumes exist; a failure leaves them for diagnosis.
+services_started=true
 if ! "${compose[@]}" up -d --wait --wait-timeout 150 db redis; then
   echo "A database or Redis dependency failed readiness checks. Service logs:" >&2
   "${compose[@]}" logs --no-color --tail=100 db redis >&2 || true

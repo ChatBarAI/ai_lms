@@ -146,10 +146,81 @@ class MultiInstanceDeploymentTest < Minitest::Test
     assert_includes File.read("#{ROOT}/deploy/edge/Caddyfile"), "import sites/*.caddy"
   end
 
+  # Runs deploy/server's real exit handler against a temporary layout.
+  def run_exit_handler(root, status:, first_deploy:, services_started: false, extra: "")
+    server = File.read("#{ROOT}/deploy/server")
+    functions = %w[undo_first_deploy on_exit].map { |name| server[/^#{name}\(\) \{\n.*?^\}\n/m] }
+    functions.each { |function| refute_nil function }
+    script = <<~SH
+      #{functions.join("\n")}
+      instance=acme deploy_root=#{root} shared_dir=#{root}/shared env_file=#{root}/shared/.env
+      release_dir=#{root}/releases/abc rails_key_file= remove_key=false
+      first_deploy=#{first_deploy} services_started=#{services_started}
+      #{extra}
+      trap on_exit EXIT
+      exit #{status}
+    SH
+    Open3.capture3("bash", "-c", script)
+  end
+
+  def first_deploy_layout(root)
+    FileUtils.mkdir_p([ "#{root}/shared", "#{root}/releases/abc/deploy", "#{root}/.edge-stage/sites" ])
+    File.write("#{root}/shared/.env", "INSTANCE=acme\n")
+    FileUtils.touch("#{root}/.deploy.lock")
+  end
+
+  def test_failed_first_deploy_before_services_leaves_nothing_behind
+    Dir.mktmpdir do |dir|
+      root = "#{dir}/instances/acme"
+      first_deploy_layout(root)
+      _, err, status = run_exit_handler(root, status: 1, first_deploy: true)
+      assert_equal 1, status.exitstatus
+      assert_includes err, "removing the files it created"
+      refute File.exist?(root)
+      assert File.directory?("#{dir}/instances")
+    end
+  end
+
+  def test_failed_first_deploy_keeps_unrelated_files_in_the_root
+    Dir.mktmpdir do |dir|
+      first_deploy_layout(dir)
+      FileUtils.mkdir_p([ "#{dir}/instances/other", "#{dir}/edge/caddy" ])
+      run_exit_handler(dir, status: 1, first_deploy: true)
+      assert File.directory?("#{dir}/instances/other")
+      assert File.directory?("#{dir}/edge/caddy")
+      refute File.exist?("#{dir}/shared")
+      refute File.exist?("#{dir}/releases")
+    end
+  end
+
+  def test_exit_handler_keeps_files_after_success_later_deploys_or_started_services
+    [ { status: 0, first_deploy: true }, { status: 1, first_deploy: false },
+      { status: 1, first_deploy: true, services_started: true } ].each do |options|
+      Dir.mktmpdir do |dir|
+        first_deploy_layout(dir)
+        _, _, status = run_exit_handler(dir, **options)
+        assert_equal options[:status], status.exitstatus
+        assert File.exist?("#{dir}/shared/.env"), options.inspect
+        assert File.directory?("#{dir}/releases/abc"), options.inspect
+      end
+    end
+  end
+
+  def test_exit_handler_always_removes_the_uploaded_rails_key
+    Dir.mktmpdir do |dir|
+      first_deploy_layout(dir)
+      File.write("#{dir}/production.key", "key")
+      run_exit_handler(dir, status: 0, first_deploy: false,
+        extra: "rails_key_file=#{dir}/production.key remove_key=true")
+      refute File.exist?("#{dir}/production.key")
+    end
+  end
+
   def test_server_validates_edge_before_changing_the_app_and_publishes_after_health
     server = File.read("#{ROOT}/deploy/server")
-    order = [ "flock -n 9", 'lms_env_set "$env_file" INSTANCE', 'validate_edge_config "$edge_stage"',
-      '"${compose[@]}" build web', "Web container did not become healthy",
+    order = [ "flock -n 9", "first_deploy=true", 'lms_env_set "$env_file" INSTANCE', 'validate_edge_config "$edge_stage"',
+      '"${compose[@]}" build web', "services_started=true", "up -d --wait --wait-timeout 150 db redis",
+      "Web container did not become healthy",
       'validate_edge_config "$edge_root/caddy"', 'docker rm -f "${legacy_proxies[@]}"',
       "caddy reload", 'check-readiness" https', "ln -sfn" ]
     order.each { |marker| assert_includes server, marker }
