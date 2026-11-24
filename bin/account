@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "optparse"
+require "shellwords"
+require "tempfile"
+
+options = { role: "admin", name: "Admin" }
+instance = "default"
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/account [--instance NAME] USER@HOST --email EMAIL [--name NAME] [--role ROLE]"
+  opts.on("--instance NAME", "Docker instance (default: default)") { |value| instance = value }
+  opts.on("--email EMAIL", "Email address for the new account (required)") { |value| options[:email] = value.strip.downcase }
+  opts.on("--name NAME", "Display name (default: Admin)") { |value| options[:name] = value }
+  opts.on("--role ROLE", "admin, instructor or student (default: admin)") { |value| options[:role] = value }
+  opts.on("-h", "--help", "Show help") do
+    puts opts
+    puts "Creates a new account; existing accounts are never changed."
+    puts "Prints its ID, email, role and generated password after saving. Store the password securely."
+    puts "Runs through SSH in the existing web container; no redeploy is needed."
+    puts "SSH_PORT sets the SSH port (default: 22)."
+    exit
+  end
+end
+
+begin
+  parser.parse!
+  target = ARGV.shift
+  raise ArgumentError, "Provide exactly one USER@HOST." unless ARGV.empty? && target&.match?(/\A[A-Za-z_][A-Za-z0-9_-]*@[A-Za-z0-9.-]+\z/)
+  raise ArgumentError, "Invalid instance name." unless instance.match?(/\A[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?\z/) && instance != "edge"
+  raise ArgumentError, "--email is required." if options[:email].to_s.empty?
+  raise ArgumentError, "Invalid role." unless %w[admin instructor student].include?(options[:role])
+  ssh_port = Integer(ENV.fetch("SSH_PORT", "22"), 10)
+  raise ArgumentError, "SSH_PORT must be between 1 and 65535." unless ssh_port.between?(1, 65_535)
+rescue OptionParser::ParseError, ArgumentError => e
+  warn "#{e.message} Run bin/account --help."
+  exit 2
+end
+
+container = instance == "default" ? "ai_lms-web-1" : "ai_lms_#{instance}-web-1"
+command = Shellwords.join([ "docker", "exec", "-i", "-w", "/rails", container,
+  "bin/rails", "runner", "-" ])
+puts "Creating #{options[:role]} account on #{target}, instance #{instance}..."
+$stdout.flush
+
+begin
+  # Send the helper over stdin so older releases can create accounts too.
+  # Passwords are generated remotely and never passed in shell arguments.
+  status = Tempfile.create("ai-lms-account") do |input|
+    input.write(File.read(File.expand_path("../deploy/create_account.rb", __dir__)))
+    input.write("\nCreateAccount.run(**JSON.parse(#{JSON.generate(options).dump}, symbolize_names: true))\n")
+    input.flush
+    input.rewind
+    system("ssh", "-p", ssh_port.to_s, "-o", "ConnectTimeout=15", target, command, in: input)
+    $?.exitstatus
+  end
+  warn "Account command failed. Check the error above and SSH/container access." unless status == 0
+  exit(status || 1)
+rescue SystemCallError => e
+  warn "Could not run account command (#{e.class}). Check SSH and local script access."
+  exit 1
+end

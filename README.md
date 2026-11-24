@@ -433,6 +433,7 @@ on the machine where they run.
 | --- | --- |
 | `bin/deploy [--instance NAME] root@HOST DOMAIN` | Deploy application code to the remote server; no automatic data backup. |
 | `bin/instances [--json] USER@HOST` | List the instances on a server: domains, release, proxy site, container health, and problems. |
+| `bin/account [--instance NAME] USER@HOST --email EMAIL` | Create an admin account and print its ID and generated password. |
 | `bin/check-deploy USER@HOST [GIT_REF]` | Compare production web/worker image tags with local `main` and check both are running. |
 | `bin/backup USER@HOST [FILE]` | Create a remote snapshot and download one archive locally. |
 | `bin/export USER@HOST [FILE]` | Same portable archive as `bin/backup`. |
@@ -455,6 +456,26 @@ container's image tag, status, and last start time (UTC). Exit status is `0`
 when both match and are running, `1` for a mismatch or stopped container, and
 `2` if the check fails. This compares deployment tags; it does not fetch remote
 Git changes, verify file contents, or deploy code.
+
+### Creating an account on an instance
+
+From your local checkout, create an account without knowing any existing login:
+
+```bash
+bin/account --instance staging root@85.93.90.221 --email you@example.com --name "Your Name"
+```
+
+The default role is `admin`; use `--role instructor` or `--role student` for
+other roles. The command prints the new ID, email, role and generated password
+only after the account is saved. Store the password securely and sign in at
+`https://YOUR_DOMAIN/users/sign_in`. Existing accounts with the same email are
+rejected without changing them. Email verification follows the normal application
+flow; the command does not mark the address as verified.
+
+The helper runs over SSH inside the instance's running web container, so it also
+works with releases deployed before this command was added. No redeploy is
+needed. Omit `--instance` for the default instance; use `SSH_PORT` for a custom
+SSH port. Run `bin/account --help` for options.
 
 ### Multiple instances on one server
 
