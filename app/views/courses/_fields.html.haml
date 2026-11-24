@@ -49,20 +49,27 @@
   %div
     = render "shared/tag_picker", f: f, record: course
 
-  - options = Course.prerequisite_options_for(except: course)
-  - if options.any?
+  %section.border-t.border-gray-200.pt-4.space-y-4{ "aria-labelledby": "course-gating-heading" }
+    %h3.text-sm.font-semibold.text-gray-900#course-gating-heading= t("catalog_ui.gating_heading")
     %div
-      %p.block.text-sm.font-medium.mb-1= t("catalog_ui.prerequisite_heading", **terms)
-      %p.text-xs.text-gray-500.mb-2= t("catalog_ui.prerequisite_hint", **terms)
-      = hidden_field_tag "course[prerequisite_course_ids][]", ""
-      %fieldset
-        %legend.sr-only= t("catalog_ui.prerequisite_legend", **terms)
-        .flex.flex-wrap.gap-3
-          - options.each do |option|
-            = toggle_switch_tag "course[prerequisite_course_ids][]",
-                label: option.title,
-                value: option.id,
-                checked: course.prerequisite_course_ids.include?(option.id),
-                include_hidden: false,
-                id: "course_prerequisite_course_ids_#{option.id}",
-                wrapper_class: "inline-flex items-center gap-2"
+      = toggle_switch_field f, :sequential_lessons,
+          label: t("catalog_ui.sequential_lessons_label", **terms),
+          title: t("catalog_ui.sequential_lessons_hint", **terms)
+
+    - options = Course.prerequisite_options_for(except: course)
+    - if options.any?
+      %div
+        %p.block.text-sm.font-medium.mb-1= t("catalog_ui.prerequisite_heading", **terms)
+        %p.text-xs.text-gray-500.mb-2= t("catalog_ui.prerequisite_hint", **terms)
+        = hidden_field_tag "course[prerequisite_course_ids][]", ""
+        %fieldset
+          %legend.sr-only= t("catalog_ui.prerequisite_legend", **terms)
+          .flex.flex-wrap.gap-3
+            - options.each do |option|
+              = toggle_switch_tag "course[prerequisite_course_ids][]",
+                  label: option.title,
+                  value: option.id,
+                  checked: course.prerequisite_course_ids.include?(option.id),
+                  include_hidden: false,
+                  id: "course_prerequisite_course_ids_#{option.id}",
+                  wrapper_class: "inline-flex items-center gap-2"

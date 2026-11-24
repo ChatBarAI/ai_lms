@@ -122,6 +122,11 @@ en:
       update_failed: "Could not save profile."
 
   lessons:
+    locked:
+      label: "Locked"
+      title: "%{lesson} locked"
+      message: "Complete “%{title}” to unlock this %{lesson_l}."
+      go_to: "Go to “%{title}”"
     materials:
       mark_complete: "Mark as complete"
       marked_complete: "Marked as complete"
@@ -238,6 +243,7 @@ en:
       signin_prompt: "Sign in to enrol in this %{course_l} and track your progress."
       signin_cta: "Sign in to enrol"
       lessons_heading: "%{lessons}"
+      lessons_in_order: "%{lessons} in this %{course_l} must be completed in order."
       no_lessons: "No published %{lessons_l} yet."
     card:
       lessons_count:

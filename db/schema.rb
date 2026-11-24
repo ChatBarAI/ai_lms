@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_24_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -137,6 +137,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
     t.string "access_policy", default: "free", null: false
     t.integer "price_minor"
     t.string "price_currency"
+    t.boolean "sequential_lessons", default: false, null: false
     t.index ["learning_order"], name: "index_courses_on_learning_order"
     t.index ["owner_id"], name: "index_courses_on_owner_id"
     t.index ["slug"], name: "index_courses_on_slug", unique: true

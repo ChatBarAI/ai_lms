@@ -38,9 +38,11 @@
             - progress = @lesson_progress_by_id[lesson.id]
             - item_classes = current ? "border-indigo-200 bg-indigo-50 text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-100" : "border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             - panel_id = "lesson-sidebar-details-#{lesson.id}"
+            - locked_by = @locked_lessons[lesson.id]
+            - row_options = { href: course_lesson_path(@course, lesson), class: "flex min-w-0 flex-1 items-start gap-3 px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5", "aria-current": (current ? "page" : nil), data: { lesson_sidebar_progress: "lesson-#{lesson.id}" } }.deep_merge(locked_lesson_link_attributes(@course, locked_by))
             .overflow-hidden.rounded-lg.border{ class: item_classes }
               .flex.w-full.items-stretch
-                = link_to course_lesson_path(@course, lesson), class: "flex min-w-0 flex-1 items-start gap-3 px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5", "aria-current": (current ? "page" : nil) do
+                = tag.a(**row_options) do
                   %span.flex.h-6.w-6.shrink-0.items-center.justify-center.rounded-full.text-xs.font-semibold{ class: (current ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300") }= index + 1
                   .min-w-0.flex-1
                     .flex.items-start.gap-2
@@ -50,8 +52,10 @@
                           %span.text-xs.font-normal.text-gray-500.dark:text-gray-400= t("lessons.course_sidebar.duration", count: lesson.duration_minutes)
                       - unless lesson.published?
                         %span.shrink-0.rounded.bg-amber-100.text-xs.text-amber-800{ class: "px-1.5 py-0.5" }= t("common.draft")
-                  - if @enrollment
-                    %span.shrink-0{ data: { lesson_sidebar_progress: "lesson-#{lesson.id}" } }
+                  - if locked_by
+                    %span.shrink-0.text-amber-500= padlock_icon(label: t("lessons.locked.label"))
+                  - elsif @enrollment
+                    %span.shrink-0
                       - if progress&.completed?
                         %span.text-green-600{ title: t("lessons.course_sidebar.completed"), "aria-label": t("lessons.course_sidebar.completed") } ✓
                       - elsif progress&.in_progress?

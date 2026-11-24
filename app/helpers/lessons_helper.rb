@@ -1,4 +1,24 @@
 module LessonsHelper
+  # Attributes that make a locked lesson's link open the "lesson locked" dialog
+  # (lessons/_locked_dialog) via status-modal. The href is kept, so without
+  # JavaScript the server redirects with the same message. Empty when unlocked.
+  def locked_lesson_link_attributes(course, blocker)
+    return {} unless blocker
+
+    {
+      "aria-haspopup": "dialog",
+      "aria-controls": "locked-lesson-dialog",
+      data: {
+        controller: "status-modal",
+        action: "click->status-modal#open",
+        status_modal_dialog_id_value: "locked-lesson-dialog",
+        status_modal_message_param: t("lessons.locked.message", title: blocker.title, **terms),
+        status_modal_link_url_param: course_lesson_path(course, blocker),
+        status_modal_link_label_param: t("lessons.locked.go_to", title: blocker.title)
+      }
+    }
+  end
+
   YOUTUBE_VIDEO_ID_PATTERN = /\A[A-Za-z0-9_-]+\z/
 
   LESSON_SECTION_PARTIALS = {

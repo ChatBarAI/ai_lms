@@ -27,3 +27,5 @@
   .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
     %p.flex-1= t(".enrol_prompt", **terms)
     = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
+- if @locked_lessons.any?
+  = render "lessons/locked_dialog"

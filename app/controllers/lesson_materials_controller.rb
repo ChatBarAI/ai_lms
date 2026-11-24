@@ -1,4 +1,6 @@
 class LessonMaterialsController < ApplicationController
+  include LessonGating
+
   DOCUMENT_CONTENT_SECURITY_POLICY = [
     "default-src 'none'",
     "img-src 'self' data:",
@@ -27,6 +29,7 @@ class LessonMaterialsController < ApplicationController
   before_action :normalize_ai_designed_kind, only: :create
   load_and_authorize_resource through: :lesson
   skip_authorize_resource only: [ :acknowledge, :reorder, :document, :copy ]
+  before_action :enforce_lesson_order, only: [ :index, :show, :acknowledge, :document ]
 
   def index
     @lesson_materials = @lesson.lesson_materials.accessible_by(current_ability)
@@ -125,7 +128,7 @@ class LessonMaterialsController < ApplicationController
 
   def acknowledge
     authorize! :read, @lesson_material
-    enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
+    enrollment = current_enrollment
     unless enrollment
       respond_to do |format|
         format.html { redirect_to course_lesson_path(@course, @lesson), alert: "Enrol to mark materials as complete." }

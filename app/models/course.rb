@@ -176,6 +176,32 @@ class Course < ApplicationRecord
     lessons.required_for_completion
   end
 
+  # When the course requires lessons in order, maps each lesson the learner
+  # cannot open yet to the earliest lesson they must complete first. A nil
+  # enrollment (guest or not enrolled) can open only the first lesson.
+  #
+  # - Draft lessons are not part of the sequence.
+  # - A lesson the learner already has progress on stays open, so turning the
+  #   setting on, or adding or reordering lessons, never locks them out of
+  #   work they started.
+  # - Quiz answers waiting for marking count as done, so learners are not held
+  #   up by the marking queue.
+  def locked_lessons_for(enrollment)
+    return {} unless sequential_lessons?
+
+    sequence = lessons.published.to_a
+    progress_by_lesson = enrollment ? enrollment.progresses.where(lesson: sequence).index_by(&:lesson_id) : {}
+    awaiting_marking = enrollment ? enrollment.lesson_ids_awaiting_marking : Set.new
+
+    blocker = nil
+    sequence.each_with_object({}) do |lesson, locked|
+      progress = progress_by_lesson[lesson.id]
+      locked[lesson.id] = blocker if blocker && progress.nil?
+      done = progress&.completed? || awaiting_marking.include?(lesson.id)
+      blocker ||= lesson unless done
+    end
+  end
+
   def enrollment_count
     enrollments.count
   end

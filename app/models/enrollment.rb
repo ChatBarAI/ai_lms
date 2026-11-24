@@ -94,6 +94,11 @@ class Enrollment < ApplicationRecord
     end
   end
 
+  # Lessons where this learner has free-text answers waiting for a mark.
+  def lesson_ids_awaiting_marking
+    QuestionAnswer.pending_marking.where(enrollment_id: id).distinct.pluck("questions.lesson_id").to_set
+  end
+
   private
 
   def completed_required_progresses

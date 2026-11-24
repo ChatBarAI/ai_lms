@@ -1,0 +1,5 @@
+-# One dialog per page; locked lesson links fill it in and open it (LessonsHelper#locked_lesson_link_attributes).
+- actions = capture do
+  %a.px-4.py-2.rounded-lg.text-sm.font-medium.bg-indigo-600.text-white.hover:bg-indigo-700.transition-colors{ href: course_path(@course), data: { dialog_fill: "link" } }
+= render layout: "shared/dialog", locals: { id: "locked-lesson-dialog", title: t("lessons.locked.title", lesson: terms[:lesson]), kind: :alert, icon: padlock_icon(size_class: "w-6 h-6"), open: false, actions: actions } do
+  %p{ data: { dialog_fill: "message" } }

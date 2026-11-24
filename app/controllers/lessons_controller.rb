@@ -1,16 +1,18 @@
 class LessonsController < ApplicationController
   include LearningReports
+  include LessonGating
   before_action :authenticate_user!, only: [ :report, :question_report, :new, :create, :edit, :update, :destroy, :start, :submit_quiz, :publish, :unpublish, :video_youtube_edit, :video_youtube_update, :video_upload_edit, :video_upload_update, :video_chatbar, :video_synthesia, :video_heygen, :import_recording, :import_synthesia_video, :import_heygen_video, :destroy_video, :poster_edit, :poster_update, :destroy_poster ]
   before_action :set_course
   load_and_authorize_resource through: :course
   skip_authorize_resource only: [ :start, :submit_quiz ]
+  before_action :enforce_lesson_order, only: [ :show, :start, :submit_quiz ]
 
   def index
     @lessons = @course.lessons.accessible_by(current_ability)
   end
 
   def show
-    @enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
+    @enrollment = current_enrollment
     if @enrollment
       @progress = @enrollment.progresses.find_or_create_by!(lesson_id: @lesson.id)
       @progress.with_lock { @progress.refresh_material_progress! }
@@ -54,12 +56,13 @@ class LessonsController < ApplicationController
 
     prepare_course_sidebar
     current_lesson_index = @course_lessons.index(@lesson)
-    @next_lesson = @course_lessons[current_lesson_index + 1] if current_lesson_index
+    next_lesson = @course_lessons[current_lesson_index + 1] if current_lesson_index
+    @next_lesson = next_lesson unless next_lesson.nil? || @locked_lessons.key?(next_lesson.id)
   end
 
   def start
     authorize! :read, @lesson
-    enrollment = current_user.enrollments.find_by(course_id: @course.id, archived_at: nil)
+    enrollment = current_enrollment
     if enrollment && !@lesson.lesson_materials_complete_for?(enrollment)
       redirect_to course_lesson_path(@course, @lesson), alert: t("lessons.flash.complete_required_materials") and return
     end
@@ -73,7 +76,7 @@ class LessonsController < ApplicationController
   def submit_quiz
     authorize! :read, @lesson
 
-    enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
+    enrollment = current_enrollment
     return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.enrol_to_submit")) unless enrollment
     return redirect_to(course_lesson_path(@course, @lesson), alert: t("lessons.flash.complete_required_materials")) unless @lesson.lesson_materials_complete_for?(enrollment)
 
@@ -262,6 +265,7 @@ class LessonsController < ApplicationController
     end
 
     @course_progress_percentage = @enrollment ? @enrollment.completion_percentage.to_i : 0
+    @locked_lessons = viewer_locked_lessons
   end
 
   def submission_answers

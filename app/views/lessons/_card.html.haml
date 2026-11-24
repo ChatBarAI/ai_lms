@@ -2,10 +2,11 @@
 - enrollment = local_assigns.fetch(:enrollment, nil)
 - queued_for_marking_lesson_ids = local_assigns.fetch(:queued_for_marking_lesson_ids, [])
 - show_course_info = local_assigns.fetch(:show_course_info, true)
+- locked_by = local_assigns.fetch(:locked_by, nil)
 
 - lesson_accessible = can?(:read, lesson)
 - card_classes = "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden dark:bg-gray-800 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500"
-- card_options = { class: card_classes }
+- card_options = { class: card_classes }.merge(locked_lesson_link_attributes(lesson.course, locked_by))
 - card_options[:href] = course_lesson_path(lesson.course, lesson) if lesson_accessible
 = content_tag(:a, card_options) do
   .relative
@@ -27,7 +28,9 @@
       .flex.shrink-0.gap-1
         - unless lesson.published?
           %span.text-xs.text-amber-600= t("common.draft")
-        - if enrollment
+        - if locked_by
+          %span.text-amber-500= padlock_icon(label: t("lessons.locked.label"))
+        - elsif enrollment
           - progress = enrollment.progresses.find { |p| p.lesson_id == lesson.id }
           - if progress&.completed?
             %span.text-xs.text-green-700= t(".done")

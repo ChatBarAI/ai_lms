@@ -1,5 +1,6 @@
 class CoursesController < ApplicationController
   include LearningReports
+  include LessonGating
   before_action :authenticate_user!, only: [ :report, :new, :create, :edit, :update, :destroy, :certificate_layout, :update_certificate_layout ]
   load_and_authorize_resource find_by: :slug
 
@@ -10,20 +11,11 @@ class CoursesController < ApplicationController
   end
 
   def show
-    @enrollment = current_user&.enrollments&.find_by(course_id: @course.id, archived_at: nil)
+    @enrollment = current_enrollment
     visible_lessons = can?(:update, @course) ? @course.lessons : @course.lessons.published
     @lessons = visible_lessons.includes(:tags)
-
-    @queued_for_marking_lesson_ids = if @enrollment
-      QuestionAnswer
-        .joins(:question)
-        .where(enrollment_id: @enrollment.id, questions: { lesson_id: visible_lessons.select(:id), kind: Question.kinds[:free_text] })
-        .where(ai_score: nil)
-        .distinct
-        .pluck("questions.lesson_id")
-    else
-      []
-    end
+    @queued_for_marking_lesson_ids = @enrollment ? @enrollment.lesson_ids_awaiting_marking : Set.new
+    @locked_lessons = viewer_locked_lessons
 
     if can?(:report, @course)
       @pending_marking_count = QuestionAnswer.pending_marking.merge(Lesson.manually_marked)
@@ -117,7 +109,7 @@ class CoursesController < ApplicationController
   private
 
   def course_params
-    permitted = params.require(:course).permit(:access_policy, :price_minor, :price_currency, :title, :description, :locale, :subject_id, :published_at, :learning_order, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
+    permitted = params.require(:course).permit(:access_policy, :price_minor, :price_currency, :title, :description, :locale, :subject_id, :published_at, :learning_order, :sequential_lessons, :public_access_enabled, :cover_image, :certificate_template, tag_ids: [], prerequisite_course_ids: [])
     filter_prerequisite_course_ids!(permitted)
     permitted
   end
