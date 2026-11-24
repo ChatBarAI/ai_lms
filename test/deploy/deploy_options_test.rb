@@ -49,8 +49,8 @@ class DeployOptionsTest < Minitest::Test
     File.chmod(0o755, path)
   end
 
-  def server_arguments(*options)
-    out, err, status = Open3.capture3(@env, "bash", SCRIPT, *options,
+  def server_arguments(*options, env: @env)
+    out, err, status = Open3.capture3(env, "bash", SCRIPT, *options,
       "root@148.72.159.88", "ai-craig-academy.chatbar-ai.com", "alias.example.com")
     assert status.success?, "#{out}\n#{err}"
     command = File.read(@env.fetch("COMMAND_LOG"))
@@ -73,6 +73,31 @@ class DeployOptionsTest < Minitest::Test
     assert_equal "ai-craig-academy.chatbar-ai.com", arguments[2]
     assert_equal "ai-craig-academy.chatbar-ai.com, alias.example.com", arguments[3]
     assert_equal "/tmp/ai_lms-deploy.TEST1234/production.key", arguments[5]
+  end
+
+  def test_default_instance_keeps_original_root
+    arguments = server_arguments(env: @env.merge("DEPLOY_ROOT" => nil))
+    assert_equal "default", arguments[7]
+    assert_equal "/opt/ai_lms", arguments[1]
+    assert_includes File.read(@env.fetch("COMMAND_LOG")), "release_dir=/opt/ai_lms/releases/abc123;"
+  end
+
+  def test_instance_option_selects_its_own_root
+    arguments = server_arguments("--instance", "acme", "--skip-dns-check", env: @env.merge("DEPLOY_ROOT" => nil))
+    assert_equal "acme", arguments[7]
+    assert_equal "/opt/ai_lms/instances/acme", arguments[1]
+    assert_equal "true", arguments[6]
+    assert_equal "ai-craig-academy.chatbar-ai.com", arguments[2]
+    assert_includes File.read(@env.fetch("COMMAND_LOG")), "release_dir=/opt/ai_lms/instances/acme/releases/abc123;"
+  end
+
+  def test_invalid_instance_is_rejected_before_connecting
+    [ "Acme", "a_b", "../x", "edge", "-x", "x" * 31 ].each do |name|
+      _, err, status = Open3.capture3(@env, "bash", SCRIPT, "--instance", name, "root@148.72.159.88", "a.example.com")
+      refute status.success?, name
+      assert_includes err, "Invalid instance name", name
+    end
+    refute File.exist?(@env.fetch("COMMAND_LOG"))
   end
 
   def test_skip_combines_with_existing_options

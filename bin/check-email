@@ -7,9 +7,11 @@ require "tempfile"
 
 options = { timeout: 8 }
 container = "ai_lms-web-1"
+instance = nil
 parser = OptionParser.new do |opts|
-  opts.banner = "Usage: bin/check-email [USER@HOST] [--env-only] [--host SMTP_HOST] [--ports 587,465]"
+  opts.banner = "Usage: bin/check-email [USER@HOST] [--instance NAME] [--env-only] [--host SMTP_HOST] [--ports 587,465]"
   opts.on("--container NAME", "Remote Docker container (default: ai_lms-web-1)") { |v| container = v }
+  opts.on("--instance NAME", "Instance deployed with bin/deploy --instance NAME (sets --container)") { |v| instance = v }
   opts.on("--env-only", "Skip Rails/database; inspect exported environment only") { options[:env_only] = true }
   opts.on("--host HOST", "Probe this provider instead of the configured SMTP host") { |v| options[:host] = v }
   opts.on("--providers", "Probe SendGrid and Mailjet (default ports: 587,465; excludes --host)") { options[:providers] = true }
@@ -40,6 +42,11 @@ begin
     domain = options[:recipient_domain]
     raise ArgumentError unless domain.length <= 253 && domain.split(".", -1).length >= 2 &&
       domain.split(".", -1).all? { |label| label.match?(/\A[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\z/) }
+  end
+  if instance
+    # Same rules as deploy/lib/instance.sh.
+    raise ArgumentError unless instance.match?(/\A[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?\z/) && instance != "edge"
+    container = instance == "default" ? "ai_lms-web-1" : "ai_lms_#{instance}-web-1"
   end
   raise ArgumentError unless container.match?(/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*\z/)
   if target

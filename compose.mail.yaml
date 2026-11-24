@@ -38,4 +38,4 @@ networks:
 
 volumes:
   mail_queue:
-    name: ai_lms_mail_queue
+    name: "${COMPOSE_PROJECT_NAME:-ai_lms}_mail_queue"

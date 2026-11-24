@@ -408,19 +408,21 @@ The deployment runs separate containers under the same Docker engine:
 | `worker` | `ai_lms-worker-1` | Sidekiq background jobs |
 | `db` | `ai_lms-db-1` | PostgreSQL database |
 | `redis` | `ai_lms-redis-1` | Job queue/cache |
-| `proxy` | `ai_lms-proxy-1` | Caddy HTTPS proxy |
 | `mail` | `ai_lms-mail-1` | Postfix email relay, when configured |
+| `caddy` | `ai_lms_edge-caddy-1` | Shared Caddy HTTPS proxy, one per server |
 
-That means **six running containers with the local mail relay**, or **five when
-using an external email provider such as SendGrid**. Rails and the worker connect
+That means **five containers per instance with the local mail relay**, or
+**four when using an external email provider such as SendGrid**, plus the one
+shared proxy. The container names above are for the default instance; see
+[Multiple instances on one server](#multiple-instances-on-one-server). Rails and the worker connect
 to the separate mail container privately at `mail:25`; SMTP is not published on
 the host. See [Docker mail relay](#docker-mail-relay) for configuration details.
 
-Caddy obtains and renews the HTTPS certificate automatically.
+Caddy obtains and renews the HTTPS certificates automatically.
 
 Persistent state lives in named Docker volumes. Application releases live
 under `/opt/ai_lms/releases`, and `/opt/ai_lms/current` points to the active
-release.
+release (for a named instance, under `/opt/ai_lms/instances/NAME`).
 
 ### Command reference
 
@@ -429,7 +431,8 @@ on the machine where they run.
 
 | Command | Purpose |
 | --- | --- |
-| `bin/deploy root@HOST DOMAIN` | Deploy application code to the remote server; no automatic data backup. |
+| `bin/deploy [--instance NAME] root@HOST DOMAIN` | Deploy application code to the remote server; no automatic data backup. |
+| `bin/instances [--json] USER@HOST` | List the instances on a server: domains, release, proxy site, container health, and problems. |
 | `bin/check-deploy USER@HOST [GIT_REF]` | Compare production web/worker image tags with local `main` and check both are running. |
 | `bin/backup USER@HOST [FILE]` | Create a remote snapshot and download one archive locally. |
 | `bin/export USER@HOST [FILE]` | Same portable archive as `bin/backup`. |
@@ -441,7 +444,8 @@ on the machine where they run.
 | `deploy/restore --force FILE` | Restore into the instance on this machine. |
 
 Backup, export, restore, and local-clone commands support `--help`.
-Remote wrappers accept `SSH_PORT` and `DEPLOY_ROOT`.
+Remote wrappers accept `SSH_PORT`, `DEPLOY_ROOT` and `--instance NAME`, as do
+`bin/check-deploy` and `bin/check-email`.
 
 Run `bin/check-deploy USER@HOST` to check a production server against the
 latest committed local `main`, without switching branches. The SSH target is
@@ -452,19 +456,65 @@ when both match and are running, `1` for a mismatch or stopped container, and
 `2` if the check fails. This compares deployment tags; it does not fetch remote
 Git changes, verify file contents, or deploy code.
 
-### Single-instance limitation
+### Multiple instances on one server
 
-The current Docker deployment supports one LMS instance per server. It uses
-the fixed Compose project name `ai_lms`, fixed image and named-volume names,
-the fixed `/opt/ai_lms` deployment root, and a Caddy container bound to host
-ports 80 and 443.
+One Debian server can run several independent LMS instances. Give each one a
+name with `--instance`:
 
-Do not run an unchanged second copy on the same server. Besides port and
-container conflicts, the fixed PostgreSQL and Active Storage volume names
-could cause instances to share persistent data. A multi-instance deployment
-must parameterize every stack, image, directory, network, and volume name and
-use one shared edge proxy to route each domain to its corresponding Rails
-service.
+```bash
+bin/deploy root@SERVER_IP learn.example.com                     # "default" instance
+bin/deploy --instance acme root@SERVER_IP learn.acme.com
+bin/deploy --instance beta root@SERVER_IP courses.beta.org
+```
+
+Each instance has its own containers, PostgreSQL database, Redis, uploads,
+private mail network, Rails credentials file and release history. Names use
+1-30 lowercase letters, digits or inner hyphens (`edge` is reserved).
+
+| Instance | Deployment root | Compose project | Volumes |
+| --- | --- | --- | --- |
+| `default` (no `--instance`) | `/opt/ai_lms` | `ai_lms` | `ai_lms_postgres`, `ai_lms_storage`, ... |
+| `acme` | `/opt/ai_lms/instances/acme` | `ai_lms_acme` | `ai_lms_acme_postgres`, `ai_lms_acme_storage`, ... |
+
+The default instance keeps the names used before multi-instance support, so an
+existing server needs no data migration.
+
+Only one process can listen on ports 80 and 443, so a single **edge proxy**
+(`/opt/ai_lms/edge`, Compose project `ai_lms_edge`) serves every instance. Each
+deploy writes that instance's `sites/NAME.caddy` file (its domains, routed to
+its web container over the `ai_lms_edge` Docker network) and reloads Caddy
+without interrupting the other sites. The deploy validates the whole edge
+configuration first, so a domain already used by another instance stops the
+deploy before anything changes.
+
+Run `bin/instances root@SERVER_IP` to see every instance on a server, its
+domains, deployed release and container health, plus anything inconsistent
+(for example a folder left by a failed first deploy). Add `--json` for scripts.
+
+Pass the same `--instance NAME` to the other commands, for example
+`bin/backup --instance acme root@SERVER_IP`. On the server, the `deploy/`
+scripts default to the deployment they are run from, such as
+`/opt/ai_lms/instances/acme/current/deploy/backup`. An archive from one
+instance can be restored into another.
+
+Deployments of one instance are serialised with a lock; different instances
+can deploy at the same time. Each instance needs roughly 1 GB of RAM (Puma,
+Sidekiq, PostgreSQL and Redis).
+
+#### Upgrading a server deployed before multi-instance support
+
+Redeploy the existing site once without `--instance`. The deploy moves HTTPS
+from the old per-instance proxy to the shared edge proxy, reusing the existing
+`ai_lms_caddy_data` volume so certificates are kept. Expect a brief HTTPS
+interruption while the web container restarts and the edge proxy takes over.
+Until that redeploy, deploying a named instance on that server stops with a
+message asking you to do so first.
+
+Removing an instance is manual: delete its site file from
+`/opt/ai_lms/edge/caddy/sites/`, reload the edge proxy
+(`docker exec ai_lms_edge-caddy-1 caddy reload --config /etc/caddy/Caddyfile`),
+then run `docker compose -p ai_lms_NAME down` from its `current` release
+directory. Back it up first; deleting its volumes is permanent.
 
 ### Source-only sync for native installations
 
@@ -530,10 +580,12 @@ The first run:
 1. Sends an archive of the committed local `HEAD` (repository access is not
    required on the server).
 2. Installs Docker and Docker Compose.
-3. Creates `/opt/ai_lms/shared/.env` with generated database credentials and
-   the Rails production key.
-4. Builds the application image, prepares the database, and starts the web,
-   worker, database, Redis, and HTTPS proxy services.
+3. Creates `/opt/ai_lms/shared/.env` (or the named instance's equivalent) with
+   generated database credentials and the Rails production key.
+4. Builds the application image, prepares the database, starts the web,
+   worker, database and Redis services, and publishes the instance's domains on
+   the shared HTTPS edge proxy (starting the proxy if this is the server's
+   first instance).
 
 Subsequent runs repeat only the release, build, migration, and restart steps.
 The five newest source releases are retained. Deploys intentionally refuse
@@ -577,6 +629,8 @@ Standalone readiness checks (no Rails boot or database access):
 ```bash
 ruby test/deploy/readiness_test.rb
 ruby test/deploy/deploy_options_test.rb
+ruby test/deploy/multi_instance_test.rb
+ruby test/deploy/instances_test.rb
 ```
 
 While developing the deployment mechanism itself, an explicit development mode
@@ -646,8 +700,10 @@ After editing it, recreate the app processes:
 ```bash
 cd /opt/ai_lms/current
 export APP_IMAGE="ai_lms:$(basename "$(readlink -f /opt/ai_lms/current)")"
-docker compose --env-file /opt/ai_lms/shared/.env up -d web worker proxy
+docker compose --env-file /opt/ai_lms/shared/.env up -d web worker
 ```
+
+For a named instance, use `/opt/ai_lms/instances/NAME` in place of `/opt/ai_lms`.
 
 Useful checks:
 
@@ -679,8 +735,11 @@ Inspect recent Rails, Sidekiq, or Caddy logs:
 ```bash
 docker logs --since=10m ai_lms-web-1
 docker logs --since=10m ai_lms-worker-1
-docker logs --since=10m ai_lms-proxy-1
+docker logs --since=10m ai_lms_edge-caddy-1
 ```
+
+A named instance's containers are `ai_lms_NAME-web-1` and `ai_lms_NAME-worker-1`.
+The Caddy container is shared by all instances.
 
 Native installations continue to use systemd, for example:
 
@@ -745,7 +804,8 @@ SSH_PORT=22 bin/restore --force root@NEW_SERVER ./ai-lms-clone.tar.gz
 This uploads the archive and replaces the destination data. To restore on
 your own computer, use [the local Docker clone](#restore-locally-in-docker-recommended)
 or [the native restore](#restore-locally-without-docker) described below. All three wrappers support `--help`, `SSH_PORT` (default 22), and
-`DEPLOY_ROOT` (default `/opt/ai_lms`). They target Docker deployments;
+`DEPLOY_ROOT` (default `/opt/ai_lms`), and `--instance NAME` for a named
+instance (`/opt/ai_lms/instances/NAME`). They target Docker deployments;
 use the `deploy/` scripts directly for native instances.
 
 #### Run directly on the source instance

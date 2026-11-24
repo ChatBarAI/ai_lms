@@ -83,6 +83,40 @@ class RemoteTransferTest < Minitest::Test
     end
   end
 
+  def test_instance_option_selects_the_instance_root
+    with_transport do |work, environment|
+      environment = environment.merge("DEPLOY_ROOT" => nil)
+      output = "#{work}/acme.tar.gz"
+      _, error, status = Open3.capture3(environment, "#{ROOT}/bin/backup", "--instance", "acme", "root@example.com", output)
+      assert status.success?, error
+      assert_includes File.read("#{work}/calls"), "DEPLOY_ROOT='/opt/ai_lms/instances/acme' '/opt/ai_lms/instances/acme/current/deploy/export'"
+
+      archive = "#{work}/input.tar.gz"
+      File.write(archive, "fixture")
+      _, error, status = Open3.capture3(environment, "#{ROOT}/bin/restore", "--force", "--instance=acme", "root@example.com", archive)
+      assert status.success?, error
+      assert_includes File.read("#{work}/calls"), "'/opt/ai_lms/instances/acme/current/deploy/restore' --force"
+    end
+  end
+
+  def test_default_instance_keeps_the_original_root
+    with_transport do |work, environment|
+      _, error, status = Open3.capture3(environment.merge("DEPLOY_ROOT" => nil), "#{ROOT}/bin/export", "root@example.com", "#{work}/a.tar.gz")
+      assert status.success?, error
+      assert_includes File.read("#{work}/calls"), "'/opt/ai_lms/current/deploy/export'"
+    end
+  end
+
+  def test_invalid_instance_does_not_connect
+    with_transport do |work, environment|
+      [ "../etc", "Acme", "edge", "a_b", "" ].each do |name|
+        _, _, status = Open3.capture3(environment, "#{ROOT}/bin/backup", "--instance", name, "root@example.com")
+        refute status.success?, name
+      end
+      refute File.exist?("#{work}/calls")
+    end
+  end
+
   def test_invalid_host_and_port_do_not_connect
     with_transport do |work, environment|
       [ ["-oProxyCommand=bad", "22"], ["root@example.com", "invalid"] ].each do |host, port|

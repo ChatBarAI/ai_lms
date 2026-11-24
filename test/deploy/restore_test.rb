@@ -7,10 +7,11 @@ require "open3"
 class RestoreScriptTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
-  def run_restore(failure: nil, ask_admin: false, local_mail: false)
+  def run_restore(failure: nil, ask_admin: false, local_mail: false, instance: nil)
     Dir.mktmpdir do |work|
       FileUtils.mkdir_p("#{work}/shared")
-      File.write("#{work}/shared/.env", "COMPOSE_PROFILES=#{local_mail ? 'local-mail' : ''}\n")
+      File.write("#{work}/shared/.env", "COMPOSE_PROFILES=#{local_mail ? 'local-mail' : ''}\n" +
+        (instance ? "INSTANCE=#{instance}\n" : ""))
       File.write("#{work}/docker", <<~'SH')
         #!/usr/bin/env bash
         set -eu
@@ -53,9 +54,9 @@ class RestoreScriptTest < Minitest::Test
   def test_restores_into_empty_destination_before_replacing_uploads
     run_restore do |status, error, calls|
       assert status.success?, error
-      sequence = [ "stop web worker proxy", "pg_restore --list", "psql -X --set=ON_ERROR_STOP=1", "dropdb --if-exists -U ai_lms ai_lms_production",
+      sequence = [ "stop web worker\n", "pg_restore --list", "psql -X --set=ON_ERROR_STOP=1", "dropdb --if-exists -U ai_lms ai_lms_production",
         "createdb --template=template0 -U ai_lms ai_lms_production", "pg_restore --no-owner", "find /target",
-        "./bin/rails db:migrate", "SiteSetting.update_all", "up -d web worker proxy" ]
+        "./bin/rails db:migrate", "SiteSetting.update_all", "up -d web worker\n" ]
       sequence.each { |command| assert_includes calls, command }
       sequence.each_cons(2) { |before, after| assert_operator calls.index(before), :<, calls.index(after) }
       assert_includes calls, "--single-transaction"
@@ -63,6 +64,26 @@ class RestoreScriptTest < Minitest::Test
       refute_includes calls, "--create "
       refute_includes calls, "compose.mail.yaml"
       assert_includes calls, "WHERE datname = 'ai_lms_production' AND pid <> pg_backend_pid()"
+      refute_includes calls, "proxy"
+      assert_includes calls, "compose -p ai_lms --env-file"
+      assert_includes calls, "-v ai_lms_storage:/target"
+    end
+  end
+
+  def test_named_instance_restores_only_its_own_project_and_volume
+    run_restore(instance: "acme") do |status, error, calls|
+      assert status.success?, error
+      calls.lines.grep(/\Acompose /).each { |line| assert_includes line, "compose -p ai_lms_acme --env-file" }
+      assert_includes calls, "-v ai_lms_acme_storage:/target"
+      refute_match(/-v ai_lms_storage:/, calls)
+    end
+  end
+
+  def test_invalid_recorded_instance_stops_before_touching_services
+    run_restore(instance: "Bad_Name") do |status, error, calls|
+      refute status.success?
+      assert_includes error, "Invalid instance name"
+      assert_empty calls
     end
   end
 
@@ -82,7 +103,7 @@ class RestoreScriptTest < Minitest::Test
         refute status.success?, failure
         refute_includes calls, "find /target"
         refute_includes calls, "db:migrate"
-        refute_includes calls, "up -d web worker proxy"
+        refute_includes calls, "up -d web worker"
         refute_includes calls, "dropdb" if %w[list sessions session_check].include?(failure)
         refute_includes calls, "createdb" if failure == "drop"
         refute_includes calls, "pg_restore --no-owner" if failure == "create"
@@ -99,6 +120,7 @@ class RestoreScriptTest < Minitest::Test
     Dir.mktmpdir do |work|
       %w[app/bin app/deploy app/storage tools].each { |dir| FileUtils.mkdir_p("#{work}/#{dir}") }
       %w[restore unpack-bundle].each { |file| FileUtils.cp("#{ROOT}/deploy/#{file}", "#{work}/app/deploy/#{file}") }
+      FileUtils.cp_r("#{ROOT}/deploy/lib", "#{work}/app/deploy/lib")
       File.write("#{work}/app/storage/existing-upload", "keep this upload")
       File.write("#{work}/app/bin/rails", <<~'SH')
         #!/usr/bin/env bash

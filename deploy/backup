@@ -22,7 +22,9 @@ See bin/backup --help for the remote wrappers.
 With no argument, writes:
   /opt/ai_lms/backups/ai-lms-clone-TIMESTAMP.tar.gz
 Pass a directory for a timestamped backup, or a .tar.gz path for an exact name.
-Existing archive files are never overwritten. DEPLOY_ROOT changes /opt/ai_lms.
+Existing archive files are never overwritten. The default directory belongs to
+the deployment this script runs from (e.g. /opt/ai_lms/instances/acme/backups
+for an "acme" instance); DEPLOY_ROOT overrides it.
 
 The archive contains PostgreSQL data, local Active Storage uploads (videos,
 logos, etc.), and source release metadata. It excludes application code,
@@ -55,7 +57,11 @@ USAGE
 fi
 [[ $# -le 1 ]] || { echo 'Expected at most one output path.' >&2; exit 2; }
 app_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
-output=${1:-"${DEPLOY_ROOT:-/opt/ai_lms}/backups"}
+# shellcheck source=deploy/lib/instance.sh
+source "$app_root/deploy/lib/instance.sh"
+DEPLOY_ROOT=${DEPLOY_ROOT:-$(lms_default_deploy_root "$app_root")}
+export DEPLOY_ROOT
+output=${1:-"$DEPLOY_ROOT/backups"}
 if [[ $output != *.tar.gz || -d $output ]]; then
   mkdir -p "$output"
   output="$output/ai-lms-clone-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"

@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Machine-readable inventory of the LMS instances on this server, read by
+# bin/instances (which streams this script over SSH, so the server does not
+# need a release that contains it). Read-only. Only non-secret keys are read
+# from env files.
+#
+# Output, one tab-separated record per line:
+#   I  name  root  has_env  domains  release  deployed_epoch  site_file
+#   C  project  service  state  status
+#   S  site_name
+#   H  cpus  load1  load5  load15
+#   M  mem_total  mem_available  swap_total  swap_free     (kB)
+#   D  path  size  used  available  device                (bytes)
+#   U  container_name  memory_usage                       (docker stats text)
+#   X  error_message
+set -u
+
+base=${LMS_BASE_ROOT:-/opt/ai_lms}
+sites_dir="$base/edge/caddy/sites"
+
+env_value() {
+  [[ -f $1 ]] && sed -n "s/^$2=//p" "$1" | tail -n 1
+}
+
+instance_record() {
+  local name=$1 root=$2 env_file="$2/shared/.env"
+  local has_env=0 domains= release= deployed= site=0
+  if [[ -f $env_file ]]; then
+    has_env=1
+    domains=$(env_value "$env_file" APP_DOMAINS)
+    domains=${domains:-$(env_value "$env_file" APP_DOMAIN)}
+  fi
+  if [[ -L "$root/current" ]]; then
+    release=$(basename "$(readlink -f "$root/current")")
+    deployed=$(stat -c %Y "$root/current" 2>/dev/null)
+  fi
+  [[ -f "$sites_dir/$name.caddy" ]] && site=1
+  printf 'I\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$name" "$root" "$has_env" "${domains//$'\t'/ }" "$release" "$deployed" "$site"
+}
+
+if [[ -f "$base/shared/.env" || -L "$base/current" ]]; then
+  instance_record default "$base"
+fi
+for dir in "$base"/instances/*/; do
+  [[ -d $dir ]] || continue
+  dir=${dir%/}
+  instance_record "$(basename "$dir")" "$dir"
+done
+
+for site in "$sites_dir"/*.caddy; do
+  [[ -f $site ]] && printf 'S\t%s\n' "$(basename "$site" .caddy)"
+done
+
+# Host resources. /proc and df are read-only and need no extra packages.
+read -r load1 load5 load15 _ < /proc/loadavg
+printf 'H\t%s\t%s\t%s\t%s\n' "$(nproc 2>/dev/null || echo '?')" "$load1" "$load5" "$load15"
+# Values are passed through as text (kB): older mawk clamps printf %d at 2^31,
+# which turned 32 GiB into 2 GiB.
+awk '/^(MemTotal|MemAvailable|SwapTotal|SwapFree):/ { v[$1] = $2 }
+  END { printf "M\t%s\t%s\t%s\t%s\n", v["MemTotal:"], v["MemAvailable:"], v["SwapTotal:"], v["SwapFree:"] }' "${LMS_MEMINFO:-/proc/meminfo}"
+disk_record() {
+  df -P -B1 "$1" 2>/dev/null | awk -v path="$1" 'NR == 2 { printf "D\t%s\t%s\t%s\t%s\t%s\n", path, $2, $3, $4, $1 }'
+}
+disk_record /
+
+if ! command -v docker >/dev/null 2>&1; then
+  printf 'X\tDocker is not installed on this server.\n'
+  exit 0
+fi
+# Long-running service containers only; one-off `compose run` containers are skipped.
+if ! containers=$(docker ps -a \
+    --filter label=com.docker.compose.project \
+    --filter label=com.docker.compose.oneoff=False \
+    --format '{{.Label "com.docker.compose.project"}}	{{.Label "com.docker.compose.service"}}	{{.State}}	{{.Status}}' 2>&1); then
+  printf 'X\tCould not list Docker containers: %s\n' "${containers//$'\n'/ }"
+  exit 0
+fi
+while IFS= read -r line; do
+  [[ $line == ai_lms* ]] && printf 'C\t%s\n' "$line"
+done <<< "$containers"
+
+# Docker's data directory holds images and volumes; report it separately when
+# it is on a different filesystem from /.
+docker_root=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)
+if [[ -n $docker_root && -d $docker_root &&
+      $(df -P "$docker_root" 2>/dev/null | awk 'NR == 2 { print $1 }') != $(df -P / | awk 'NR == 2 { print $1 }') ]]; then
+  disk_record "$docker_root"
+fi
+
+# Memory per running container (one sample; takes a second or two).
+docker stats --no-stream --format '{{.Name}}	{{.MemUsage}}' 2>/dev/null |
+  while IFS= read -r line; do
+    [[ $line == ai_lms* ]] && printf 'U\t%s\n' "$line"
+  done

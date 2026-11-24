@@ -8,6 +8,7 @@ requested_domains=${4:-}
 allow_domain_change=${5:-false}
 rails_key_file=${6:-}
 skip_dns_check=${7:-false}
+instance=${8:-default}
 domain_changed=false
 
 [[ $skip_dns_check == true || $skip_dns_check == false ]] || {
@@ -36,9 +37,44 @@ case "${deploy_root%/}" in
     ;;
 esac
 
+# shellcheck source=deploy/lib/instance.sh
+source "$release_dir/deploy/lib/instance.sh"
+lms_require_instance "$instance" || exit 2
+project=$(lms_instance_project "$instance")
+edge_upstream=$(lms_edge_upstream "$instance")
+edge_root="$LMS_BASE_ROOT/edge"
+
+remove_key=false
+first_deploy=false
+services_started=false
+
+# Undo a first deployment that failed before any container started (for
+# example a domain already used by another instance, or a DNS mismatch), so
+# the rejected instance leaves no folder behind. Only files this deploy created
+# are removed, and directories only when empty: the default instance's root
+# also holds other instances and the edge proxy.
+undo_first_deploy() {
+  echo "First deployment of instance '$instance' failed before any service started; removing the files it created." >&2
+  rm -f -- "$env_file"
+  rmdir -- "$shared_dir" 2>/dev/null || true
+  rm -rf -- "$release_dir" "$deploy_root/.edge-stage"
+  rmdir -- "$deploy_root/releases" 2>/dev/null || true
+  rm -f -- "$deploy_root/.deploy.lock"
+  rmdir -- "$deploy_root" 2>/dev/null || true
+}
+
+on_exit() {
+  local status=$?
+  if $remove_key; then rm -f -- "$rails_key_file"; fi
+  if [[ $status -ne 0 ]] && $first_deploy && ! $services_started; then
+    undo_first_deploy
+  fi
+}
+trap on_exit EXIT
+
 if [[ -n $rails_key_file && -e $rails_key_file ]]; then
   chmod 600 "$rails_key_file"
-  trap 'rm -f -- "$rails_key_file"' EXIT
+  remove_key=true
 fi
 
 install_docker() {
@@ -88,6 +124,41 @@ fi
 
 shared_dir="$deploy_root/shared"
 env_file="$shared_dir/.env"
+
+# One deployment per instance at a time. Different instances may deploy
+# concurrently; edge proxy changes take their own lock below.
+mkdir -p "$deploy_root"
+exec 9>"$deploy_root/.deploy.lock"
+flock -n 9 || {
+  echo "Another deployment of instance '$instance' is already running." >&2
+  exit 1
+}
+# Decided only while holding the lock, so a concurrent deploy that was refused
+# above can never undo files the running one is creating.
+if [[ ! -f $env_file && ! -e "$deploy_root/current" ]]; then
+  first_deploy=true
+fi
+
+# Refuse to point a deployment root at another instance's data, or two roots
+# at the same Compose project (which would share containers and volumes).
+if [[ -f $env_file ]]; then
+  configured_instance=$(lms_env_instance "$env_file")
+  if [[ $configured_instance != "$instance" ]]; then
+    echo "Instance mismatch: $deploy_root belongs to instance '$configured_instance', requested '$instance'." >&2
+    exit 1
+  fi
+fi
+while IFS= read -r owner_dir; do
+  [[ -z $owner_dir || $owner_dir == "$deploy_root/releases/"* ]] && continue
+  echo "Compose project '$project' already runs from $owner_dir, outside $deploy_root." >&2
+  echo "Each instance needs its own name; see bin/deploy --help." >&2
+  exit 1
+done < <(docker ps -a --filter "label=com.docker.compose.project=$project" \
+  --format '{{.Label "com.docker.compose.project.working_dir"}}' | sort -u)
+
+if ! docker network inspect "$LMS_EDGE_NETWORK" >/dev/null 2>&1; then
+  docker network create "$LMS_EDGE_NETWORK" >/dev/null
+fi
 
 # Resolve the final domain list before changing configuration or application data.
 configured_domain=
@@ -187,18 +258,104 @@ if ! grep -q '^SMTP_ADDRESS=' "$env_file"; then
   } >> "$env_file"
 fi
 
+# Record which instance owns this environment. Older single-instance files gain
+# these lines on their next deploy; values for the default instance match the
+# names it has always used.
+lms_env_set "$env_file" INSTANCE "$instance"
+lms_env_set "$env_file" COMPOSE_PROJECT_NAME "$project"
+lms_env_set "$env_file" EDGE_UPSTREAM "$edge_upstream"
+# The default instance keeps compose.mail.yaml's legacy subnet. Every other
+# instance gets its own, so their private mail networks never overlap.
+if [[ $instance != "$LMS_DEFAULT_INSTANCE" ]] && ! grep -q '^MAIL_NETWORK=' "$env_file"; then
+  mail_network=$(lms_allocate_mail_network)
+  lms_env_set "$env_file" MAIL_NETWORK "$mail_network"
+  echo "Allocated private mail network $mail_network for instance '$instance'."
+fi
+
 rm -f "$rails_key_file"
-trap - EXIT
+remove_key=false
+
+# --- Shared edge proxy -------------------------------------------------------
+# One Caddy per server (deploy/edge) owns ports 80/443. Each instance owns one
+# site file, sites/<instance>.caddy, routing its domains to its web container.
+
+render_site() {
+  local domains acme_email domain addresses=
+  local -a domain_list=()
+  domains=$(lms_env_value "$env_file" APP_DOMAINS)
+  acme_email=$(lms_env_value "$env_file" ACME_EMAIL)
+  IFS=',' read -r -a domain_list <<< "${domains:-$app_domain}"
+  for domain in "${domain_list[@]}"; do
+    domain=${domain//[[:space:]]/}
+    [[ $domain =~ ^[A-Za-z0-9.-]+$ ]] || {
+      echo "Invalid domain '$domain' in APP_DOMAINS ($env_file)." >&2
+      return 1
+    }
+    # Older deploys could record the same domain twice; list each once.
+    [[ ", $addresses, " == *", $domain, "* ]] && continue
+    addresses+=${addresses:+, }$domain
+  done
+  printf '# Managed by deploy/server for instance "%s"; edits are overwritten.\n' "$instance"
+  printf '%s {\n' "$addresses"
+  if [[ $acme_email =~ ^[^[:space:]{}@]+@[A-Za-z0-9.-]+$ ]]; then
+    printf '\ttls %s\n' "$acme_email"
+  fi
+  printf '\tencode zstd gzip\n\n'
+  printf '\trequest_body {\n\t\tmax_size 110MB\n\t}\n\n'
+  printf '\treverse_proxy %s:3000\n' "$edge_upstream"
+  printf '}\n'
+}
+
+validate_edge_config() {
+  local output
+  if ! output=$(docker run --rm --network none -v "$1:/etc/caddy:ro" caddy:2 \
+      caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile 2>&1); then
+    printf '%s\n' "$output" >&2
+    return 1
+  fi
+}
+
+# A proxy container from before multi-instance support holds ports 80/443. This
+# deploy retires its own; another instance's must be migrated by redeploying
+# that instance first, or its sites would go offline.
+while IFS='|' read -r legacy_project legacy_id; do
+  [[ -z $legacy_id || $legacy_project == "$project" ]] && continue
+  echo "Instance project '$legacy_project' still runs its own proxy on ports 80/443." >&2
+  echo "Redeploy that instance first so it moves onto the shared edge proxy." >&2
+  exit 1
+done < <(docker ps -a --filter label=com.docker.compose.service=proxy \
+  --format '{{.Label "com.docker.compose.project"}}|{{.ID}}' | grep '^ai_lms[_|]' || true)
+
+# Check the full edge configuration, including other instances' sites, before
+# changing anything. This catches a domain already served by another instance.
+edge_stage="$deploy_root/.edge-stage"
+rm -rf -- "$edge_stage"
+mkdir -p "$edge_stage/sites"
+cp "$release_dir/deploy/edge/Caddyfile" "$edge_stage/Caddyfile"
+if [[ -d "$edge_root/caddy/sites" ]]; then
+  find "$edge_root/caddy/sites" -maxdepth 1 -name '*.caddy' ! -name "$instance.caddy" \
+    -exec cp -t "$edge_stage/sites" {} +
+fi
+render_site > "$edge_stage/sites/$instance.caddy"
+echo "Validating the shared edge proxy configuration..."
+if ! validate_edge_config "$edge_stage"; then
+  echo "Edge proxy configuration for instance '$instance' is invalid (is a domain already used by another instance?)." >&2
+  exit 1
+fi
 
 release_name=$(basename "$release_dir")
 export DEPLOY_ROOT="$deploy_root"
 export APP_IMAGE="ai_lms:$release_name"
-compose=(docker compose --env-file "$env_file" -f "$release_dir/compose.yaml")
+export COMPOSE_PROJECT_NAME="$project"
+export EDGE_UPSTREAM="$edge_upstream"
+compose=(docker compose -p "$project" --env-file "$env_file" -f "$release_dir/compose.yaml")
 # Override any previously saved profile until the database has been inspected.
 export COMPOSE_PROFILES=
 
 cd "$release_dir"
 "${compose[@]}" build web
+# From here containers and volumes exist; a failure leaves them for diagnosis.
+services_started=true
 if ! "${compose[@]}" up -d --wait --wait-timeout 150 db redis; then
   echo "A database or Redis dependency failed readiness checks. Service logs:" >&2
   "${compose[@]}" logs --no-color --tail=100 db redis >&2 || true
@@ -253,7 +410,7 @@ if [[ $mail_mode == local ]]; then
 else
   # Do not remove the previous mail container as an orphan while the old app
   # may still be serving traffic; stop it after replacement readiness below.
-  "${compose[@]}" up -d db redis web worker proxy
+  "${compose[@]}" up -d db redis web worker
 fi
 
 web_id=$("${compose[@]}" ps -q web)
@@ -274,27 +431,49 @@ if [[ $health != healthy ]]; then
   exit 1
 fi
 
-proxy_id=$("${compose[@]}" ps -q proxy)
-for _ in $(seq 1 15); do
-  health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$proxy_id")
-  [[ $health == healthy ]] && break
-  [[ $health == unhealthy || $health == exited || $health == dead || $health == restarting ]] && {
-    "${compose[@]}" logs --tail=100 proxy
-    exit 1
-  }
-  sleep 2
-done
-
-health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$proxy_id")
-if [[ $health != healthy ]]; then
-  "${compose[@]}" logs --tail=100 proxy
-  echo "Caddy proxy container did not become healthy." >&2
+# Publish this instance's site on the shared edge proxy. The lock serialises
+# edge changes between instances deploying at the same time.
+mkdir -p "$edge_root/caddy/sites"
+exec 8>"$edge_root/.lock"
+flock -w 300 8 || { echo "Timed out waiting for the edge proxy lock." >&2; exit 1; }
+install -m 0644 "$release_dir/deploy/edge/compose.yaml" "$edge_root/compose.yaml"
+install -m 0644 "$release_dir/deploy/edge/Caddyfile" "$edge_root/caddy/Caddyfile"
+site_file="$edge_root/caddy/sites/$instance.caddy"
+previous_site="$edge_stage/previous.caddy"
+[[ -f $site_file ]] && cp -p "$site_file" "$previous_site"
+install -m 0644 "$edge_stage/sites/$instance.caddy" "$site_file"
+if ! validate_edge_config "$edge_root/caddy"; then
+  if [[ -f $previous_site ]]; then cp -p "$previous_site" "$site_file"; else rm -f "$site_file"; fi
+  echo "Edge proxy configuration became invalid; restored the previous site file." >&2
   exit 1
 fi
 
+# Retire this instance's pre-multi-instance proxy, which holds ports 80/443.
+mapfile -t legacy_proxies < <(docker ps -aq \
+  --filter "label=com.docker.compose.project=$project" \
+  --filter label=com.docker.compose.service=proxy)
+if [[ ${#legacy_proxies[@]} -gt 0 ]]; then
+  echo "Moving HTTPS for instance '$instance' to the shared edge proxy..."
+  docker rm -f "${legacy_proxies[@]}" >/dev/null
+fi
+docker network rm "${project}_frontend" >/dev/null 2>&1 || true
+
+# Certificates from the former per-instance proxy live in these volumes.
+docker volume create ai_lms_caddy_data >/dev/null
+docker volume create ai_lms_caddy_config >/dev/null
+edge_compose=(docker compose -p "$LMS_EDGE_PROJECT" -f "$edge_root/compose.yaml")
+if ! "${edge_compose[@]}" up -d --wait --wait-timeout 90 caddy; then
+  "${edge_compose[@]}" logs --no-color --tail=100 caddy >&2 || true
+  echo "Edge proxy did not become healthy." >&2
+  exit 1
+fi
+"${edge_compose[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+flock -u 8
+rm -rf -- "$edge_stage"
+
 echo "Checking public HTTPS (allowing up to five minutes for certificates)..."
 if ! bash "$release_dir/deploy/check-readiness" https "$effective_domains"; then
-  "${compose[@]}" logs --tail=100 proxy >&2 || true
+  "${edge_compose[@]}" logs --tail=100 caddy >&2 || true
   echo "Deployment failed HTTPS readiness. Services remain running for diagnosis; no automatic rollback was attempted." >&2
   exit 1
 fi
@@ -316,4 +495,4 @@ done
 
 docker image prune -f >/dev/null
 "${compose[@]}" ps
-echo "Deployed $release_name to https://$app_domain"
+echo "Deployed $release_name to https://$app_domain (instance '$instance')"
