@@ -1,5 +1,6 @@
 class CoursesController < ApplicationController
-  before_action :authenticate_user!, only: [ :new, :create, :edit, :update, :destroy, :certificate_layout, :update_certificate_layout ]
+  include LearningReports
+  before_action :authenticate_user!, only: [ :report, :new, :create, :edit, :update, :destroy, :certificate_layout, :update_certificate_layout ]
   load_and_authorize_resource find_by: :slug
 
   def index
@@ -23,6 +24,16 @@ class CoursesController < ApplicationController
     else
       []
     end
+
+    if can?(:report, @course)
+      @pending_marking_count = QuestionAnswer.pending_marking.merge(Lesson.manually_marked)
+        .where(lessons: { course_id: @course.id }).count
+    end
+  end
+
+  def report
+    load_course_report
+    render "admin/courses/report"
   end
 
   def new

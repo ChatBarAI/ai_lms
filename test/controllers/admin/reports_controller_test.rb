@@ -26,8 +26,15 @@ class Admin::ReportsControllerTest < ActionDispatch::IntegrationTest
     get report_admin_course_lesson_path(courses(:algebra), lessons(:advanced))
     assert_response :success
     assert_match "Free-text lesson marking", response.body
-    assert_match "9/10", response.body
+    assert_match "9.0/10", response.body
     assert_match "Explain the commutative property", response.body
+    question = question_answers(:scored_answer).question
+    assert_select "a[href=?]", question_report_admin_course_lesson_path(courses(:algebra), lessons(:advanced), question)
+
+    get question_report_admin_course_lesson_path(courses(:algebra), lessons(:advanced), question)
+    assert_response :success
+    assert_match "9/10", response.body
+    assert_match question_answers(:scored_answer).answer_text, response.body
   end
 
   test "lesson report marking table only shows free-text answers" do

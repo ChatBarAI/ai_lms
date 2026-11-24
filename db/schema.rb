@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_15_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_24_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -374,6 +374,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_15_000000) do
     t.index ["enrollment_id", "question_id"], name: "index_question_answers_on_enrollment_id_and_question_id", unique: true
     t.index ["enrollment_id"], name: "index_question_answers_on_enrollment_id"
     t.index ["question_id"], name: "index_question_answers_on_question_id"
+    t.index ["question_id"], name: "index_question_answers_pending_on_question_id", where: "(ai_score IS NULL)"
   end
 
   create_table "question_generation_tasks", force: :cascade do |t|

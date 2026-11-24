@@ -140,34 +140,40 @@ class Lesson < ApplicationRecord
 
   scope :published, -> { where(published_at: ..Time.current) }
   scope :required_for_completion, -> { published }
-  scope :pending_marking, -> {
-    joins(questions: :question_answers)
-      .where(questions: { kind: Question.kinds[:free_text] })
-      .where(question_answers: { ai_score: nil })
-  }
 
-  def self.pending_marking_count
-    pending_marking.distinct.count(:id)
-  end
+  # Lessons without a ChatBar API key cannot be AI-marked, so an instructor
+  # has to score their free-text answers by hand.
+  scope :manually_marked, -> { where(cbai_api_key: [ nil, "" ]) }
 
+  # Lessons with free-text answers waiting to be marked, most recent first,
+  # carrying the pending counts the marking queue shows.
   def self.marking_queue
-    pending_marking
+    pending = QuestionAnswer.pending_marking
+      .group("questions.lesson_id")
       .select(
-        "lessons.*",
-        "COUNT(question_answers.id) AS pending_free_text_answers_count",
+        "questions.lesson_id",
+        "COUNT(*) AS pending_free_text_answers_count",
         "COUNT(DISTINCT question_answers.enrollment_id) AS pending_learners_count",
         "MAX(question_answers.updated_at) AS latest_pending_answer_at"
       )
-      .group("lessons.id")
-      .order(Arel.sql("MAX(question_answers.updated_at) DESC"))
+
+    joins("INNER JOIN (#{pending.to_sql}) pending_marking ON pending_marking.lesson_id = lessons.id")
+      .select(
+        "lessons.*",
+        "pending_marking.pending_free_text_answers_count",
+        "pending_marking.pending_learners_count",
+        "pending_marking.latest_pending_answer_at"
+      )
+      .order("pending_marking.latest_pending_answer_at DESC")
   end
 
   def published?
     published_at.present? && published_at <= Time.current
   end
 
-  def pending_marking_mode
-    cbai_api_key.present? ? :ai : :manual
+  # Counterpart of the manually_marked scope.
+  def manual_marking?
+    cbai_api_key.blank?
   end
 
   def average_rating

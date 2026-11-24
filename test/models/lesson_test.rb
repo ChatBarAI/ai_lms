@@ -255,8 +255,20 @@ class LessonTest < ActiveSupport::TestCase
     queued = Lesson.marking_queue.to_a
 
     assert_includes queued, lessons(:intro)
-    assert_equal 1, Lesson.pending_marking_count
-    assert_equal :manual, queued.find { |lesson| lesson.id == lessons(:intro).id }.pending_marking_mode
+    assert queued.find { |lesson| lesson.id == lessons(:intro).id }.manual_marking?
+  end
+
+  test "marking_queue counts only answers from learners enrolled in the lesson's module" do
+    question = questions(:intro_q1)
+    question.update!(kind: :free_text)
+    QuestionAnswer.create!(enrollment: enrollments(:student_in_algebra), question: question, answer_text: "Enrolled")
+    outsider = Enrollment.create!(user: users(:other_student), course: lessons(:physics_lesson).course)
+    QuestionAnswer.create!(enrollment: outsider, question: question, answer_text: "Not enrolled here")
+
+    queued = Lesson.marking_queue.find { |lesson| lesson.id == lessons(:intro).id }
+
+    assert_equal 1, queued.pending_free_text_answers_count
+    assert_equal 1, queued.pending_learners_count
   end
 
   test "immediate_score_for scores true/false radio values against legacy answers" do

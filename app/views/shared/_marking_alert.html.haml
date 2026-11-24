@@ -1,0 +1,11 @@
+-# Expects summary: { answers:, lessons: } and path: where "Start marking" goes.
+.mb-6.flex.flex-col.gap-3.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.sm:flex-row.sm:items-center.sm:justify-between{ role: "status" }
+  .flex.items-center.gap-3
+    .flex.h-9.w-9.shrink-0.items-center.justify-center.rounded-full.bg-amber-100.text-amber-700
+      %svg.h-5.w-5{ xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 20 20", fill: "currentColor", "aria-hidden": "true" }
+        %path{ d: "M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" }
+    %div
+      .font-semibold.text-amber-900= t("catalog_ui.marking_alert", count: summary[:answers])
+      - if summary[:lessons]
+        .text-sm.text-amber-800= t("catalog_ui.marking_alert_lessons", count: summary[:lessons], **terms)
+  = link_to t("catalog_ui.start_marking"), path, class: "inline-flex justify-center rounded bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"

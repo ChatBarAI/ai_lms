@@ -1,0 +1,29 @@
+- user = answer.enrollment.user
+.flex.flex-wrap.items-baseline.justify-between.gap-2.mb-2
+  .text-sm
+    %span.font-semibold.text-gray-900= user.display_name
+    %span.ml-1.text-gray-600= learning_report_user(user)
+  .text-xs.text-gray-500= answer.updated_at.strftime("%Y-%m-%d %H:%M")
+-# Content must sit on the same line as the tag: whitespace-pre-line would render Haml's indentation newline.
+- if answer.answer_text.present?
+  .mb-3.rounded-md.border.border-gray-300.bg-gray-50.px-3.py-2.text-sm.text-gray-900.whitespace-pre-line= answer.answer_text
+- else
+  .mb-3.rounded-md.border.border-dashed.border-gray-300.px-3.py-2.text-sm.italic.text-gray-500= t("catalog_ui.no_answer")
+- if answer.ai_score
+  - passed = answer.ai_score >= lesson.free_text_pass_level
+  .flex.flex-wrap.items-center.gap-3
+    %span.text-sm.font-medium.text-gray-700= t("catalog_ui.score_label")
+    %span.inline-flex.items-center.rounded-full.border.px-2.5.py-0.5.text-sm.font-semibold{ class: passed ? "border-green-300 bg-green-100 text-green-900" : "border-red-300 bg-red-100 text-red-900" }= "#{answer.ai_score}/10"
+    - if answer.scored_at
+      %span.text-xs.text-gray-500= answer.scored_at.strftime("%Y-%m-%d %H:%M")
+- elsif !lesson.manual_marking?
+  = render "marking/ai_queued_badge"
+- else
+  = form_with url: learning_answer_score_path(answer), method: :patch, local: true, class: "flex flex-wrap items-center gap-3" do
+    = hidden_field_tag :return_to, request.fullpath
+    %span.text-sm.font-medium.text-gray-700= t("catalog_ui.score_label")
+    -# No bg-white here: the theme forces .bg-white with !important, which would cancel the hover colours.
+    .inline-flex.overflow-hidden.rounded-md.border.border-gray-300.shadow-sm{ role: "group", "aria-label": t("catalog_ui.score_label") }
+      - (1..10).each do |score|
+        - passing = score >= lesson.free_text_pass_level
+        = button_tag score, type: "submit", name: "question_answer[ai_score]", value: score, "aria-label": "#{t('catalog_ui.score_label')} #{score}/10", class: "h-9 w-10 border-l border-gray-300 first:border-l-0 text-sm font-semibold cursor-pointer transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-indigo-600 #{passing ? 'bg-green-50 text-green-900 hover:bg-green-600 hover:text-white' : 'text-gray-800 hover:bg-red-600 hover:text-white'}"

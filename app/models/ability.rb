@@ -66,6 +66,10 @@ class Ability
   end
 
   def allow_instructor_capabilities(user)
+    can :access, :marking_queue
+    can :report, Course, owner_id: user.id
+    can :read, Progress, lesson: { course: { owner_id: user.id } }
+    can :score, QuestionAnswer, question: { lesson: { course: { owner_id: user.id } } }
     can :create, Course
     can [ :read, :update, :destroy ], Course, owner_id: user.id
     can :manage, Lesson, course: { owner_id: user.id }

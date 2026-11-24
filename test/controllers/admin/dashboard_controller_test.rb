@@ -32,8 +32,8 @@ class Admin::DashboardControllerTest < ActionDispatch::IntegrationTest
     get admin_root_path
 
     assert_response :success
-    assert_match "Lessons needing marking", response.body
-    assert_match admin_marking_queue_path, response.body
+    assert_match "1 answer is waiting for you to mark", response.body
+    assert_select "[role=status] a[href=?]", admin_marking_queue_path
   end
 
   test "admin can filter dashboard by organization" do

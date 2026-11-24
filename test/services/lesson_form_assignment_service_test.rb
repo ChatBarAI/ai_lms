@@ -174,7 +174,7 @@ class LessonFormAssignmentServiceTest < ActiveSupport::TestCase
     assert LessonFormAssignmentService.new(lesson: lesson, params: params).call
 
     assert_nil lesson.cbai_api_key
-    assert_equal :manual, lesson.pending_marking_mode
+    assert lesson.manual_marking?
   end
 
   test "removes the saved Anam key when asked" do

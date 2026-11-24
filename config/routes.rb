@@ -35,6 +35,7 @@ Rails.application.routes.draw do
     resources :purchases, only: :create
     post "chatbar_name", to: "chatbar_names#create", as: :chatbar_name
     member do
+      get :report
       post :publish
       post :unpublish
       get   "certificate_layout", to: "courses#certificate_layout"
@@ -42,6 +43,8 @@ Rails.application.routes.draw do
     end
     resources :lessons do
       member do
+        get :report
+        get "report/questions/:question_id", to: "lessons#question_report", as: :question_report
         post :start
         post :submit_quiz
         post :publish
@@ -61,6 +64,7 @@ Rails.application.routes.draw do
         delete "video/poster",  to: "lessons#destroy_poster",      as: :destroy_poster
         delete "video",         to: "lessons#destroy_video",       as: :destroy_video
       end
+      patch "question_answers/:id/score", to: "question_answers#score", as: :question_answer_score
       resources :questions do
         collection do
           post :reorder
@@ -103,6 +107,8 @@ Rails.application.routes.draw do
 
   get "/certificates/:token", to: "verifications#show", as: :verify_certificate
 
+  get "marking_queue", to: "marking_queue#index", as: :marking_queue
+
   resources :progresses, only: [ :update ]
   get "material-design-assets/:id/file", to: "material_design_assets#file", as: :material_design_asset_file
   get "material-design-imported-assets/:id/file", to: "material_design_assets#imported_file", as: :material_design_imported_asset_file
@@ -140,6 +146,7 @@ Rails.application.routes.draw do
       resources :lessons, only: [ :index ] do
         member do
           get :report
+          get "report/questions/:question_id", to: "lessons#question_report", as: :question_report
         end
       end
     end

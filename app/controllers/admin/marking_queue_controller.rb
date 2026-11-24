@@ -1,5 +1,7 @@
 class Admin::MarkingQueueController < Admin::BaseController
+  include MarkingWorkspace
+
   def index
-    @lessons = Lesson.marking_queue.includes(:course)
+    load_marking_queue(Lesson.marking_queue)
   end
 end

@@ -5,6 +5,7 @@
     %meta{ name: "viewport", content: "width=device-width,initial-scale=1" }
     = csrf_meta_tags
     = csp_meta_tag
+    = yield :head
     = site_favicon_link_tag
     = stylesheet_link_tag "tailwind", "data-turbo-track": "reload"
     -# Keep tracked asset markup stable: changing media on load forces Turbo to reload.
@@ -23,6 +24,10 @@
           - if subjects_enabled?
             = link_to terms[:subjects], admin_subjects_path, class: "text-sm hover:opacity-80"
           = link_to terms[:courses], admin_courses_path, class: "text-sm hover:opacity-80"
+          = link_to admin_marking_queue_path, class: "inline-flex items-center gap-1.5 text-sm hover:opacity-80" do
+            Marking
+            - if (marking = pending_marking_summary)
+              %span.rounded-full.bg-amber-500.px-1.5.text-xs.font-semibold.text-white{ title: t("catalog_ui.marking_alert", count: marking[:answers]) }= number_with_delimiter(marking[:answers])
           = link_to "Users", admin_users_path, class: "text-sm hover:opacity-80"
           = link_to "Certificates", admin_certificates_path, class: "text-sm hover:opacity-80"
           = link_to "Tags", admin_tags_path, class: "text-sm hover:opacity-80"

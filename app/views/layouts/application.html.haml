@@ -36,7 +36,7 @@
           = yield :header_actions
           - if user_signed_in?
             .relative{ data: { controller: "dropdown" } }
-              %button.flex.items-center.gap-1.5.cursor-pointer{ type: "button", data: { action: "click->dropdown#toggle", dropdown_target: "button" }, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "user-menu", "aria-label": current_user.display_name }
+              %button.relative.flex.items-center.gap-1.5.cursor-pointer{ type: "button", data: { action: "click->dropdown#toggle", dropdown_target: "button" }, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "user-menu", "aria-label": current_user.display_name }
                 - if current_user.avatar.attached?
                   = image_tag url_for(current_user.avatar), class: "w-7 h-7 rounded-full object-cover border border-gray-200"
                 - elsif current_user.image_url.present?
@@ -44,6 +44,8 @@
                 - else
                   .w-7.h-7.rounded-full.bg-indigo-100.flex.items-center.justify-center.text-indigo-600.text-xs.font-bold
                     = current_user.display_name.first.upcase
+                - if pending_marking_summary
+                  %span.absolute.-top-0.5.left-5.h-2.5.w-2.5.rounded-full.bg-amber-500.ring-2.ring-white{ title: t("catalog_ui.marking_alert", count: pending_marking_summary[:answers]) }
                 %span{ class: "hidden sm:inline text-sm max-w-[12rem] truncate opacity-80" }= current_user.display_name
                 %svg.w-4.h-4.opacity-50{ xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 20 20", fill: "currentColor" }
                   %path{ "fill-rule": "evenodd", d: "M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z", "clip-rule": "evenodd" }
@@ -51,6 +53,10 @@
                 = link_to t("layouts.application.my_learning"), me_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 = link_to t("layouts.application.my_profile"), profile_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.instructor? || current_user.admin?
+                  = link_to marking_queue_path, class: "flex items-center justify-between gap-2 px-4 py-2 text-sm hover:bg-gray-50" do
+                    %span= t("catalog_ui.needs_marking", **terms)
+                    - if pending_marking_summary
+                      %span.rounded-full.bg-amber-500.px-1.5.text-xs.font-semibold.text-white= pending_marking_summary[:answers]
                   = link_to t("layouts.application.my_courses", **terms), courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.admin?
                   = link_to "Admin", admin_root_path, class: "block px-4 py-2 text-sm text-indigo-600 hover:bg-gray-50"

@@ -1,0 +1,14 @@
+-# A free-text question with every learner answer beneath it. Used by the
+-# marking queue and the lesson report.
+.mb-5.overflow-hidden.rounded-lg.border.border-gray-300.bg-white.shadow-sm
+  .border-b.border-gray-200.px-5.py-4
+    .text-xs.font-semibold.uppercase.tracking-wide.text-indigo-700= t("catalog_ui.question")
+    .mt-1.text-base.font-semibold.text-gray-900.whitespace-pre-line= question.prompt
+    - if question.correct_answer.present?
+      .mt-3.rounded-md.border-l-4.border-green-600.bg-green-50.px-3.py-2
+        .text-xs.font-semibold.uppercase.tracking-wide.text-green-800= t("catalog_ui.expected_answer")
+        .mt-0.5.text-sm.text-gray-900.whitespace-pre-line= question.correct_answer
+  %ul.divide-y.divide-gray-200
+    - answers.each do |answer|
+      %li.px-5.py-4.scroll-mt-20{ id: "answer-#{answer.id}" }
+        = render "marking/answer", answer: answer, lesson: lesson

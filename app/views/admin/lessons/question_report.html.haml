@@ -1,0 +1,48 @@
+- content_for :title, "#{@lesson.title} – #{t('catalog_ui.question')}"
+- content_for :head do
+  -# Scoring redirects back here; morph + preserve scroll keeps the marker's place.
+  = turbo_refreshes_with method: :morph, scroll: :preserve
+- base_path = learning_question_report_path(@course, @lesson, @question)
+
+.flex.flex-wrap.items-start.justify-between.gap-3.mb-6
+  %div
+    .text-sm.text-gray-700
+      = link_to @course.title, learning_course_report_path(@course), class: "font-medium text-indigo-700 hover:underline"
+      %span.text-gray-500 ›
+      = link_to @lesson.title, learning_lesson_report_path(@course, @lesson), class: "font-medium text-indigo-700 hover:underline"
+    %h1.mt-1.text-2xl.font-bold.text-gray-900= t("catalog_ui.lesson_marking", **terms)
+  = link_to t("catalog_ui.back_to_lesson_report", **terms), learning_lesson_report_path(@course, @lesson, anchor: "marking"), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300 text-sm font-medium"
+
+.mb-5.rounded-lg.border.border-gray-300.bg-white.shadow-sm.px-5.py-4
+  .text-xs.font-semibold.uppercase.tracking-wide.text-indigo-700= t("catalog_ui.question")
+  .mt-1.text-base.font-semibold.text-gray-900.whitespace-pre-line= @question.prompt
+  - if @question.correct_answer.present?
+    .mt-3.rounded-md.border-l-4.border-green-600.bg-green-50.px-3.py-2
+      .text-xs.font-semibold.uppercase.tracking-wide.text-green-800= t("catalog_ui.expected_answer")
+      .mt-0.5.text-sm.text-gray-900.whitespace-pre-line= @question.correct_answer
+  .mt-3.text-sm.text-gray-700= t("catalog_ui.pass_level", level: @lesson.free_text_pass_level)
+
+.mb-4.flex.flex-wrap.items-center.justify-between.gap-3
+  %nav.inline-flex.overflow-hidden.rounded-md.border.border-gray-300.shadow-sm{ "aria-label": "Filter answers" }
+    - LearningReports::QUESTION_REPORT_STATUSES.each do |status|
+      - active = status == @status
+      = link_to learning_question_report_path(@course, @lesson, @question, status: status, q: @search.presence), "aria-current": (active ? "page" : nil), class: "border-l border-gray-300 first:border-l-0 px-3 py-1.5 text-sm font-medium #{active ? 'bg-indigo-600 text-white' : 'text-gray-800 hover:bg-gray-100'}" do
+        = t("catalog_ui.status_#{status}")
+        %span{ class: active ? "ml-1 opacity-90" : "ml-1 text-gray-500" }= number_with_delimiter(@status_counts[status])
+  = form_with url: base_path, method: :get, local: true, class: "flex items-center gap-2" do
+    = hidden_field_tag :status, @status
+    = search_field_tag :q, @search, placeholder: t("catalog_ui.search_learners"), "aria-label": t("catalog_ui.search_learners"), class: "w-64 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-900"
+    = submit_tag "Search", name: nil, class: "rounded border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-200 cursor-pointer"
+
+- if @answers.any?
+  .overflow-hidden.rounded-lg.border.border-gray-300.bg-white.shadow-sm
+    %ul.divide-y.divide-gray-200
+      - @answers.each do |answer|
+        %li.px-5.py-4.scroll-mt-20{ id: "answer-#{answer.id}" }
+          = render "marking/answer", answer: answer, lesson: @lesson
+  - if @pagy.pages > 1
+    .mt-4.flex.flex-wrap.items-center.justify-between.gap-3.text-sm.text-gray-700
+      %span= "#{number_with_delimiter(@pagy.from)}–#{number_with_delimiter(@pagy.to)} of #{number_with_delimiter(@pagy.count)}"
+      = raw @pagy.series_nav
+- else
+  .rounded-lg.border.border-gray-300.bg-white.px-5.py-4.text-sm.text-gray-700.shadow-sm= t("catalog_ui.no_matching_answers")

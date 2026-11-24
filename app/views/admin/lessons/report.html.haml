@@ -1,98 +1,107 @@
 - content_for :title, "#{@lesson.title} – Report"
+- content_for :head do
+  -# Scoring redirects back here; morph + preserve scroll keeps the marker's place.
+  = turbo_refreshes_with method: :morph, scroll: :preserve
 
-.flex.items-center.justify-between.mb-4
+.flex.flex-wrap.items-start.justify-between.gap-3.mb-6
   %div
-    %h1.text-2xl.font-bold= @lesson.title
-    .text-sm.text-gray-500
+    %h1.text-2xl.font-bold.text-gray-900= @lesson.title
+    .mt-1.text-sm.text-gray-700
       = t("catalog_ui.lesson_report", **terms)
-      = link_to @course.title, admin_course_path(@course), class: "text-indigo-600 hover:underline"
-  = link_to t("catalog_ui.back_to_course_report", **terms), report_admin_course_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 text-sm"
+      = link_to @course.title, (admin_report_context? ? admin_course_path(@course) : course_path(@course)), class: "font-medium text-indigo-700 hover:underline"
+  = link_to t("catalog_ui.back_to_course_report", **terms), learning_course_report_path(@course), class: "px-3 py-1.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300 text-sm font-medium"
+
+- pending = @pending_marking
+- if pending.positive? && @lesson.manual_marking?
+  = render "shared/marking_alert", summary: { answers: pending }, path: learning_marking_queue_path(lesson: @lesson.id)
 
 .grid.grid-cols-2.md:grid-cols-5.gap-3.mb-6
   - tiles = [ [ "Attempts", @attempts ], [ "Completions", @completions ], [ "Avg score", @average_score&.round(1) || "—" ], [ "Pass rate", @pass_rate ? "#{@pass_rate}%" : "—" ], [ "Avg rating", @average_rating&.round(2) || "—" ] ]
   - tiles.each do |label, value|
-    .bg-white.border.border-gray-200.rounded.p-3
-      .text-xs.uppercase.tracking-wide.text-gray-500= label
-      .text-2xl.font-semibold.mt-1= value
+    %div{ class: "#{report_card_class} px-4 py-3" }
+      .text-xs.font-semibold.uppercase.tracking-wide.text-gray-600= label
+      .mt-1.text-2xl.font-semibold.text-gray-900= value
 
-.grid.grid-cols-1.lg:grid-cols-2.gap-4.mb-6
-  .bg-white.border.border-gray-200.rounded.p-4
-    %h2.font-semibold.mb-2 Completions per week (12w)
-    = svg_chart @completions_per_week, type: :column, color: "#16a34a"
-  .bg-white.border.border-gray-200.rounded.p-4
-    %h2.font-semibold.mb-2 Ratings distribution
+.grid.grid-cols-1.lg:grid-cols-2.lg:items-start.gap-4.mb-6
+  %div{ class: report_card_class }
+    %h2{ class: report_card_heading_class } Completions per week (12w)
+    .p-4= svg_chart @completions_per_week, type: :column, color: "#16a34a"
+  %div{ class: report_card_class }
+    %h2{ class: report_card_heading_class } Ratings distribution
     - if @ratings_distribution.any?
-      = svg_chart @ratings_distribution.sort.to_h, type: :column, color: "#f59e0b"
+      .p-4= svg_chart @ratings_distribution.sort.to_h, type: :column, color: "#f59e0b"
     - else
-      .text-sm.text-gray-500 No ratings yet.
+      %div{ class: report_empty_class } No ratings yet.
 
-.grid.grid-cols-1.lg:grid-cols-2.gap-4
-  .bg-white.border.border-gray-200.rounded
-    .px-4.py-2.border-b.border-gray-100.font-semibold Recent attempts
+.grid.grid-cols-1.lg:grid-cols-2.lg:items-start.gap-4
+  %div{ class: "#{report_card_class} overflow-hidden" }
+    %h2{ class: report_card_heading_class } Recent attempts
     - if @recent_attempts.any?
       %table.w-full.text-sm
         %thead.bg-gray-50
           %tr
-            %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 User
-            %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Status
-            %th.text-right.text-xs.font-medium.text-gray-500.px-3.py-2 Score
-            %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2 Updated
-        %tbody
+            %th.text-left{ class: report_th_class } User
+            %th.text-left{ class: report_th_class } Status
+            %th.text-right{ class: report_th_class } Score
+            %th.text-left{ class: report_th_class } Updated
+        %tbody.divide-y.divide-gray-200
           - @recent_attempts.each do |p|
-            %tr.border-t.border-gray-100
-              %td.px-3.py-2= link_to p.enrollment.user.email, admin_user_path(p.enrollment.user), class: "text-indigo-600 hover:underline"
-              %td.px-3.py-2= p.status.humanize
-              %td.px-3.py-2.text-right= p.score || "—"
-              %td.px-3.py-2.text-gray-500= p.updated_at.strftime("%Y-%m-%d %H:%M")
+            %tr
+              %td.px-4.py-2.text-gray-900= learning_report_user(p.enrollment.user)
+              %td.px-4.py-2.text-gray-800= p.status.humanize
+              %td.px-4.py-2.text-right.font-medium.text-gray-900= p.score || "—"
+              %td.px-4.py-2.text-gray-600.whitespace-nowrap= p.updated_at.strftime("%Y-%m-%d %H:%M")
     - else
-      .px-4.py-3.text-sm.text-gray-500 No attempts yet.
+      %div{ class: report_empty_class } No attempts yet.
 
-  .bg-white.border.border-gray-200.rounded
-    .px-4.py-2.border-b.border-gray-100.font-semibold Recent comments
+  %div{ class: report_card_class }
+    %h2{ class: report_card_heading_class } Recent comments
     - if @recent_comments.any?
-      %ul.divide-y.divide-gray-100
+      %ul.divide-y.divide-gray-200
         - @recent_comments.each do |r|
-          %li.px-4.py-3.text-sm
-            .flex.justify-between
-              %span.font-medium= r.user.email
-              %span.text-amber-600 #{r.stars}★
-            .text-gray-600.mt-1= r.comment
+          %li.px-5.py-3.text-sm
+            .flex.justify-between.gap-2
+              %span.font-semibold.text-gray-900= r.user.email
+              %span.font-semibold.text-amber-700 #{r.stars}★
+            .mt-1.text-gray-800= r.comment
     - else
-      .px-4.py-3.text-sm.text-gray-500 No comments yet.
+      %div{ class: report_empty_class } No comments yet.
 
-- if @ai_answers.any?
-  .mt-4.bg-white.border.border-gray-200.rounded
-    .px-4.py-2.border-b.border-gray-100.flex.items-center.justify-between
-      %span.font-semibold= t("catalog_ui.lesson_marking", **terms)
-      - pending = @ai_answers.count { |a| a.ai_score.nil? }
-      - if pending > 0
-        .flex.items-center.gap-1.5
-          .w-2.h-2.rounded-full.bg-indigo-500.animate-pulse
-          %span.text-xs.text-indigo-600.font-medium= "#{pending} pending"
-    %table.w-full.text-sm.table-fixed
-      %thead.bg-gray-50
-        %tr
-          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:16%" } Student
-          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:24%" } Question
-          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:22%" } Their answer
-          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:22%" } Expected
-          %th.text-center.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:12%" } Score
-          %th.text-left.text-xs.font-medium.text-gray-500.px-3.py-2{ style: "width:8%" } Scored at
-      %tbody
-        - @ai_answers.each do |qa|
-          %tr.border-t.border-gray-100
-            %td.px-3.py-2.text-gray-700.truncate{ title: qa.user_email }= qa.user_email
-            %td.px-3.py-2.text-gray-700.truncate{ title: qa.question_body }= qa.question_body
-            %td.px-3.py-2.text-gray-700.truncate{ title: qa.answer_text }= qa.answer_text.presence || "—"
-            %td.px-3.py-2.text-gray-500.truncate{ title: qa.expected_answer }= qa.expected_answer.presence || "—"
-            %td.px-3.py-2.text-center
-              - if qa.ai_score
-                %span.inline-flex.items-center.rounded-full.px-2.py-0.5.text-xs.font-semibold{ class: qa.ai_score >= 7 ? "bg-green-100 text-green-800" : qa.ai_score >= 4 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800" }
-                  = "#{qa.ai_score}/10"
-              - elsif @lesson.cbai_api_key.present?
-                %span.text-xs.text-indigo-500 queued for AI
-              - else
-                = form_with url: admin_question_answer_score_path(qa), method: :patch, local: true, class: "flex justify-center gap-1" do
-                  = select_tag "question_answer[ai_score]", options_for_select((1..10).map { |score| [ score, score ] }), include_blank: "—", class: "w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-xs"
-                  = submit_tag "Save", class: "rounded bg-amber-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-amber-700 cursor-pointer"
-            %td.px-3.py-2.text-gray-400.text-xs.truncate{ title: qa.scored_at&.strftime("%Y-%m-%d %H:%M") }= qa.scored_at&.strftime("%Y-%m-%d %H:%M") || "—"
+- if @free_text_summary.any?
+  %section#marking.mt-8.scroll-mt-20
+    .flex.flex-wrap.items-end.justify-between.gap-3.mb-4.border-b.border-gray-200.pb-3
+      %h2.text-xl.font-semibold.text-gray-900= t("catalog_ui.lesson_marking", **terms)
+      .flex.flex-wrap.items-center.gap-3.text-sm
+        - if pending.positive?
+          %span.inline-flex.items-center.rounded-full.border.border-amber-300.bg-amber-100.px-2.5.py-0.5.text-xs.font-semibold.text-amber-900= "#{pending} pending"
+        %span.text-gray-700= t("catalog_ui.pass_level", level: @lesson.free_text_pass_level)
+    %div{ class: "#{report_card_class} overflow-x-auto" }
+      %table.w-full.text-sm
+        %thead.bg-gray-50
+          %tr
+            %th.text-left{ class: report_th_class } Question
+            %th.text-right{ class: report_th_class } Answers
+            %th.text-right{ class: report_th_class } Avg score
+            %th.text-right{ class: report_th_class } Pass rate
+            %th.text-right{ class: report_th_class } Pending
+            %th{ class: report_th_class }
+        %tbody.divide-y.divide-gray-200
+          - @free_text_summary.each do |row|
+            - question_path = learning_question_report_path(@course, @lesson, row[:question])
+            %tr.hover:bg-gray-50
+              %td.px-4.py-3.font-medium.text-gray-900
+                = link_to row[:question].prompt.truncate(140), question_path, class: "hover:text-indigo-700 hover:underline"
+              %td.px-4.py-3.text-right.text-gray-900= number_with_delimiter(row[:total])
+              %td.px-4.py-3.text-right.text-gray-900= row[:average] ? "#{row[:average]}/10" : "—"
+              %td.px-4.py-3.text-right
+                - if row[:pass_rate]
+                  %span.font-semibold{ class: row[:pass_rate] >= 50 ? "text-green-800" : "text-red-700" }= "#{row[:pass_rate]}%"
+                - else
+                  %span.text-gray-600 —
+              %td.px-4.py-3.text-right
+                - if row[:pending].positive?
+                  %span.inline-flex.rounded-full.border.border-amber-300.bg-amber-100.px-2.py-0.5.text-xs.font-semibold.text-amber-900= number_with_delimiter(row[:pending])
+                - else
+                  %span.text-gray-600 0
+              %td.px-4.py-3.text-right.whitespace-nowrap
+                = link_to t("catalog_ui.view_answers"), question_path, class: "font-medium text-indigo-700 hover:underline"

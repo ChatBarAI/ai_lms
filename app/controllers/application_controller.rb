@@ -9,6 +9,8 @@ class ApplicationController < ActionController::Base
   before_action :enforce_sso_requirement
   after_action :prevent_private_response_caching
 
+  helper_method :pending_marking_summary
+
   rescue_from CanCan::AccessDenied do |exception|
     respond_to do |format|
       format.html { redirect_to root_path, alert: exception.message }
@@ -26,6 +28,22 @@ class ApplicationController < ActionController::Base
   def after_sign_in_path_for(resource)
     stored_location_for(resource) ||
       (resource.respond_to?(:admin?) && resource.admin? ? admin_root_path : super)
+  end
+
+  # Free-text answers waiting for the signed-in instructor/admin to mark by
+  # hand (AI-marked lessons are excluded: they need no action). Returns
+  # { answers:, lessons: } or nil when there is nothing to do.
+  def pending_marking_summary
+    return @pending_marking_summary if defined?(@pending_marking_summary)
+
+    @pending_marking_summary = nil
+    return unless user_signed_in? && (current_user.instructor? || current_user.admin?)
+
+    lesson_ids = Lesson.manually_marked.accessible_by(current_ability, :report).select(:id)
+    answers, lessons = QuestionAnswer.pending_marking
+      .where(questions: { lesson_id: lesson_ids })
+      .pick(Arel.sql("COUNT(*)"), Arel.sql("COUNT(DISTINCT questions.lesson_id)"))
+    @pending_marking_summary = { answers: answers, lessons: lessons } if answers.to_i.positive?
   end
 
   private

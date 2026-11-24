@@ -1,4 +1,5 @@
 class Admin::CoursesController < Admin::BaseController
+  include LearningReports
   before_action :set_course, only: [ :show, :edit, :update, :destroy, :report, :certificate_layout, :update_certificate_layout ]
 
   def index
@@ -65,34 +66,7 @@ class Admin::CoursesController < Admin::BaseController
   end
 
   def report
-    enrollments = @course.enrollments
-    progresses = @course.progresses
-
-    @enrollment_count = enrollments.count
-    @active_learners = @course.active_learners_count
-    @completion_rate = @course.completion_rate
-    @average_score = @course.average_score
-    @average_rating = @course.average_rating
-
-    @enrollments_per_week = enrollments.where(enrolled_at: 12.weeks.ago..).group_by_week(:enrolled_at).count
-    @completions_per_week = progresses.completed.where(completed_at: 12.weeks.ago..).group_by_week(:completed_at).count
-    @score_distribution = progresses.with_score.group("FLOOR(score / 10) * 10").count
-                                     .transform_keys { |k| "#{k.to_i}–#{k.to_i + 9}" }
-
-    @top_learners = enrollments.includes(:user, :progresses)
-                                .sort_by { |e| -e.lessons_completed_count }
-                                .first(10)
-
-    @lesson_summary = @course.lessons.order(:position).map do |lesson|
-      {
-        lesson: lesson,
-        attempts: lesson.attempts_count,
-        completions: lesson.completions_count,
-        average_score: lesson.average_score,
-        pass_rate: lesson.pass_rate,
-        average_rating: lesson.average_rating
-      }
-    end
+    load_course_report
   end
 
   def certificate_layout

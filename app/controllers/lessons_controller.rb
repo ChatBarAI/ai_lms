@@ -1,5 +1,6 @@
 class LessonsController < ApplicationController
-  before_action :authenticate_user!, only: [ :new, :create, :edit, :update, :destroy, :start, :submit_quiz, :publish, :unpublish, :video_youtube_edit, :video_youtube_update, :video_upload_edit, :video_upload_update, :video_chatbar, :video_synthesia, :video_heygen, :import_recording, :import_synthesia_video, :import_heygen_video, :destroy_video, :poster_edit, :poster_update, :destroy_poster ]
+  include LearningReports
+  before_action :authenticate_user!, only: [ :report, :question_report, :new, :create, :edit, :update, :destroy, :start, :submit_quiz, :publish, :unpublish, :video_youtube_edit, :video_youtube_update, :video_upload_edit, :video_upload_update, :video_chatbar, :video_synthesia, :video_heygen, :import_recording, :import_synthesia_video, :import_heygen_video, :destroy_video, :poster_edit, :poster_update, :destroy_poster ]
   before_action :set_course
   load_and_authorize_resource through: :course
   skip_authorize_resource only: [ :start, :submit_quiz ]
@@ -81,6 +82,16 @@ class LessonsController < ApplicationController
 
     result = LessonQuizSubmissionService.new(lesson: @lesson, enrollment: enrollment, answers: answers).call
     redirect_after_quiz_submission(result)
+  end
+
+  def report
+    load_lesson_report
+    render "admin/lessons/report"
+  end
+
+  def question_report
+    load_question_report
+    render "admin/lessons/question_report" unless performed?
   end
 
   def new

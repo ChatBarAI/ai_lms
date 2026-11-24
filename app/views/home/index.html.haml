@@ -1,5 +1,8 @@
 - content_for :title, t(".title")
 
+- if (marking = pending_marking_summary)
+  = render "shared/marking_alert", summary: marking, path: marking_queue_path
+
 .bg-white.border.border-gray-200.rounded-lg.p-8.mb-8
   .flex.flex-col.items-start.gap-4.sm:flex-row.sm:items-center.sm:justify-between
     - hero = render_hero_content(site_setting)

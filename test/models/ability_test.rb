@@ -59,6 +59,27 @@ class AbilityTest < ActiveSupport::TestCase
     assert_not a.can?(:update, other)
   end
 
+  test "instructor assessment permissions are restricted to owned modules" do
+    ability = ability_for(users(:instructor))
+    assert ability.can?(:access, :marking_queue)
+    assert ability.can?(:report, courses(:algebra))
+    assert ability.can?(:report, lessons(:intro))
+    assert ability.can?(:read, progresses(:student_intro))
+    assert ability.can?(:score, question_answers(:scored_answer))
+    assert_not ability.can?(:report, courses(:other_owner_course))
+    assert_not ability.can?(:report, lessons(:physics_lesson))
+
+    other_owner = ability_for(users(:other_instructor))
+    assert_not other_owner.can?(:read, progresses(:student_intro))
+    assert_not other_owner.can?(:score, question_answers(:scored_answer))
+
+    student = ability_for(users(:student))
+    assert_not student.can?(:access, :marking_queue)
+    assert_not student.can?(:report, courses(:algebra))
+    assert_not student.can?(:report, lessons(:intro))
+    assert_not student.can?(:score, question_answers(:scored_answer))
+  end
+
   test "student can read own drafts of nothing but can read published lessons" do
     a = ability_for(users(:student))
     assert a.can?(:read, lessons(:intro))
