@@ -121,12 +121,18 @@ en:
       updated: "Profile updated."
       update_failed: "Could not save profile."
 
+  locked:
+    label: "Locked"
+    quoted: "“%{title}”"
+    view_course: "View %{course_l}"
+    go_to: "Go to “%{title}”"
+    lesson_title: "%{lesson} locked"
+    lesson_message: "Complete “%{title}” to unlock this %{lesson_l}."
+    course_title: "%{course} locked"
+    course_message: "Complete %{titles} to unlock this %{course_l}."
+    course_message_guest: "Sign in and complete %{titles} to unlock this %{course_l}."
+    sign_in: "Sign in"
   lessons:
-    locked:
-      label: "Locked"
-      title: "%{lesson} locked"
-      message: "Complete “%{title}” to unlock this %{lesson_l}."
-      go_to: "Go to “%{title}”"
     materials:
       mark_complete: "Mark as complete"
       marked_complete: "Marked as complete"

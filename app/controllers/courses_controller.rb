@@ -1,6 +1,5 @@
 class CoursesController < ApplicationController
   include LearningReports
-  include LessonGating
   before_action :authenticate_user!, only: [ :report, :new, :create, :edit, :update, :destroy, :certificate_layout, :update_certificate_layout ]
   load_and_authorize_resource find_by: :slug
 
@@ -15,7 +14,6 @@ class CoursesController < ApplicationController
     visible_lessons = can?(:update, @course) ? @course.lessons : @course.lessons.published
     @lessons = visible_lessons.includes(:tags)
     @queued_for_marking_lesson_ids = @enrollment ? @enrollment.lesson_ids_awaiting_marking : Set.new
-    @locked_lessons = viewer_locked_lessons
 
     if can?(:report, @course)
       @pending_marking_count = QuestionAnswer.pending_marking.merge(Lesson.manually_marked)

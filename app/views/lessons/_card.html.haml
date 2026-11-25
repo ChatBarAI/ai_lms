@@ -2,7 +2,7 @@
 - enrollment = local_assigns.fetch(:enrollment, nil)
 - queued_for_marking_lesson_ids = local_assigns.fetch(:queued_for_marking_lesson_ids, [])
 - show_course_info = local_assigns.fetch(:show_course_info, true)
-- locked_by = local_assigns.fetch(:locked_by, nil)
+- locked_by = locked_lessons_for_viewer(lesson.course)[lesson.id]
 
 - lesson_accessible = can?(:read, lesson)
 - card_classes = "block h-full bg-white border border-gray-200 rounded-lg overflow-hidden dark:bg-gray-800 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500"
@@ -29,7 +29,7 @@
         - unless lesson.published?
           %span.text-xs.text-amber-600= t("common.draft")
         - if locked_by
-          %span.text-amber-500= padlock_icon(label: t("lessons.locked.label"))
+          %span.text-amber-500= padlock_icon(label: t("locked.label"))
         - elsif enrollment
           - progress = enrollment.progresses.find { |p| p.lesson_id == lesson.id }
           - if progress&.completed?

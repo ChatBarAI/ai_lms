@@ -80,6 +80,8 @@
       - if flash[:popup_alert].present?
         = render "shared/dialog", title: flash[:popup_title].presence || "Notice", body: flash[:popup_alert], kind: :alert
       = yield
+      - if locked_dialog_needed?
+        = render "shared/locked_dialog"
 
     .fixed.inset-x-0.bottom-0.z-40.hidden{ data: { controller: "pwa-install", pwa_install_target: "container" } }
       %div{ class: "border-t backdrop-blur shadow-2xl", style: "border-color: color-mix(in srgb, var(--page-fg) 18%, transparent); background-color: color-mix(in srgb, var(--card-bg) 94%, transparent);" }

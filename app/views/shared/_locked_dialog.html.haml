@@ -1,0 +1,6 @@
+-# Filled in and opened by locked links (LockedContentHelper); rendered once by the layout.
+- actions = capture do
+  %a.hidden.px-4.py-2.rounded-lg.text-sm.font-medium.border.border-gray-300.hover:bg-gray-50.transition-colors{ href: "#", data: { dialog_fill: "secondary-link" } }
+  %a.px-4.py-2.rounded-lg.text-sm.font-medium.bg-indigo-600.text-white.hover:bg-indigo-700.transition-colors{ href: "#", data: { dialog_fill: "link" } }
+= render layout: "shared/dialog", locals: { id: LockedContentHelper::LOCKED_DIALOG_ID, title: t("locked.label"), kind: :alert, icon: padlock_icon(size_class: "w-6 h-6"), open: false, actions: actions } do
+  %p{ data: { dialog_fill: "message" } }

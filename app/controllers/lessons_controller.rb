@@ -1,6 +1,5 @@
 class LessonsController < ApplicationController
   include LearningReports
-  include LessonGating
   before_action :authenticate_user!, only: [ :report, :question_report, :new, :create, :edit, :update, :destroy, :start, :submit_quiz, :publish, :unpublish, :video_youtube_edit, :video_youtube_update, :video_upload_edit, :video_upload_update, :video_chatbar, :video_synthesia, :video_heygen, :import_recording, :import_synthesia_video, :import_heygen_video, :destroy_video, :poster_edit, :poster_update, :destroy_poster ]
   before_action :set_course
   load_and_authorize_resource through: :course
@@ -265,7 +264,7 @@ class LessonsController < ApplicationController
     end
 
     @course_progress_percentage = @enrollment ? @enrollment.completion_percentage.to_i : 0
-    @locked_lessons = viewer_locked_lessons
+    @locked_lessons = locked_lessons_for_viewer(@course)
   end
 
   def submission_answers

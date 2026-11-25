@@ -6,7 +6,7 @@ class SequentialLessonsTest < ActionDispatch::IntegrationTest
     @course.update!(sequential_lessons: true)
     @intro = lessons(:intro)
     @advanced = lessons(:advanced)
-    @locked_message = I18n.t("lessons.locked.message", title: @intro.title, lesson_l: Lesson.model_name.human.downcase)
+    @locked_message = I18n.t("locked.lesson_message", title: @intro.title, lesson_l: Lesson.model_name.human.downcase)
   end
 
   test "a learner cannot open a lesson before completing the earlier ones" do
@@ -76,14 +76,14 @@ class SequentialLessonsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]:not([data-controller])", course_lesson_path(@course, @intro)
     assert_select locked_link, course_lesson_path(@course, @advanced), course_lesson_path(@course, @intro)
-    assert_select "svg[aria-label=?]", I18n.t("lessons.locked.label")
-    assert_select "#locked-lesson-dialog[role=dialog].hidden"
+    assert_select "svg[aria-label=?]", I18n.t("locked.label")
+    assert_select "#locked-dialog[role=dialog].hidden"
 
     get course_lesson_path(@course, @intro)
     assert_response :success
     assert_select "#lesson-course-sidebar #{locked_link}", course_lesson_path(@course, @advanced), course_lesson_path(@course, @intro)
-    assert_select "#lesson-course-sidebar svg[aria-label=?]", I18n.t("lessons.locked.label")
-    assert_select "#locked-lesson-dialog [data-dialog-fill=link]"
+    assert_select "#lesson-course-sidebar svg[aria-label=?]", I18n.t("locked.label")
+    assert_select "#locked-dialog [data-dialog-fill=link]"
   end
 
   test "no locked dialog is rendered once every lesson is open" do
@@ -92,8 +92,8 @@ class SequentialLessonsTest < ActionDispatch::IntegrationTest
 
     get course_path(@course)
 
-    assert_select "#locked-lesson-dialog", count: 0
-    assert_select "a[data-status-modal-dialog-id-value='locked-lesson-dialog']", count: 0
+    assert_select "#locked-dialog", count: 0
+    assert_select "a[data-status-modal-dialog-id-value='locked-dialog']", count: 0
   end
 
   test "nothing is locked when the course setting is off" do

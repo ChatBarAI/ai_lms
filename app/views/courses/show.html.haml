@@ -22,7 +22,11 @@
   .p-6.flow-root
     - if @course.cover_image.attached?
       = image_tag @course.cover_image, class: "float-right ml-4 mb-2 object-contain max-w-full sm:max-w-96"
-    %h1.text-2xl.font-bold.mb-1= @course.title
+    - header_lock = locked_course_link_attributes(missing_prerequisites_for_viewer(@course))
+    %h1.text-2xl.font-bold.mb-1.flex.items-center.gap-2
+      = @course.title
+      - if header_lock.any?
+        %button.text-amber-500.cursor-pointer{ header_lock.merge(type: "button", title: t("locked.label")) }= padlock_icon(label: t("locked.label"), size_class: "h-5 w-5")
     %p.text-sm.text-gray-500
       - if subjects_enabled? && @course.subject
         = @course.subject.name
@@ -48,13 +52,9 @@
                 %text{ x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: ring_color, "font-weight": "600" }= "#{pct}%"
               = button_to t(".unenrol"), course_enrollment_path(@course, @enrollment), method: :delete, data: { turbo_confirm: t(".unenrol_confirm", **terms) }, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 cursor-pointer transition-colors"
           - else
-            - missing_prerequisites = @course.missing_prerequisites_for(current_user)
-            - gated = missing_prerequisites.any?
-            .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3{ data: { controller: "status-modal", status_modal_dialog_id_value: "course-prerequisites-dialog" } }
+            .bg-amber-50.border.border-amber-200.text-amber-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
               %p.flex-1= t(".enrol_prompt", **terms)
-              = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, form: { data: { action: gated ? "submit->status-modal#open" : nil } }, aria: { haspopup: gated ? "dialog" : nil, controls: gated ? "course-prerequisites-dialog" : nil }, class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
-            - if gated
-              = render "prerequisite_dialog", missing: missing_prerequisites
+              = button_to t(".enrol_now"), course_enrollments_path(@course), method: :post, **locked_button_to_options(missing_prerequisites_for_enrollment(@course)), class: "inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 cursor-pointer transition-colors"
         - else
           .bg-blue-50.border.border-blue-200.text-blue-800.rounded.p-4.text-sm.flex.items-center.justify-between.gap-3
             %p.flex-1= t(".signin_prompt", **terms)
@@ -72,8 +72,6 @@
   - if @lessons.any?
     .grid.grid-cols-1.sm:grid-cols-2.lg:grid-cols-3.gap-4
       - @lessons.each_with_index do |lesson, i|
-        = render "lessons/card", lesson: lesson, index: i + 1, enrollment: @enrollment, queued_for_marking_lesson_ids: @queued_for_marking_lesson_ids, show_course_info: false, locked_by: @locked_lessons[lesson.id]
+        = render "lessons/card", lesson: lesson, index: i + 1, enrollment: @enrollment, queued_for_marking_lesson_ids: @queued_for_marking_lesson_ids, show_course_info: false
   - else
     %p.text-gray-500= t(".no_lessons", **terms)
-- if @locked_lessons.any?
-  = render "lessons/locked_dialog"

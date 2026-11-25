@@ -1,6 +1,4 @@
 class LessonMaterialsController < ApplicationController
-  include LessonGating
-
   DOCUMENT_CONTENT_SECURITY_POLICY = [
     "default-src 'none'",
     "img-src 'self' data:",

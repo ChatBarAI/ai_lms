@@ -147,9 +147,10 @@ class Course < ApplicationRecord
 
   def missing_prerequisites_for(user)
     prereqs = prerequisite_courses.to_a
-    return prereqs if user.blank?
+    return prereqs if user.blank? || prereqs.empty?
 
-    prereqs.reject { |c| user.enrollments.find_by(course_id: c.id)&.fully_completed? }
+    enrollments_by_course = user.enrollments.where(course_id: prereqs.map(&:id)).index_by(&:course_id)
+    prereqs.reject { |course| enrollments_by_course[course.id]&.fully_completed? }
   end
 
   def prerequisites_met_by?(user)

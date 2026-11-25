@@ -127,12 +127,18 @@ de:
       updated: "Profil aktualisiert."
       update_failed: "Profil konnte nicht gespeichert werden."
 
+  locked:
+    label: "Gesperrt"
+    quoted: "„%{title}“"
+    view_course: "%{course} ansehen"
+    go_to: "Zu „%{title}“"
+    lesson_title: "%{lesson} gesperrt"
+    lesson_message: "Schließe zuerst „%{title}“ ab."
+    course_title: "%{course} gesperrt"
+    course_message: "Schließe zuerst %{titles} ab."
+    course_message_guest: "Melde dich an und schließe zuerst %{titles} ab."
+    sign_in: "Anmelden"
   lessons:
-    locked:
-      label: "Gesperrt"
-      title: "%{lesson} gesperrt"
-      message: "Schließe zuerst „%{title}“ ab."
-      go_to: "Zu „%{title}“"
     materials:
       mark_complete: "Als abgeschlossen markieren"
       marked_complete: "Als abgeschlossen markiert"

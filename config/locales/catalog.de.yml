@@ -103,7 +103,6 @@ de:
     course_title_placeholder: "Titel von %{course}"
     course_title: "%{course}: Titel"
     enable_subjects: "%{subjects} aktivieren (%{courses} darunter gruppieren)"
-    prerequisites: "Schließe vor der Einschreibung in %{course} zuerst folgende %{prerequisites} ab:"
     browse_courses: "%{courses} durchsuchen"
     certificate_incomplete: "Schließe alle %{lessons} ab, um dein Zertifikat zu erhalten."
     question_api_key_required: "Hinterlege zuerst einen ChatBar-AI-API-Schlüssel für %{lesson}."

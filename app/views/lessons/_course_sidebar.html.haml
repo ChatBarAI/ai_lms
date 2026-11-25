@@ -53,7 +53,7 @@
                       - unless lesson.published?
                         %span.shrink-0.rounded.bg-amber-100.text-xs.text-amber-800{ class: "px-1.5 py-0.5" }= t("common.draft")
                   - if locked_by
-                    %span.shrink-0.text-amber-500= padlock_icon(label: t("lessons.locked.label"))
+                    %span.shrink-0.text-amber-500= padlock_icon(label: t("locked.label"))
                   - elsif @enrollment
                     %span.shrink-0
                       - if progress&.completed?
