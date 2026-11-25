@@ -59,7 +59,7 @@ class Course < ApplicationRecord
   validates :locale, presence: true, inclusion: { in: User::SUPPORTED_LOCALES.keys }
   validates :learning_order, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :slug, presence: true, uniqueness: true,
-                   format: { with: /\A[a-z0-9-]+\z/ }
+                   format: { with: /\A[a-z0-9-]+\z/ }, if: -> { title.present? }
 
   before_validation :assign_slug, on: :create
 

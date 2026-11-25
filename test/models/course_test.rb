@@ -22,6 +22,23 @@ class CourseTest < ActiveSupport::TestCase
     assert_includes c.errors[:owner], "must exist"
   end
 
+  test "blank title only reports a title error" do
+    [ nil, "", "   " ].each do |title|
+      course = Course.new(title: title, owner: users(:instructor))
+
+      assert_not course.valid?
+      assert_equal [ "Title can't be blank" ], course.errors.full_messages
+    end
+  end
+
+  test "slug validation still rejects titles that generate an empty slug" do
+    course = Course.new(title: "!!!", owner: users(:instructor))
+
+    assert_not course.valid?
+    assert_includes course.errors[:slug], "can't be blank"
+    assert_includes course.errors[:slug], "is invalid"
+  end
+
   test "auto-assigns slug from title" do
     c = Course.create!(title: "Hello World", subject: subjects(:math), owner: users(:instructor))
     assert_equal "hello-world", c.slug
