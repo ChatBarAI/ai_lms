@@ -67,6 +67,22 @@ class DeployOptionsTest < Minitest::Test
     assert_equal "/tmp/ai_lms-deploy.TEST1234/production.key", arguments[5]
   end
 
+  def test_checkout_without_a_key_can_deploy
+    # Run away from any real local production.key in the developer checkout.
+    Dir.chdir(@work) do
+      arguments = server_arguments(env: @env.merge("RAILS_PRODUCTION_KEY_FILE" => nil))
+      assert_equal "", arguments[5]
+    end
+  end
+
+  def test_missing_explicit_key_is_rejected_before_connecting
+    _, err, status = Open3.capture3(@env.merge("RAILS_PRODUCTION_KEY_FILE" => "#{@work}/missing.key"),
+      "bash", SCRIPT, "root@148.72.159.88", "a.example.com")
+    refute status.success?
+    assert_includes err, "override is missing or empty"
+    refute File.exist?(@env.fetch("COMMAND_LOG"))
+  end
+
   def test_skip_option_reaches_server_without_shifting_domains_or_key
     arguments = server_arguments("--skip-dns-check")
     assert_equal "true", arguments[6]

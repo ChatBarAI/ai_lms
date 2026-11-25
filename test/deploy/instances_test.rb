@@ -4,6 +4,7 @@ require "tmpdir"
 require "fileutils"
 require "open3"
 require "json"
+require "digest"
 
 class InstancesCommandTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
@@ -24,6 +25,8 @@ class InstancesCommandTest < Minitest::Test
     @mem_available_kb = 2 * 1024 * 1024
     @disk_size = 40 * 1024**3
     @disk_free = 30 * 1024**3
+    @key_file = "#{@work}/production.key"
+    File.write(@key_file, "ab" * 16)
   end
 
   def teardown
@@ -71,7 +74,7 @@ class InstancesCommandTest < Minitest::Test
     SH
     File.chmod(0o755, "#{@work}/bin/df")
     env = { "PATH" => "#{@work}/bin:#{ENV.fetch('PATH')}", "LMS_BASE_ROOT" => @base, "NO_COLOR" => "1",
-            "LMS_MEMINFO" => "#{@work}/meminfo" }
+            "LMS_MEMINFO" => "#{@work}/meminfo", "RAILS_PRODUCTION_KEY_FILE" => @key_file }
     Open3.capture3(env, "#{ROOT}/bin/instances", *args, "root@203.0.113.10")
   end
 
@@ -171,6 +174,54 @@ class InstancesCommandTest < Minitest::Test
     assert_equal [ "default" ], data.fetch("instances").map { |i| i.fetch("name") }
     assert_equal [ "default.example.com" ], data.dig("instances", 0, "domains")
     assert_empty data.fetch("problems")
+  end
+
+  def test_master_key_comparison_and_generated_secret_modes_do_not_leak_secrets
+    local = "ab" * 16
+    other = "cd" * 16
+    signing = "ef" * 64
+    File.write(@key_file, "#{local}\r\n")
+    add_instance("default", @base, env: "RAILS_MASTER_KEY=#{local}\n")
+    add_instance("other", "#{@base}/instances/other", env: "RAILS_MASTER_KEY=#{other}\n")
+    add_instance("independent", "#{@base}/instances/independent", env: "SECRET_KEY_BASE=#{signing}\n")
+    %w[ai_lms ai_lms_other ai_lms_independent].each { |project| healthy_stack(project) }
+    container("ai_lms_edge", "caddy")
+
+    out, err, status = run_instances("--json")
+    assert status.success?, err
+    instances = JSON.parse(out).fetch("instances").to_h { |i| [i.fetch("name"), i] }
+    assert_equal "match", instances.dig("default", "local_master_key_match")
+    assert_equal "different", instances.dig("other", "local_master_key_match")
+    assert_equal "secret_key_base", instances.dig("independent", "rails_secret_mode")
+    assert_equal "not_applicable", instances.dig("independent", "local_master_key_match")
+    [local, other, signing, Digest::SHA256.hexdigest(local)].each { |secret| refute_includes out + err, secret }
+
+    out, err, status = run_instances
+    assert status.success?, err
+    assert_includes out, "master key: matches local key"
+    assert_includes out, "master key: differs from local key"
+    assert_includes out, "SECRET_KEY_BASE only (no master key)"
+    [local, other, signing].each { |secret| refute_includes out + err, secret }
+  end
+
+  def test_missing_local_key_is_reported_without_claiming_a_mismatch
+    File.delete(@key_file)
+    # Use the default relative path from a directory without a production key.
+    @key_file = nil
+    add_instance("default", @base, env: "RAILS_MASTER_KEY=#{'ab' * 16}\n")
+    healthy_stack("ai_lms")
+    container("ai_lms_edge", "caddy")
+    out, err, status = Dir.chdir(@work) { run_instances("--json") }
+    assert status.success?, err
+    assert_equal "no_local_key", JSON.parse(out).dig("instances", 0, "local_master_key_match")
+  end
+
+  def test_invalid_local_key_is_rejected_without_printing_it
+    File.write(@key_file, "invalid-secret")
+    out, err, status = run_instances
+    assert_equal 2, status.exitstatus
+    assert_includes err, "Local production key is missing or invalid"
+    refute_includes out + err, "invalid-secret"
   end
 
   def test_invalid_target_does_not_connect

@@ -7,6 +7,8 @@
 require "json"
 require "open3"
 require "optparse"
+require "digest"
+require "securerandom"
 
 REQUIRED_SERVICES = %w[web worker db redis].freeze
 # Report a problem when less than this fraction of disk or memory is free.
@@ -30,6 +32,11 @@ parser = OptionParser.new do |opts|
       SSH_PORT defaults to 22. Exit: 0 = no problems, 1 = problems found,
       2 = the check could not run.
       Example: SSH_PORT=2222 bin/instances root@server.example.com
+
+      Reports whether each saved Rails master key matches the local
+      config/credentials/production.key (RAILS_PRODUCTION_KEY_FILE overrides).
+      Generated SECRET_KEY_BASE instances are identified separately. Keys and
+      fingerprints are never printed; differences do not affect the exit code.
     HELP
     exit 0
   end
@@ -48,9 +55,20 @@ rescue OptionParser::ParseError, ArgumentError
 end
 
 begin
+  key_file = ENV.fetch("RAILS_PRODUCTION_KEY_FILE", "config/credentials/production.key")
+  local_key = File.file?(key_file) ? File.read(key_file).delete("\r\n") : nil
+  if (ENV.key?("RAILS_PRODUCTION_KEY_FILE") && !local_key) ||
+      (local_key && !local_key.match?(/\A[0-9a-fA-F]{32}\z/))
+    warn "Local production key is missing or invalid; expected 32 hexadecimal characters."
+    exit 2
+  end
+  # Send a one-use comparison digest, never the key or a stable fingerprint.
+  nonce = SecureRandom.hex(32)
+  digest = local_key ? Digest::SHA256.hexdigest(nonce + local_key) : ""
+  inventory = "key_check_nonce=#{nonce}\nkey_check_digest=#{digest}\n" + File.read(INVENTORY_SCRIPT)
   output, status = Open3.capture2(
     "ssh", "-p", ssh_port.to_s, "-o", "ConnectTimeout=15", target, "bash -s",
-    stdin_data: File.read(INVENTORY_SCRIPT)
+    stdin_data: inventory
   )
 rescue SystemCallError => e
   warn "Could not start SSH: #{e.message}"
@@ -109,6 +127,12 @@ output.each_line(chomp: true) do |line|
   when "C"
     project, service, state, text = fields
     containers[project][service] = parse_status(state, text.to_s)
+  when "K"
+    name, mode, match = fields
+    if instances[name]
+      instances[name][:rails_secret_mode] = mode
+      instances[name][:local_master_key_match] = match
+    end
   when "S" then sites << fields.first
   when "H"
     cpus, *load = fields
@@ -275,6 +299,19 @@ instances.values.sort_by { |instance| [ instance[:name] == "default" ? 0 : 1, in
       red.("none")
     end
   puts "  #{dim.('Release'.ljust(10))}#{release}"
+  key_status = case instance[:rails_secret_mode]
+  when "master_key", "master_key_and_secret_key_base"
+    comparison = {
+      "match" => "matches local key", "different" => "differs from local key",
+      "no_local_key" => "no local key to compare", "unknown" => "comparison unavailable"
+    }.fetch(instance[:local_master_key_match], "comparison unavailable")
+    "master key: #{comparison}" +
+      (instance[:rails_secret_mode] == "master_key_and_secret_key_base" ? " (also has SECRET_KEY_BASE)" : "")
+  when "secret_key_base" then "SECRET_KEY_BASE only (no master key)"
+  when "missing" then "no saved Rails secret"
+  else "unavailable (cannot read saved secrets)"
+  end
+  puts "  #{dim.('Rails key'.ljust(10))}#{key_status}"
   puts "  #{dim.('Proxy'.ljust(10))}#{instance[:site] ? "sites/#{instance[:name]}.caddy" : red.('not published')}"
   names = REQUIRED_SERVICES + (services.keys - REQUIRED_SERVICES).sort
   line = names.map do |name|

@@ -512,6 +512,21 @@ Run `bin/instances root@SERVER_IP` to see every instance on a server, its
 domains, deployed release and container health, plus anything inconsistent
 (for example a folder left by a failed first deploy). Add `--json` for scripts.
 
+The `Rails key` line also reports whether the saved `RAILS_MASTER_KEY` matches
+the deploying computer's `config/credentials/production.key`, or the file set
+by `RAILS_PRODUCTION_KEY_FILE`. It distinguishes a match, a different key,
+no local key to compare, and instances using only `SECRET_KEY_BASE`. This
+checks saved configuration, not the environment of an already running container
+or whether the key decrypts the current release's credentials. Key differences
+are informational and do not change the exit code. JSON includes
+`rails_secret_mode` and `local_master_key_match` for each instance.
+
+The comparison uses a fresh random salt and SHA-256 over the existing SSH
+connection. The local key is never sent; neither keys nor digests are printed
+or saved by the command. Reading server secrets requires access to each
+instance's `shared/.env` (normally run as root); unreadable files report an
+unavailable comparison. Local keys are expected to contain 32 hex characters.
+
 Pass the same `--instance NAME` to the other commands, for example
 `bin/backup --instance acme root@SERVER_IP`. On the server, the `deploy/`
 scripts default to the deployment they are run from, such as
@@ -578,8 +593,15 @@ EOL exception in `config/brakeman.ignore` without a maintenance decision.
   already able to run the deploy as root).
 - Ports 22, 80, and 443 open at the provider/firewall.
 - A DNS `A`/`AAAA` record for the application domain pointing at the server.
-- `config/credentials/production.key` on the deploying computer. It remains
-  ignored by Git and is copied through SSH only for the deployment.
+- No Rails production key is required for an independent installation. Without
+  a local key, the first deploy generates a unique `SECRET_KEY_BASE` on the
+  server and Rails treats encrypted credentials as empty. Integrations that
+  require Rails credentials (such as Kinde) remain unconfigured.
+- To deploy using your own encrypted production credentials, keep their matching
+  `config/credentials/production.key` on the deploying computer, or set
+  `RAILS_PRODUCTION_KEY_FILE=/secure/path/production.key`. The key stays ignored
+  by Git and is transferred through SSH. Do not use the original operator's
+  production key for an independent installation.
 - A clean, committed local Git `HEAD`.
 
 Docker does not need to be preinstalled. The first deployment installs Docker
@@ -602,7 +624,8 @@ The first run:
    required on the server).
 2. Installs Docker and Docker Compose.
 3. Creates `/opt/ai_lms/shared/.env` (or the named instance's equivalent) with
-   generated database credentials and the Rails production key.
+   generated database credentials and a unique `SECRET_KEY_BASE`, or the Rails
+   production key if one was supplied locally.
 4. Builds the application image, prepares the database, starts the web,
    worker, database and Redis services, and publishes the instance's domains on
    the shared HTTPS edge proxy (starting the proxy if this is the server's
@@ -611,6 +634,14 @@ The first run:
 Subsequent runs repeat only the release, build, migration, and restart steps.
 The five newest source releases are retained. Deploys intentionally refuse
 tracked uncommitted changes so the deployed revision is reproducible.
+
+Subsequent deploys preserve the existing `.env` and its secrets, even when no
+local production key is available. Adding a local key later does not switch an
+existing instance to different credentials. Back up the instance's `.env`
+securely: losing or changing its signing secret also prevents decrypting
+encrypted database fields. A data restore needs the source instance's matching
+signing/encryption secrets. Independently generated instance secrets differ;
+instances deployed with the same production credentials key share that key.
 
 Before changing configuration or application data, deployment checks every
 configured domain (including retained aliases) against public DNS resolvers

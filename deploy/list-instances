@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Machine-readable inventory of the LMS instances on this server, read by
 # bin/instances (which streams this script over SSH, so the server does not
-# need a release that contains it). Read-only. Only non-secret keys are read
-# from env files.
+# need a release that contains it). Read-only. Secrets are read only for a
+# one-use comparison; neither secrets nor their digests are emitted.
 #
 # Output, one tab-separated record per line:
 #   I  name  root  has_env  domains  release  deployed_epoch  site_file
+#   K  name  rails_secret_mode  local_master_key_match
 #   C  project  service  state  status
 #   S  site_name
 #   H  cpus  load1  load5  load15
@@ -20,6 +21,36 @@ sites_dir="$base/edge/caddy/sites"
 
 env_value() {
   [[ -f $1 ]] && sed -n "s/^$2=//p" "$1" | tail -n 1
+}
+
+key_record() {
+  local name=$1 env_file=$2 master secret mode match digest
+  mode=unavailable
+  match=unknown
+  if [[ -r $env_file ]]; then
+    master=$(env_value "$env_file" RAILS_MASTER_KEY)
+    secret=$(env_value "$env_file" SECRET_KEY_BASE)
+    mode=missing
+    match=not_applicable
+    [[ -n $secret ]] && mode=secret_key_base
+    if [[ -n $master ]]; then
+      mode=master_key
+      [[ -n $secret ]] && mode=master_key_and_secret_key_base
+      match=unknown
+      if [[ -z ${key_check_digest:-} ]]; then
+        match=no_local_key
+      elif [[ $master =~ ^[a-fA-F0-9]{32}$ && ${key_check_nonce:-} =~ ^[a-f0-9]{64}$ ]] &&
+          command -v sha256sum >/dev/null 2>&1; then
+        # Keep secrets out of process arguments and stdout. Never source .env.
+        if digest=$(printf '%s%s' "$key_check_nonce" "$master" | sha256sum); then
+          digest=${digest%% *}
+          match=different
+          [[ $digest == "$key_check_digest" ]] && match=match
+        fi
+      fi
+    fi
+  fi
+  printf 'K\t%s\t%s\t%s\n' "$name" "$mode" "$match"
 }
 
 instance_record() {
@@ -37,6 +68,7 @@ instance_record() {
   [[ -f "$sites_dir/$name.caddy" ]] && site=1
   printf 'I\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$name" "$root" "$has_env" "${domains//$'\t'/ }" "$release" "$deployed" "$site"
+  key_record "$name" "$env_file"
 }
 
 if [[ -f "$base/shared/.env" || -L "$base/current" ]]; then

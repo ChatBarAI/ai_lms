@@ -39,6 +39,7 @@ esac
 
 # shellcheck source=deploy/lib/instance.sh
 source "$release_dir/deploy/lib/instance.sh"
+source "$release_dir/deploy/lib/rails-secrets.sh"
 lms_require_instance "$instance" || exit 2
 project=$(lms_instance_project "$instance")
 edge_upstream=$(lms_edge_upstream "$instance")
@@ -196,20 +197,14 @@ mkdir -p "$shared_dir" "$deploy_root/releases"
 chmod 700 "$shared_dir"
 
 if [[ ! -f $env_file ]]; then
-  if [[ -z $rails_key_file || ! -s $rails_key_file ]]; then
-    echo "A Rails production key is required for the first deployment." >&2
-    exit 1
-  fi
-
   postgres_password=$(openssl rand -hex 32)
-  rails_master_key=$(tr -d '\r\n' < "$rails_key_file")
   acme_email="admin@$app_domain"
 
   {
     printf 'RAILS_ENV=production\n'
     printf 'RAILS_SERVE_STATIC_FILES=true\n'
     printf 'RAILS_LOG_TO_STDOUT=true\n'
-    printf 'RAILS_MASTER_KEY=%s\n' "$rails_master_key"
+    lms_write_rails_secrets "$rails_key_file"
     printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
     printf 'APP_DOMAIN=%s\n' "$app_domain"
     printf 'APP_DOMAINS=%s\n' "${requested_domains:-$app_domain}"
