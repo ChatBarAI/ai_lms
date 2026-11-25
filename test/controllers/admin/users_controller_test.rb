@@ -142,6 +142,55 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  [ false, true ].each do |revoked|
+    test "admin deletes a user with a #{revoked ? 'revoked' : 'active'} certificate" do
+      sign_in users(:admin)
+      user = users(:other_student)
+      certificate = Certificate.create!(user: user, course: courses(:algebra), revoked_at: revoked ? Time.current : nil)
+      other_certificate = Certificate.create!(user: users(:student), course: courses(:algebra))
+
+      assert_difference -> { User.count }, -1 do
+        assert_difference -> { Certificate.count }, -1 do
+          delete admin_user_path(user)
+        end
+      end
+
+      assert_redirected_to admin_users_path
+      assert_not Certificate.exists?(certificate.id)
+      assert Certificate.exists?(other_certificate.id)
+    end
+  end
+
+  test "account deletion requires confirmation in the styled warning dialog" do
+    sign_in users(:admin)
+    user = users(:other_student)
+    get admin_user_path(user)
+
+    assert_response :success
+    assert_select "button[type=button][data-status-modal-dialog-id-value='delete-account-#{user.id}']", text: "Delete"
+    assert_select "#delete-account-#{user.id}[role=dialog][aria-hidden=true]" do
+      assert_select "p", text: I18n.t("account_deletion.warning")
+      assert_select "p", text: /certificates/i, count: 0
+      assert_select "form[action='#{admin_user_path(user)}']" do
+        assert_select "input[name=_method][value=delete]"
+        assert_select "button[type=submit]", text: I18n.t("account_deletion.confirm")
+      end
+      assert_select "button[data-dialog-target=closeButton]", text: I18n.t("account_deletion.cancel")
+    end
+  end
+
+  [ false, true ].each do |revoked|
+    test "account deletion warns about #{revoked ? 'revoked' : 'active'} certificates" do
+      sign_in users(:admin)
+      user = users(:other_student)
+      Certificate.create!(user: user, course: courses(:algebra), revoked_at: revoked ? Time.current : nil)
+
+      get admin_user_path(user)
+
+      assert_select "#delete-account-#{user.id} p", text: I18n.t("account_deletion.warning_with_certificates")
+    end
+  end
+
   test "admin can force-enrol a user in a course" do
     sign_in users(:admin)
     assert_difference -> { Enrollment.count }, 1 do

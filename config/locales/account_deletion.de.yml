@@ -1,0 +1,7 @@
+de:
+  account_deletion:
+    title: "Konto löschen?"
+    warning: "Beim Löschen dieses Kontos werden alle zugehörigen Einschreibungen, Lernfortschritte und Bewertungen dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden."
+    warning_with_certificates: "Beim Löschen dieses Kontos werden alle zugehörigen Zertifikate, Einschreibungen, Lernfortschritte und Bewertungen dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden."
+    confirm: "Konto löschen"
+    cancel: "Abbrechen"

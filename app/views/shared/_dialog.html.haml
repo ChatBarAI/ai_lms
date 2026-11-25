@@ -11,6 +11,7 @@
 -#   icon    (optional) – rendered icon replacing the kind's default (sized w-6 h-6)
 -#   id      (optional) – element id, so a trigger can open it (see status-modal / locked-lesson)
 -#   actions (optional) – extra buttons shown before the close button
+-#   close_label (optional) – close button text (default OK)
 
 - footer = local_assigns[:footer]
 - actions = local_assigns[:actions]
@@ -49,4 +50,4 @@
       = footer
     .px-6.py-4.flex.justify-end.gap-2
       = actions
-      %button.px-4.py-2.rounded-lg.text-sm.font-medium.transition-colors{ class: (footer.present? || actions.present?) ? "border border-gray-300 hover:bg-gray-50" : "bg-indigo-600 text-white hover:bg-indigo-700", type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" } } OK
+      %button.px-4.py-2.rounded-lg.text-sm.font-medium.transition-colors{ class: (footer.present? || actions.present?) ? "border border-gray-300 hover:bg-gray-50" : "bg-indigo-600 text-white hover:bg-indigo-700", type: "button", data: { action: "click->dialog#close", dialog_target: "closeButton" } }= local_assigns.fetch(:close_label, "OK")

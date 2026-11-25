@@ -1,6 +1,46 @@
 require "test_helper"
 
 class Users::RegistrationsControllerTest < ActionDispatch::IntegrationTest
+  test "account settings omits certificate warning when the account has none" do
+    user = users(:student)
+    sign_in user
+    get edit_user_registration_path
+
+    assert_select "button[type=button][data-status-modal-dialog-id-value='delete-account-#{user.id}']"
+    assert_select "#delete-account-#{user.id}[role=dialog][aria-hidden=true]" do
+      assert_select "p", text: I18n.t("account_deletion.warning")
+      assert_select "p", text: /certificates/i, count: 0
+      assert_select "form[action='#{user_registration_path}'] input[name=_method][value=delete]"
+      assert_select "button[data-dialog-target=closeButton]", text: I18n.t("account_deletion.cancel")
+    end
+  end
+
+  test "account settings warns about existing certificates" do
+    user = users(:student)
+    Certificate.create!(user: user, course: courses(:algebra))
+    sign_in user
+
+    get edit_user_registration_path
+
+    assert_select "#delete-account-#{user.id} p", text: I18n.t("account_deletion.warning_with_certificates")
+  end
+
+  test "deleting own account also deletes active and revoked certificates" do
+    user = users(:other_student)
+    sign_in user
+    Certificate.create!(user: user, course: courses(:algebra))
+    Certificate.create!(user: user, course: courses(:draft_course), revoked_at: Time.current)
+
+    assert_difference -> { User.count }, -1 do
+      assert_difference -> { Certificate.count }, -2 do
+        delete user_registration_path
+      end
+    end
+
+    assert_response :redirect
+    assert_not User.exists?(user.id)
+  end
+
   test "signed in user changes password with the current password" do
     user = users(:student)
     sign_in user

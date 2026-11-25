@@ -1,0 +1,7 @@
+en:
+  account_deletion:
+    title: "Delete account?"
+    warning: "Deleting this account permanently deletes all its enrolments, learning progress and ratings. This cannot be undone."
+    warning_with_certificates: "Deleting this account permanently deletes all its certificates, enrolments, learning progress and ratings. This cannot be undone."
+    confirm: "Delete account"
+    cancel: "Cancel"

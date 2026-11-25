@@ -1,0 +1,7 @@
+-# Locals: user, url, label, button_class
+- dialog_id = "delete-account-#{user.id}"
+- warning_key = user.certificates.exists? ? "account_deletion.warning_with_certificates" : "account_deletion.warning"
+%button{ type: "button", class: button_class, data: { controller: "status-modal", status_modal_dialog_id_value: dialog_id, action: "click->status-modal#open" }, aria: { haspopup: "dialog", controls: dialog_id } }= label
+- actions = capture do
+  = button_to t("account_deletion.confirm"), url, method: :delete, class: "px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+= render "shared/dialog", id: dialog_id, title: t("account_deletion.title"), subtitle: user.email, body: t(warning_key), kind: :alert, open: false, actions: actions, close_label: t("account_deletion.cancel")
