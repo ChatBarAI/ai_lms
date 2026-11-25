@@ -35,12 +35,15 @@ module LessonsHelper
     offset = (circ * (1 - pct / 100.0)).round(2)
     ring_color = "var(--btn-primary-bg, #4f46e5)"
 
+    # No vector-effect: non-scaling-stroke measures the dash in screen pixels, so the
+    # arc stopped matching the circle (0% showed an arc). The arc is left out at 0%
+    # because a round linecap still draws a dot at zero length.
     tag.svg(class: classes, width: "52", height: "52", viewBox: "0 0 48 48", fill: "none", role: "progressbar", "aria-label": t("lessons.show.progress", **terms), "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct) do
       safe_join([
-        tag.circle(cx: "24", cy: "24", r: "20", class: "stroke-gray-200 dark:stroke-[#4b5563]", "stroke-width": "6", "vector-effect": "non-scaling-stroke", fill: "none"),
-        tag.circle(cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "6", "vector-effect": "non-scaling-stroke", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)"),
+        tag.circle(cx: "24", cy: "24", r: "20", class: "stroke-gray-200 dark:stroke-[#4b5563]", "stroke-width": "6", fill: "none"),
+        (tag.circle(cx: "24", cy: "24", r: "20", stroke: ring_color, "stroke-width": "6", fill: "none", "stroke-dasharray": circ.to_s, "stroke-dashoffset": offset.to_s, "stroke-linecap": "round", transform: "rotate(-90 24 24)") if pct.positive?),
         tag.text("#{pct}%", x: "24", y: "24", "text-anchor": "middle", "dominant-baseline": "central", "font-size": "10", fill: "currentColor", "font-weight": "600")
-      ])
+      ].compact)
     end
   end
 

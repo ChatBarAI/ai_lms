@@ -164,4 +164,20 @@ class LessonsHelperTest < ActionView::TestCase
     assert_equal "Correct", quiz_answer_result(QuestionAnswer.new(question: question, answer_text: "false"), lessons(:intro))[:label]
     assert_equal "Incorrect", quiz_answer_result(QuestionAnswer.new(question: question, answer_text: "true"), lessons(:intro))[:label]
   end
+
+  test "lesson_progress_ring draws no arc at 0%" do
+    html = lesson_progress_ring(Struct.new(:completion_percentage).new(0.4))
+
+    assert_equal 1, html.scan("<circle").size
+    assert_includes html, ">0%<"
+  end
+
+  test "lesson_progress_ring arc length matches the percentage" do
+    html = lesson_progress_ring(Struct.new(:completion_percentage).new(50))
+    circ = (2 * Math::PI * 20).round(2)
+
+    assert_equal 2, html.scan("<circle").size
+    assert_includes html, %(stroke-dashoffset="#{(circ / 2).round(2)}")
+    assert_not_includes html, "non-scaling-stroke"
+  end
 end
