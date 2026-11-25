@@ -11,8 +11,7 @@ export default class extends Controller {
   connect() {
     this.current = 0
     this.answered = new Set()
-    this._resizeHandler = this._syncViewportHeight.bind(this)
-    window.addEventListener("resize", this._resizeHandler)
+    this._observeSlideSizes()
     this._observePanelVisibility()
     this._disableSubmit()
     this._update()
@@ -22,6 +21,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    if (this._resizeObserver) this._resizeObserver.disconnect()
     if (this._resizeHandler) window.removeEventListener("resize", this._resizeHandler)
     if (this._panelObserver) this._panelObserver.disconnect()
   }
@@ -131,6 +131,20 @@ export default class extends Controller {
       return
     }
     this.viewportTarget.style.height = `${height}px`
+  }
+
+  // The viewport has an explicit pixel height, so it must follow the active
+  // slide whenever that slide's size changes — not only on window resize.
+  // E.g. the AI tutor side panel narrows the column without resizing the
+  // window, answer choices wrap, and the slide grows taller.
+  _observeSlideSizes() {
+    if (typeof ResizeObserver === "undefined") {
+      this._resizeHandler = () => this._syncViewportHeight()
+      window.addEventListener("resize", this._resizeHandler)
+      return
+    }
+    this._resizeObserver = new ResizeObserver(() => this._syncViewportHeight())
+    this.slideTargets.forEach((slide) => this._resizeObserver.observe(slide))
   }
 
   _observePanelVisibility() {
