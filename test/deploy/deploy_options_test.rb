@@ -14,7 +14,7 @@ class DeployOptionsTest < Minitest::Test
     @env = {
       "PATH" => "#{@work}:#{ENV.fetch('PATH')}",
       "RAILS_PRODUCTION_KEY_FILE" => "#{@work}/production.key",
-      "DEPLOY_ROOT" => "/opt/ai_lms", "SSH_PORT" => "51760",
+      "DEPLOY_ROOT" => "/opt/ai_lms", "SSH_PORT" => "2222",
       "COMMAND_LOG" => "#{@work}/command", "SSH_LOG" => "#{@work}/ssh-arguments"
     }
     stub("git", <<~'SH')
@@ -51,12 +51,12 @@ class DeployOptionsTest < Minitest::Test
 
   def server_arguments(*options, env: @env)
     out, err, status = Open3.capture3(env, "bash", SCRIPT, *options,
-      "root@148.72.159.88", "ai-craig-academy.chatbar-ai.com", "alias.example.com")
+      "root@server.example.com", "lms.example.com", "alias.example.com")
     assert status.success?, "#{out}\n#{err}"
     command = File.read(@env.fetch("COMMAND_LOG"))
     invocation = command.split("; ").find { |part| part.start_with?('"$release_dir/deploy/server" ') }
     refute_nil invocation
-    assert_includes File.read(@env.fetch("SSH_LOG")), "-p\n51760\n"
+    assert_includes File.read(@env.fetch("SSH_LOG")), "-p\n2222\n"
     Shellwords.split(invocation).drop(1)
   end
 
@@ -77,7 +77,7 @@ class DeployOptionsTest < Minitest::Test
 
   def test_missing_explicit_key_is_rejected_before_connecting
     _, err, status = Open3.capture3(@env.merge("RAILS_PRODUCTION_KEY_FILE" => "#{@work}/missing.key"),
-      "bash", SCRIPT, "root@148.72.159.88", "a.example.com")
+      "bash", SCRIPT, "root@server.example.com", "a.example.com")
     refute status.success?
     assert_includes err, "override is missing or empty"
     refute File.exist?(@env.fetch("COMMAND_LOG"))
@@ -86,8 +86,8 @@ class DeployOptionsTest < Minitest::Test
   def test_skip_option_reaches_server_without_shifting_domains_or_key
     arguments = server_arguments("--skip-dns-check")
     assert_equal "true", arguments[6]
-    assert_equal "ai-craig-academy.chatbar-ai.com", arguments[2]
-    assert_equal "ai-craig-academy.chatbar-ai.com, alias.example.com", arguments[3]
+    assert_equal "lms.example.com", arguments[2]
+    assert_equal "lms.example.com, alias.example.com", arguments[3]
     assert_equal "/tmp/ai_lms-deploy.TEST1234/production.key", arguments[5]
   end
 
@@ -103,13 +103,13 @@ class DeployOptionsTest < Minitest::Test
     assert_equal "acme", arguments[7]
     assert_equal "/opt/ai_lms/instances/acme", arguments[1]
     assert_equal "true", arguments[6]
-    assert_equal "ai-craig-academy.chatbar-ai.com", arguments[2]
+    assert_equal "lms.example.com", arguments[2]
     assert_includes File.read(@env.fetch("COMMAND_LOG")), "release_dir=/opt/ai_lms/instances/acme/releases/abc123;"
   end
 
   def test_invalid_instance_is_rejected_before_connecting
     [ "Acme", "a_b", "../x", "edge", "-x", "x" * 31 ].each do |name|
-      _, err, status = Open3.capture3(@env, "bash", SCRIPT, "--instance", name, "root@148.72.159.88", "a.example.com")
+      _, err, status = Open3.capture3(@env, "bash", SCRIPT, "--instance", name, "root@server.example.com", "a.example.com")
       refute status.success?, name
       assert_includes err, "Invalid instance name", name
     end
