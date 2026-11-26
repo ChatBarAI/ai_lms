@@ -17,7 +17,7 @@ How the commands fit together:
 
 Run backup on the SOURCE machine, where the database and uploads live.
 To invoke it from your computer instead:
-  SSH_PORT=51760 bin/backup root@148.72.159.88
+  SSH_PORT=2222 bin/backup root@server.example.com
 See bin/backup --help for the remote wrappers.
 With no argument, writes:
   /opt/ai_lms/backups/ai-lms-clone-TIMESTAMP.tar.gz
@@ -38,9 +38,9 @@ Native: stop Rails and background workers yourself, then set
   DEPLOY_MODE=native NATIVE_WRITES_STOPPED=1
 
 Example: back up a server and download the archive (run from your computer):
-  ssh -p 51760 root@148.72.159.88 \
+  ssh -p 2222 root@server.example.com \
     '/opt/ai_lms/current/deploy/backup /tmp/ai-lms-clone.tar.gz'
-  scp -P 51760 root@148.72.159.88:/tmp/ai-lms-clone.tar.gz .
+  scp -P 2222 root@server.example.com:/tmp/ai-lms-clone.tar.gz .
 Use a new filename for subsequent backups, or use the timestamped default.
 
 Example: restore locally into a prepared checkout, with Rails/workers stopped:

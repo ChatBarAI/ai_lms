@@ -666,7 +666,7 @@ For Cloudflare-proxied domains or another reverse proxy that hides the server's
 IP, explicitly skip the DNS-to-server IP validation on each deployment:
 
 ```bash
-SSH_PORT=51760 bin/deploy --skip-dns-check root@148.72.159.88 ai-craig-academy.chatbar-ai.com
+SSH_PORT=2222 bin/deploy --skip-dns-check root@server.example.com lms.example.com
 ```
 
 This flag applies to the canonical domain and all aliases for that invocation;
@@ -1235,7 +1235,7 @@ From your workstation, use the same SSH target as `bin/deploy`:
 bin/check-email root@server.example.com
 SSH_PORT=2222 bin/check-email root@server.example.com --host smtp.your-provider.com
 # Discover reachable external providers before choosing one:
-SSH_PORT=51760 bin/check-email root@server.example.com --providers
+SSH_PORT=2222 bin/check-email root@server.example.com --providers
 ```
 
 `--providers` checks SendGrid (`smtp.sendgrid.net`) and Mailjet

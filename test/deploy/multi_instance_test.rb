@@ -107,9 +107,9 @@ class MultiInstanceDeploymentTest < Minitest::Test
   end
 
   def test_site_file_lists_repeated_domains_once
-    out, err, status = render_site("APP_DOMAINS=ai-academy-staging.chatbar-ai.com, ai-academy-staging.chatbar-ai.com\n")
+    out, err, status = render_site("APP_DOMAINS=staging.example.com, staging.example.com\n")
     assert status.success?, err
-    assert_includes out, "\nai-academy-staging.chatbar-ai.com {\n"
+    assert_includes out, "\nstaging.example.com {\n"
   end
 
   def test_site_file_rejects_unsafe_domains_and_skips_unsafe_email

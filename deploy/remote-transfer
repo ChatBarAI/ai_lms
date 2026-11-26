@@ -29,9 +29,9 @@ Environment:
   DEPLOY_ROOT=/opt/ai_lms      Remote Docker deployment root (overrides --instance)
 
 Examples:
-  SSH_PORT=51760 bin/backup root@148.72.159.88
-  SSH_PORT=51760 bin/export root@148.72.159.88 ./ai-lms-clone-copy.tar.gz
-  SSH_PORT=51760 bin/restore --force root@148.72.159.88 ./ai-lms-clone-copy.tar.gz
+  SSH_PORT=2222 bin/backup root@server.example.com
+  SSH_PORT=2222 bin/export root@server.example.com ./ai-lms-clone-copy.tar.gz
+  SSH_PORT=2222 bin/restore --force root@server.example.com ./ai-lms-clone-copy.tar.gz
   bin/backup --instance acme root@203.0.113.10
 
 Remote scripts run from DEPLOY_ROOT/current on an existing Docker deployment.

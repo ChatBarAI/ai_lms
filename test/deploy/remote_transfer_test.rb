@@ -27,7 +27,7 @@ class RemoteTransferTest < Minitest::Test
       FileUtils.chmod(0o755, [ "#{work}/ssh", "#{work}/scp" ])
       environment = {
         "PATH" => "#{work}:#{ENV.fetch('PATH')}", "CALL_LOG" => "#{work}/calls",
-        "SSH_PORT" => "51760", "DEPLOY_ROOT" => "/opt/custom_lms",
+        "SSH_PORT" => "2222", "DEPLOY_ROOT" => "/opt/custom_lms",
         "FAIL_DOWNLOAD" => fail_download ? "1" : "0"
       }
       yield work, environment
@@ -43,8 +43,8 @@ class RemoteTransferTest < Minitest::Test
         assert_equal "archive fixture", File.read(output)
         assert_equal 0o600, File.stat(output).mode & 0o777
         calls = File.read("#{work}/calls")
-        assert_includes calls, "ssh -p 51760"
-        assert_includes calls, "scp -P 51760"
+        assert_includes calls, "ssh -p 2222"
+        assert_includes calls, "scp -P 2222"
         assert_includes calls, "/opt/custom_lms/current/deploy/export"
         refute_includes calls, "/opt/custom_lms/current/deploy/backup"
         assert_includes calls, "test -f '/tmp/ai_lms-transfer.ABC12345/bundle.tar.gz'"
@@ -78,7 +78,7 @@ class RemoteTransferTest < Minitest::Test
       _, error, status = Open3.capture3(environment, "#{ROOT}/bin/restore", "--force", "root@example.com", archive)
       assert status.success?, error
       calls = File.read("#{work}/calls")
-      assert_includes calls, "scp -P 51760"
+      assert_includes calls, "scp -P 2222"
       assert_includes calls, "/deploy/restore' --force '/tmp/ai_lms-transfer.ABC12345/bundle.tar.gz'"
     end
   end
