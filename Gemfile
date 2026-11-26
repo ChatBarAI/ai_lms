@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.2.3.1"
+gem "rails", "~> 7.2.4"
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem "sprockets-rails"
 # Use postgresql as the database for Active Record
@@ -98,7 +98,7 @@ gem "active_storage_validations"
 
 # Stdlib gems being removed from default Ruby
 gem "ostruct"
-# Keep psych on Ruby 3.4.2's bundled default version; newer releases can be
+# Keep psych on Ruby 3.4.13's bundled default version; newer releases can be
 # reinstalled by Bundler and trigger ambiguous-spec warnings alongside default gems.
 gem "psych", "5.2.2"
 

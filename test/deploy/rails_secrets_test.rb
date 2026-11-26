@@ -33,7 +33,7 @@ class RailsSecretsTest < Minitest::Test
   def test_invalid_explicit_key_fails_instead_of_generating_a_secret
     Dir.mktmpdir do |dir|
       path = File.join(dir, "production.key")
-      [nil, "", "invalid-key"].each do |contents|
+      [ nil, "", "invalid-key" ].each do |contents|
         File.write(path, contents) if contents
         out, _, status = write_secrets(path)
         refute status.success?
@@ -57,7 +57,7 @@ class RailsSecretsTest < Minitest::Test
       refute_includes generated, "RAILS_MASTER_KEY="
       assert_equal 0o600, File.stat(env_file).mode & 0o777
 
-      [generated, "RAILS_MASTER_KEY=#{'ab' * 16}\n"].each do |saved|
+      [ generated, "RAILS_MASTER_KEY=#{'ab' * 16}\n" ].each do |saved|
         File.write(env_file, saved)
         _, err, status = Open3.capture3("bash", "-eu", "-c", script, "test", HELPER, env_file)
         assert status.success?, err

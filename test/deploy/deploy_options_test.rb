@@ -54,7 +54,7 @@ class DeployOptionsTest < Minitest::Test
       "root@148.72.159.88", "ai-craig-academy.chatbar-ai.com", "alias.example.com")
     assert status.success?, "#{out}\n#{err}"
     command = File.read(@env.fetch("COMMAND_LOG"))
-    invocation = command.split('; ').find { |part| part.start_with?('"$release_dir/deploy/server" ') }
+    invocation = command.split("; ").find { |part| part.start_with?('"$release_dir/deploy/server" ') }
     refute_nil invocation
     assert_includes File.read(@env.fetch("SSH_LOG")), "-p\n51760\n"
     Shellwords.split(invocation).drop(1)

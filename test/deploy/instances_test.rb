@@ -189,19 +189,19 @@ class InstancesCommandTest < Minitest::Test
 
     out, err, status = run_instances("--json")
     assert status.success?, err
-    instances = JSON.parse(out).fetch("instances").to_h { |i| [i.fetch("name"), i] }
+    instances = JSON.parse(out).fetch("instances").to_h { |i| [ i.fetch("name"), i ] }
     assert_equal "match", instances.dig("default", "local_master_key_match")
     assert_equal "different", instances.dig("other", "local_master_key_match")
     assert_equal "secret_key_base", instances.dig("independent", "rails_secret_mode")
     assert_equal "not_applicable", instances.dig("independent", "local_master_key_match")
-    [local, other, signing, Digest::SHA256.hexdigest(local)].each { |secret| refute_includes out + err, secret }
+    [ local, other, signing, Digest::SHA256.hexdigest(local) ].each { |secret| refute_includes out + err, secret }
 
     out, err, status = run_instances
     assert status.success?, err
     assert_includes out, "master key: matches local key"
     assert_includes out, "master key: differs from local key"
     assert_includes out, "SECRET_KEY_BASE only (no master key)"
-    [local, other, signing].each { |secret| refute_includes out + err, secret }
+    [ local, other, signing ].each { |secret| refute_includes out + err, secret }
   end
 
   def test_missing_local_key_is_reported_without_claiming_a_mismatch

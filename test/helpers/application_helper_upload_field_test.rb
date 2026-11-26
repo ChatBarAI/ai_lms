@@ -24,7 +24,7 @@ class ApplicationHelperUploadFieldTest < ActionView::TestCase
     assert_includes html, "Replace image"
     assert_includes html, "or drag and drop to replace"
     assert_match(/<dialog[^>]*data-image-crop-target="dialog"/, html)
-    assert_includes html, 'change-&gt;image-crop#fileChanged'
+    assert_includes html, "change-&gt;image-crop#fileChanged"
   end
 
   test "image upload_field with current attachment exposes crop source url" do

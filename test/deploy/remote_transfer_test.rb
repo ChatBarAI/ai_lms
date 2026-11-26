@@ -24,7 +24,7 @@ class RemoteTransferTest < Minitest::Test
           printf 'archive fixture' > "${@: -1}"
         fi
       SH
-      FileUtils.chmod(0o755, ["#{work}/ssh", "#{work}/scp"])
+      FileUtils.chmod(0o755, [ "#{work}/ssh", "#{work}/scp" ])
       environment = {
         "PATH" => "#{work}:#{ENV.fetch('PATH')}", "CALL_LOG" => "#{work}/calls",
         "SSH_PORT" => "51760", "DEPLOY_ROOT" => "/opt/custom_lms",
@@ -119,7 +119,7 @@ class RemoteTransferTest < Minitest::Test
 
   def test_invalid_host_and_port_do_not_connect
     with_transport do |work, environment|
-      [ ["-oProxyCommand=bad", "22"], ["root@example.com", "invalid"] ].each do |host, port|
+      [ [ "-oProxyCommand=bad", "22" ], [ "root@example.com", "invalid" ] ].each do |host, port|
         _, _, status = Open3.capture3(environment.merge("SSH_PORT" => port), "#{ROOT}/bin/backup", host)
         refute status.success?
         refute File.exist?("#{work}/calls")

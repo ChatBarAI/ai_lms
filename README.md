@@ -64,8 +64,8 @@ Use Chatbar AI or provide your own endpoint to create lesson questions. Free-for
 
 ## Stack
 
-- Ruby `3.4.2`
-- Rails `7.2.3`
+- Ruby `3.4.13`
+- Rails `7.2.4`
 - PostgreSQL
 - ActiveJob via Sidekiq 7 + Redis (background AI scoring)
 - Action Cable + Turbo Streams (live UI updates from background jobs)
@@ -308,7 +308,7 @@ Without `CALLBACK_HOST`, URLs fall back to the current request host.
 
 | Requirement | Notes |
 |---|---|
-| Ruby `3.4.2` | See [`.ruby-version`](.ruby-version). RVM, rbenv, or asdf all work. |
+| Ruby `3.4.13` | See [`.ruby-version`](.ruby-version). RVM, rbenv, or asdf all work. |
 | PostgreSQL `≥ 14` | Default dev DB: `ai_lms_development` |
 | **libvips** | ActiveStorage image variants — `apt install libvips-tools` / `brew install vips` |
 | **ImageMagick** | PWA icon generation — `apt install imagemagick` / `brew install imagemagick` |
@@ -584,7 +584,7 @@ sudo systemctl restart puma-ai_lms.service sidekiq-ai_lms.service
 
 ### Deployment prerequisites
 
-The pre-commit Brakeman review reported that the pinned Rails 7.2.3.2 version
+The pre-commit Brakeman review reported that the pinned Rails 7.2.4 version
 is past its support date (2026-08-09). Track the Rails upgrade separately;
 backup tooling does not resolve this dependency warning. Do not extend the
 EOL exception in `config/brakeman.ignore` without a maintenance decision.

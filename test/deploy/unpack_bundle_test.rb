@@ -26,17 +26,17 @@ class UnpackBundleTest < Minitest::Test
 
   def test_rejects_malicious_archives_before_extraction
     bad_storage = [
-      [["../escape", "bad"]], [["/absolute", "bad"]],
-      [["link", "", "2", "/tmp"]], [["hard", "", "1", "../escape"]],
-      [["pipe", "", "6"]]
+      [ [ "../escape", "bad" ] ], [ [ "/absolute", "bad" ] ],
+      [ [ "link", "", "2", "/tmp" ] ], [ [ "hard", "", "1", "../escape" ] ],
+      [ [ "pipe", "", "6" ] ]
     ]
     cases = bad_storage.map do |entries|
-      [["metadata", "format=ai_lms_clone_v1\n"], ["database.dump", "PGDMP"],
-       ["storage.tar.gz", archive(entries)]]
+      [ [ "metadata", "format=ai_lms_clone_v1\n" ], [ "database.dump", "PGDMP" ],
+       [ "storage.tar.gz", archive(entries) ] ]
     end
-    cases << [["metadata", "", "2", "/tmp/escape"], ["database.dump", "PGDMP"], ["storage.tar.gz", "x"]]
-    cases << [["metadata", "format=ai_lms_clone_v1\n"], ["metadata", "duplicate"],
-              ["database.dump", "PGDMP"], ["storage.tar.gz", "x"]]
+    cases << [ [ "metadata", "", "2", "/tmp/escape" ], [ "database.dump", "PGDMP" ], [ "storage.tar.gz", "x" ] ]
+    cases << [ [ "metadata", "format=ai_lms_clone_v1\n" ], [ "metadata", "duplicate" ],
+              [ "database.dump", "PGDMP" ], [ "storage.tar.gz", "x" ] ]
     cases.each do |entries|
       Dir.mktmpdir do |work|
         FileUtils.mkdir_p("#{work}/extracted")
