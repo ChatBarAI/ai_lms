@@ -21,7 +21,7 @@ class ConditionalMailDeploymentTest < Minitest::Test
       SH
       File.chmod(0o755, docker)
       server = File.read(File.expand_path("../../deploy/server", __dir__))
-      block = server.split('compose=(docker compose -p "$project" --env-file "$env_file" -f "$release_dir/compose.yaml")', 2).last.split('if $domain_changed;', 2).first
+      block = server.split('compose=(docker compose -p "$project" --env-file "$env_file" -f "$release_dir/compose.yaml")', 2).last.split("if $domain_changed;", 2).first
       script = "set -Eeuo pipefail\ncompose=(docker compose -p \"$project\" --env-file \"$env_file\" -f \"$release_dir/compose.yaml\")\n#{block}"
       out, err, status = Open3.capture3({ "PATH" => "#{dir}:#{ENV.fetch('PATH')}",
         "env_file" => env_file, "release_dir" => dir, "project" => "ai_lms", "CALL_LOG" => log,

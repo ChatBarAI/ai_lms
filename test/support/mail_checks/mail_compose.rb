@@ -21,6 +21,6 @@ subnet = overlay.dig("networks", "mailnet", "ipam", "config", 0, "subnet")
 raise "Trust must match Docker network" unless subnet == mail.dig("environment", "MAIL_NETWORK")
 raise "Local clone must not send mail" if YAML.load_file(File.join(root, "compose.local.yaml"))["services"].key?("mail")
 server = File.read(File.join(root, "deploy/server"))
-raise "Resolve mail after bootstrap" unless server.index('runner deploy/mail_mode.rb') > server.index('runner deploy/configure_mail.rb')
-raise "Seed after migrations" unless server.index('runner deploy/configure_mail.rb') > server.index('db:prepare')
+raise "Resolve mail after bootstrap" unless server.index("runner deploy/mail_mode.rb") > server.index("runner deploy/configure_mail.rb")
+raise "Seed after migrations" unless server.index("runner deploy/configure_mail.rb") > server.index("db:prepare")
 puts "Mail deployment checks passed."

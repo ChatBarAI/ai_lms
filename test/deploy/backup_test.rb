@@ -8,7 +8,7 @@ class BackupScriptTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
 
   def test_success_and_failed_dump
-    [false, true].each do |fail_dump|
+    [ false, true ].each do |fail_dump|
       Dir.mktmpdir do |work|
         FileUtils.mkdir_p("#{work}/shared")
         FileUtils.touch("#{work}/shared/.env")

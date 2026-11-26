@@ -24,7 +24,7 @@ class Payments::ConfigurationTest < ActiveSupport::TestCase
     %w[production staging test].each do |environment|
       assert_raises(Payments::Error) { base_url_for("http://localhost:3000", environment: environment) }
     end
-    [nil, "", "sk_live_example", "rk_live_example"].each do |key|
+    [ nil, "", "sk_live_example", "rk_live_example" ].each do |key|
       assert_raises(Payments::Error) { base_url_for("http://localhost:3000", key: key) }
     end
   end
