@@ -56,12 +56,19 @@ class Course < ApplicationRecord
                                    size: { less_than: 10.megabytes }
 
   validates :title, presence: true
+  validate :owner_can_author_courses
   validates :locale, presence: true, inclusion: { in: User::SUPPORTED_LOCALES.keys }
   validates :learning_order, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :slug, presence: true, uniqueness: true,
                    format: { with: /\A[a-z0-9-]+\z/ }, if: -> { title.present? }
 
   before_validation :assign_slug, on: :create
+
+  def owner_can_author_courses
+    return if owner.nil? || owner.instructor? || owner.admin?
+
+    errors.add(:owner, "must be an instructor or admin")
+  end
 
   scope :published, -> { where(published_at: ..Time.current) }
   scope :publicly_accessible, -> { published.where(public_access_enabled: true) }

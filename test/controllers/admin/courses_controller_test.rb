@@ -2,6 +2,59 @@ require "test_helper"
 require "csv"
 
 class Admin::CoursesControllerTest < ActionDispatch::IntegrationTest
+  test "new and edit owner dropdowns only list instructors and admins" do
+    sign_in users(:admin)
+
+    [ new_admin_course_path, edit_admin_course_path(courses(:algebra)) ].each do |path|
+      get path
+
+      assert_response :success
+      assert_select "select[name='course[owner_id]']" do
+        [ users(:admin), users(:instructor), users(:other_instructor) ].each do |user|
+          assert_select "option[value=?]", user.id.to_s, text: user.email
+        end
+        [ users(:student), users(:other_student) ].each do |user|
+          assert_select "option[value=?]", user.id.to_s, count: 0
+        end
+      end
+    end
+  end
+
+  test "admin cannot create a course owned by a student" do
+    sign_in users(:admin)
+
+    assert_no_difference "Course.count" do
+      post admin_courses_path, params: { course: { title: "Student Owned", owner_id: users(:student).id } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "li", text: "Owner must be an instructor or admin"
+  end
+
+  test "admin can transfer a course to another instructor or admin" do
+    sign_in users(:admin)
+    course = courses(:algebra)
+
+    [ users(:other_instructor), users(:admin) ].each do |owner|
+      patch admin_course_path(course), params: { course: { owner_id: owner.id } }
+
+      assert_redirected_to admin_courses_path
+      assert_equal owner.id, course.reload.owner_id
+    end
+  end
+
+  test "admin cannot transfer a course to a student by submitting an owner id" do
+    sign_in users(:admin)
+    course = courses(:algebra)
+    original_owner_id = course.owner_id
+
+    patch admin_course_path(course), params: { course: { owner_id: users(:student).id } }
+
+    assert_response :unprocessable_entity
+    assert_select "li", text: "Owner must be an instructor or admin"
+    assert_equal original_owner_id, course.reload.owner_id
+  end
+
   test "non-admin redirected away" do
     sign_in users(:instructor)
     get admin_courses_path

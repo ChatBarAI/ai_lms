@@ -14,6 +14,26 @@ class CourseTest < ActiveSupport::TestCase
     assert courses(:algebra).valid?
   end
 
+  test "only instructors and admins can own courses" do
+    [ users(:instructor), users(:admin) ].each do |owner|
+      course = Course.new(title: "Eligible Owner", owner: owner)
+      assert course.valid?, course.errors.full_messages.inspect
+    end
+
+    course = Course.new(title: "Student Owner", owner: users(:student))
+    assert_not course.save
+    assert_includes course.errors[:owner], "must be an instructor or admin"
+  end
+
+  test "cannot transfer a course to a student" do
+    course = courses(:algebra)
+    original_owner = course.owner
+
+    assert_not course.update(owner: users(:student))
+    assert_includes course.errors[:owner], "must be an instructor or admin"
+    assert_equal original_owner, course.reload.owner
+  end
+
   test "requires title and owner; subject is optional" do
     c = Course.new
     assert_not c.valid?

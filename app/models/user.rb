@@ -48,6 +48,7 @@ class User < ApplicationRecord
   before_validation :normalise_course_locales
   before_save :clear_email_verification, if: :email_changed_without_verification?
 
+  scope :course_owners, -> { where(role: [ :instructor, :admin ]) }
   scope :with_role, ->(role) { role.present? ? where(role: roles[role.to_s]) : all }
   scope :in_organization, ->(org_id) { org_id.present? ? where(organization_id: org_id) : all }
   scope :active_since, ->(time) { time.present? ? where("last_sign_in_at >= ?", time) : all }
