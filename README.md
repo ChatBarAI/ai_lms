@@ -1,5 +1,9 @@
 # AI LMS
 
+[![CI](https://github.com/ChatBarAI/ai_lms/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ChatBarAI/ai_lms/actions/workflows/ci.yml?query=branch%3Amain)
+[![Release](https://img.shields.io/github/v/release/ChatBarAI/ai_lms?include_prereleases&sort=semver)](https://github.com/ChatBarAI/ai_lms/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 An AI centric open-source Rails LMS/e-learning system with a built-in AI tutor on every lesson,
 powered by [ChatBar AI](https://chatbar-ai.com). [Anam](https://anam.ai/) or your own embedded custom AI.
 Instructors author courses and lessons, students enrol,
