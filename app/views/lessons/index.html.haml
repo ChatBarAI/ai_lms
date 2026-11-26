@@ -14,9 +14,9 @@
       %li.bg-white.border.border-gray-200.rounded.p-3.flex.items-center.justify-between
         .flex.items-center.gap-3.min-w-0
           - if lesson.cover_image.attached?
-            = image_tag lesson.cover_image, class: "h-12 w-16 object-cover rounded flex-shrink-0"
+            = image_tag image_variant(lesson.cover_image, :thumb), class: "h-12 w-16 object-cover rounded flex-shrink-0"
           - else
-            = default_meta_card_image_tag(class: "h-12 w-16 object-cover rounded flex-shrink-0")
+            = default_meta_card_image_tag(preset: :thumb, class: "h-12 w-16 object-cover rounded flex-shrink-0")
           = link_to lesson.title, course_lesson_path(@course, lesson), class: "font-medium truncate"
         %span.text-xs.text-gray-500= lesson.published? ? t("common.published") : t("common.draft")
 - else

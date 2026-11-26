@@ -4,13 +4,7 @@
 
 .max-w-lg.bg-white.border.border-gray-200.rounded-lg.p-6
   .flex.items-center.gap-5.mb-6
-    - if current_user.avatar.attached?
-      = image_tag url_for(current_user.avatar), class: "w-20 h-20 rounded-full object-cover border border-gray-200"
-    - elsif current_user.image_url.present?
-      = image_tag current_user.image_url, class: "w-20 h-20 rounded-full object-cover border border-gray-200"
-    - else
-      .w-20.h-20.rounded-full.bg-indigo-100.flex.items-center.justify-center.text-indigo-600.text-2xl.font-bold
-        = current_user.display_name.first.upcase
+    = user_avatar_tag(current_user, size_class: "w-20 h-20", initial_class: "text-2xl")
     .space-y-0.5
       %p.font-semibold.text-lg= current_user.display_name
       %p.text-sm.text-gray-500= current_user.email

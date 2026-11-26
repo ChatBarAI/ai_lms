@@ -37,13 +37,7 @@
           - if user_signed_in?
             .relative{ data: { controller: "dropdown" } }
               %button.relative.flex.items-center.gap-1.5.cursor-pointer{ type: "button", data: { action: "click->dropdown#toggle", dropdown_target: "button" }, "aria-haspopup": "menu", "aria-expanded": "false", "aria-controls": "user-menu", "aria-label": current_user.display_name }
-                - if current_user.avatar.attached?
-                  = image_tag url_for(current_user.avatar), class: "w-7 h-7 rounded-full object-cover border border-gray-200"
-                - elsif current_user.image_url.present?
-                  = image_tag current_user.image_url, class: "w-7 h-7 rounded-full object-cover border border-gray-200"
-                - else
-                  .w-7.h-7.rounded-full.bg-indigo-100.flex.items-center.justify-center.text-indigo-600.text-xs.font-bold
-                    = current_user.display_name.first.upcase
+                = user_avatar_tag(current_user, size_class: "w-7 h-7", initial_class: "text-xs")
                 - if pending_marking_summary
                   %span.absolute.-top-0.5.left-5.h-2.5.w-2.5.rounded-full.bg-amber-500.ring-2.ring-white{ title: t("catalog_ui.marking_alert", count: pending_marking_summary[:answers]) }
                 %span{ class: "hidden sm:inline text-sm max-w-[12rem] truncate opacity-80" }= current_user.display_name

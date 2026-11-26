@@ -90,7 +90,7 @@
     - when "image_upload"
       - if material.image_file.attached?
         .rounded-lg.border.border-gray-200.bg-gray-50.p-2
-          = image_tag material.image_file, class: "max-h-[70vh] w-auto max-w-full mx-auto rounded object-contain"
+          = image_tag image_variant(material.image_file, :large), class: "max-h-[70vh] w-auto max-w-full mx-auto rounded object-contain"
         .flex.justify-end.mt-2
           = link_to "Open in new tab", rails_blob_path(material.image_file, disposition: "inline"), target: "_blank", class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
       - else
@@ -128,7 +128,7 @@
           .prose.max-w-none.min-w-0.flex-1.text-sm.text-slate-800{ class: "dark:prose-invert dark:text-slate-100" }= material.body
           %div{ class: (has_poster ? "relative aspect-video w-full overflow-hidden rounded-lg bg-slate-900" : "shrink-0") }
             - if has_poster
-              = image_tag material.poster_image, alt: "", class: "absolute inset-0 h-full w-full object-cover", loading: "lazy"
+              = image_tag image_variant(material.poster_image, :large), alt: "", class: "absolute inset-0 h-full w-full object-cover", loading: "lazy"
             %div{ class: ("absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 p-4 text-center" if has_poster) }
               - if material.chatbar_token.present?
                 %button.shrink-0.inline-flex.items-center.gap-2.px-4.py-2.rounded.bg-indigo-600.text-white.hover:bg-indigo-700.cursor-pointer.text-sm.font-medium.disabled:opacity-50{ type: "button", class: "shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-500", data: { action: "click->chatbar-material#start", chatbar_material_target: "startButton" } }

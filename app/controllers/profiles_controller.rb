@@ -10,10 +10,15 @@ class ProfilesController < ApplicationController
   end
 
   def edit
+    @user = current_user
   end
 
+  # Updates a separate copy of the user so a rejected upload never reaches
+  # current_user: the layout and the form preview keep showing the saved
+  # avatar instead of an unsaved blob, which has no URL.
   def update
-    if current_user.update(profile_params)
+    @user = User.find(current_user.id)
+    if @user.update(profile_params)
       redirect_to profile_path, notice: t("profiles.flash.updated")
     else
       flash.now[:alert] = t("profiles.flash.update_failed")

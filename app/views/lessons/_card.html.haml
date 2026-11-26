@@ -11,7 +11,7 @@
 = content_tag(:a, card_options) do
   .relative
     - if lesson.cover_image.attached?
-      = image_tag lesson.cover_image, class: "w-full aspect-[728/320] object-cover"
+      = image_tag image_variant(lesson.cover_image, :large), class: "w-full aspect-[728/320] object-cover"
     - else
       = default_meta_card_image_tag(class: "w-full aspect-[728/320] object-cover")
     - if lesson.duration_minutes.present?

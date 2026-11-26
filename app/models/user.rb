@@ -29,6 +29,8 @@ class User < ApplicationRecord
   has_many :certificates, dependent: :destroy
 
   has_one_attached :avatar
+  validates :avatar, content_type: %w[image/png image/jpeg image/gif image/webp],
+                     size: { less_than: 5.megabytes }
 
   validates :email, presence: true
   validates :locale, presence: true, inclusion: { in: SUPPORTED_LOCALES.keys }

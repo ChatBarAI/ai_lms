@@ -22,7 +22,7 @@ module BrandingHelper
     invert_class = site_setting.invert_logo_on_dark? ? " dark:invert" : ""
     options = { alt: site_brand_name, class: "h-8 w-auto#{invert_class}" }.merge(html_options)
     if site_setting.logo.attached?
-      image_tag site_setting.logo, options
+      image_tag image_variant(site_setting.logo, :logo), options
     else
       image_tag "default-logo.png", options
     end
@@ -88,9 +88,9 @@ module BrandingHelper
     entries
   end
 
-  def default_meta_card_image_tag(html_options = {})
+  def default_meta_card_image_tag(preset: :large, **html_options)
     if site_setting.default_meta_card_image.attached?
-      image_tag site_setting.default_meta_card_image, html_options
+      image_tag image_variant(site_setting.default_meta_card_image, preset), html_options
     else
       image_tag "default-meta-card-image.jpg", html_options
     end

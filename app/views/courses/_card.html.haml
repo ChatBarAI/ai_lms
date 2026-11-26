@@ -3,7 +3,7 @@
   = link_to course_path(course), { class: "block flex-1" }.merge(locked_course_link_attributes(missing_prerequisites, view_url: course_path(course))) do
     .relative
       - if course.cover_image.attached?
-        = image_tag course.cover_image, class: "w-full aspect-[728/320] object-cover"
+        = image_tag image_variant(course.cover_image, :large), class: "w-full aspect-[728/320] object-cover"
       - else
         = default_meta_card_image_tag(class: "w-full aspect-[728/320] object-cover")
       - if course.tags.any?

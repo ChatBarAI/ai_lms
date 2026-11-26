@@ -16,7 +16,7 @@ module ActiveStorageAccessControl
 
   included do
     prepend_before_action :authenticate_user_for_protected_active_storage!
-    after_action :mark_protected_active_storage_response_private!
+    after_action :set_protected_active_storage_cache_headers!
   end
 
   private
@@ -46,11 +46,33 @@ module ActiveStorageAccessControl
     end
   end
 
+  # Protected files may only be cached by the viewer's own browser, never by a
+  # shared cache. A successful protected file response is kept for an hour so
+  # repeat page views don't re-download every image; denials, redirects and
+  # direct uploads are never stored. Trade-off: after access is revoked, files
+  # already in that browser's cache stay viewable there for up to an hour.
+  PROTECTED_ACTIVE_STORAGE_MAX_AGE = 1.hour
+
+  # Called before authorisation, so denials (which halt the before_action
+  # chain and skip after_actions) always go out as no-store.
   def mark_protected_active_storage_response_private!
     return unless @protected_active_storage_request
 
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["Pragma"] = "no-cache"
+  end
+
+  # after_action: only reached once the file has actually been served.
+  def set_protected_active_storage_cache_headers!
+    return unless @protected_active_storage_request
+    return mark_protected_active_storage_response_private! unless cacheable_protected_active_storage_response?
+
+    response.headers["Cache-Control"] = "private, max-age=#{PROTECTED_ACTIVE_STORAGE_MAX_AGE.to_i}"
+    response.headers.delete("Pragma")
+  end
+
+  def cacheable_protected_active_storage_response?
+    request.get? && response.successful? && !is_a?(ActiveStorage::DirectUploadsController)
   end
 
   def active_storage_blob_for_request
