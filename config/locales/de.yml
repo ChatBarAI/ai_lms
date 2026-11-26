@@ -64,6 +64,7 @@ de:
       my_learning: "Mein Lernen"
       my_profile: "Mein Profil"
       my_courses: "Meine %{courses}"
+      marking: "Bewertung"
       sign_in: "Anmelden"
       sign_up: "Registrieren"
       sign_out: "Abmelden"

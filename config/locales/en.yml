@@ -58,6 +58,7 @@ en:
       my_learning: "My learning"
       my_profile: "My profile"
       my_courses: "My %{courses_l}"
+      marking: "Marking"
       sign_in: "Sign in"
       sign_up: "Sign up"
       sign_out: "Sign out"

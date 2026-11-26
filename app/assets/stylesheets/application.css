@@ -229,3 +229,36 @@
         pointer-events: auto;
     }
 }
+
+/* Admin navigation: a modal drawer on small screens, a fixed left column from 1024px. */
+@media (min-width: 1024px) {
+    body {
+        --admin-sidebar-width: 17rem;
+    }
+
+    .admin-content {
+        margin-left: var(--admin-sidebar-width);
+    }
+
+    .admin-sidebar-overlay {
+        visibility: visible !important;
+        pointer-events: none !important;
+        right: auto;
+        width: var(--admin-sidebar-width);
+        z-index: 30;
+    }
+
+    .admin-sidebar-overlay .admin-sidebar-backdrop {
+        display: none;
+    }
+
+    .admin-sidebar-overlay .admin-sidebar-panel {
+        width: var(--admin-sidebar-width);
+        max-width: none;
+        translate: none !important;
+        transform: none !important;
+        transition: none;
+        box-shadow: none;
+        pointer-events: auto;
+    }
+}

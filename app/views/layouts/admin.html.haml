@@ -15,31 +15,18 @@
     = yield :javascript
     = theme_style_tag
     = theme_mode_script
-  %body{ class: "bg-[var(--page-bg)] text-[var(--page-fg)]" }
-    %nav{ class: "bg-[var(--admin-nav-bg)] text-[var(--admin-nav-fg)]" }
-      .max-w-6xl.mx-auto.px-4.py-3.flex.items-center.justify-between
-        .flex.items-center.gap-6
-          = link_to admin_root_path, class: "flex items-center gap-2" do
-            = site_logo_tag
-            %span.font-semibold= show_site_brand_name? ? "#{site_brand_name} · Admin" : "Admin"
-          - if subjects_enabled?
-            = link_to terms[:subjects], admin_subjects_path, class: "text-sm hover:opacity-80"
-          = link_to terms[:courses], admin_courses_path, class: "text-sm hover:opacity-80"
-          = link_to admin_marking_queue_path, class: "inline-flex items-center gap-1.5 text-sm hover:opacity-80" do
-            Marking
-            - if (marking = pending_marking_summary)
-              %span.rounded-full.bg-amber-500.px-1.5.text-xs.font-semibold.text-white{ title: t("catalog_ui.marking_alert", count: marking[:answers]) }= number_with_delimiter(marking[:answers])
-          = link_to "Users", admin_users_path, class: "text-sm hover:opacity-80"
-          = link_to "Certificates", admin_certificates_path, class: "text-sm hover:opacity-80"
-          = link_to "Tags", admin_tags_path, class: "text-sm hover:opacity-80"
-          = link_to "AI models", admin_ai_model_configurations_path, class: "text-sm hover:opacity-80"
-          = link_to "Settings", edit_admin_site_setting_path, class: "text-sm hover:opacity-80"
-        .flex.items-center.gap-3
-          = link_to "Back to site", root_path, class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200 transition-colors"
-          %span.text-sm.opacity-70= current_user.email
-    %main.max-w-6xl.mx-auto.px-4.py-2
-      - flash.each do |type, msg|
-        - level = (type.to_s == "notice" ? "bg-green-50 text-green-800 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200")
-        .mb-4.px-4.py-2.border.rounded{ class: level }
-          = msg
-      = yield
+  %body{ class: "bg-[var(--page-bg)] text-[var(--page-fg)]", data: { controller: "admin-sidebar" } }
+    = render "admin/sidebar"
+    .admin-content
+      %header.sticky.top-0.z-40.flex.items-center.gap-3.px-4.py-2.lg:hidden{ class: "bg-[var(--admin-nav-bg)] text-[var(--admin-nav-fg)]" }
+        %button.inline-flex.h-9.w-9.shrink-0.items-center.justify-center.rounded-md.cursor-pointer{ class: "hover:bg-current/10", type: "button", "aria-controls": "admin-sidebar", "aria-expanded": "false", "aria-label": "Open admin menu", data: { action: "admin-sidebar#toggle", admin_sidebar_target: "openButton" } }
+          = admin_nav_icon(:menu)
+        = link_to admin_root_path, class: "flex min-w-0 items-center gap-2 [&_img]:max-w-[10rem] [&_img]:object-contain" do
+          = site_logo_tag
+          %span.text-sm.font-semibold Admin
+      %main.max-w-6xl.mx-auto.px-4.py-2.lg:py-6
+        - flash.each do |type, msg|
+          - level = (type.to_s == "notice" ? "bg-green-50 text-green-800 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200")
+          .mb-4.px-4.py-2.border.rounded{ class: level }
+            = msg
+        = yield
