@@ -3,7 +3,7 @@
 %h1.text-2xl.font-bold.mb-6= t(".heading")
 
 .max-w-lg.bg-white.border.border-gray-200.rounded-lg.p-6
-  = form_with model: current_user, url: profile_path, method: :patch, class: "space-y-5" do |f|
+  = form_with model: @user, url: profile_path, method: :patch, class: "space-y-5" do |f|
     .space-y-1
       = f.label :name, t(".display_name"), class: "block text-sm font-medium text-gray-700"
       = f.text_field :name, class: "block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500", placeholder: t(".name_placeholder")
@@ -20,7 +20,7 @@
         = hidden_field_tag "user[course_locales][]", ""
         - User::SUPPORTED_LOCALES.each do |code, label|
           %label.flex.items-center.gap-2.text-sm.text-gray-700
-            = check_box_tag "user[course_locales][]", code, current_user.course_locales.include?(code), class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            = check_box_tag "user[course_locales][]", code, @user.course_locales.include?(code), class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
             %span= label
       %p.text-xs.text-gray-500= t(".course_languages_hint", courses: terms[:courses_l])
 

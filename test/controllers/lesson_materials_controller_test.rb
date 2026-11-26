@@ -66,7 +66,7 @@ class LessonMaterialsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_select "#material-#{material.id} [data-chatbar-material-target='intro'] .relative.aspect-video" do
-        assert_select "img.object-cover[src=?]", rails_blob_url(material.poster_image)
+        assert_select "img.object-cover[src*=?]", "/rails/active_storage/representations/proxy/"
         assert_select ".absolute.inset-0 button[data-chatbar-material-target='startButton']", text: /Start conversation/, count: 1
       end
     end

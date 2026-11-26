@@ -211,4 +211,12 @@ class UserTest < ActiveSupport::TestCase
     assert_emails(1) { user.send_reset_password_instructions }
     assert user.errors.empty?
   end
+
+  test "avatar must be an image" do
+    user = users(:student)
+    user.avatar.attach(io: StringIO.new("<svg/>"), filename: "a.svg", content_type: "image/svg+xml")
+
+    assert_not user.valid?
+    assert user.errors.where(:avatar).any?
+  end
 end

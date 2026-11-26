@@ -88,9 +88,9 @@ module BrandingHelper
     entries
   end
 
-  def default_meta_card_image_tag(html_options = {})
+  def default_meta_card_image_tag(preset: :large, **html_options)
     if site_setting.default_meta_card_image.attached?
-      image_tag site_setting.default_meta_card_image, html_options
+      image_tag image_variant(site_setting.default_meta_card_image, preset), html_options
     else
       image_tag "default-meta-card-image.jpg", html_options
     end

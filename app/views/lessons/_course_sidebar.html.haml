@@ -16,7 +16,7 @@
     .flex-1.overflow-y-auto{ data: { lesson_sidebar_target: "scrollArea" } }
       - if @course.cover_image.attached?
         .px-5
-          = image_tag @course.cover_image, class: "h-auto w-full", alt: ""
+          = image_tag image_variant(@course.cover_image, :large), class: "h-auto w-full", alt: ""
 
       .border-b.border-gray-200.p-5.dark:border-gray-700
         - if @course.description.present?
@@ -68,7 +68,7 @@
 
               .border-t.border-gray-200.p-3.dark:border-gray-700{ id: panel_id, class: (current ? "" : "hidden"), data: { lesson_accordion_target: "panel" } }
                 - if lesson.cover_image.attached?
-                  = image_tag lesson.cover_image, class: "mb-3 aspect-[728/320] w-full rounded-md object-cover", alt: ""
+                  = image_tag image_variant(lesson.cover_image, :large), class: "mb-3 aspect-[728/320] w-full rounded-md object-cover", alt: ""
                 - if lesson.body.present?
                   %p.text-xs.leading-5.text-gray-600.dark:text-gray-400= truncate(lesson.body.to_plain_text.squish, length: 150)
                 - if lesson.tags.any?
