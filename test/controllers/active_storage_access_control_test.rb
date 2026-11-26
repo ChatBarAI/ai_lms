@@ -173,6 +173,40 @@ class ActiveStorageAccessControlTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "protected files are cached privately by the browser for an hour" do
+    users(:student).avatar.attach(image_upload("avatar.png"))
+    sign_in users(:student)
+
+    get rails_blob_path(users(:student).avatar)
+    assert_response :success
+    assert_equal "private, max-age=3600", response.headers["Cache-Control"]
+    assert_nil response.headers["Pragma"]
+
+    # Active Storage proxies don't write the session, so re-apply the test sign-in.
+    sign_in users(:student)
+    get rails_representation_path(users(:student).avatar.variant(resize_to_fill: [ 160, 160 ], format: :webp))
+    assert_response :success
+    assert_equal "private, max-age=3600", response.headers["Cache-Control"]
+  end
+
+  test "denied protected file responses are never stored" do
+    courses(:other_owner_course).cover_image.attach(image_upload("course-cover.png"))
+
+    get rails_blob_path(courses(:other_owner_course).cover_image)
+
+    assert_response :unauthorized
+    assert_equal "private, no-store", response.headers["Cache-Control"]
+    assert_equal "no-cache", response.headers["Pragma"]
+  end
+
+  test "public files keep Rails' long-lived public caching" do
+    SiteSetting.current.logo.attach(image_upload("logo.png"))
+
+    get rails_blob_path(SiteSetting.current.logo)
+
+    assert_includes response.headers["Cache-Control"], "public"
+  end
+
   test "direct uploads require authentication" do
     post rails_direct_uploads_path, params: {
       blob: {
