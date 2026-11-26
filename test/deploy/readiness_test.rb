@@ -127,6 +127,42 @@ class ReadinessTest < Minitest::Test
     end
   end
 
+  def test_outbound_reports_each_reachable_service_without_bypassing_tls_or_proxies
+    out, err, status = Open3.capture3(@env, "bash", SCRIPT, "outbound")
+    assert status.success?, err
+    %w[configs.chatbar-ai.com dashboard.chatbar-ai.com api.anam.ai api.stripe.com].each do |host|
+      assert_includes out, "Outbound ready: #{host}"
+    end
+    calls = File.readlines(@env.fetch("CALL_LOG"))
+    assert_equal 4, calls.size
+    calls.each do |call|
+      assert_includes call, "--max-time"
+      refute_match(/--insecure|--location|--noproxy/, call)
+    end
+  end
+
+  def test_outbound_counts_any_http_response_as_reachable
+    _, err, status = Open3.capture3(@env.merge("HTTP_CODE" => "404"), "bash", SCRIPT, "outbound")
+    assert status.success?, err
+  end
+
+  def test_outbound_failure_names_the_host_and_what_breaks
+    _, err, status = Open3.capture3(@env.merge("CURL_MODE" => "fail"), "bash", SCRIPT, "outbound")
+    refute status.success?
+    assert_includes err, "Cannot reach https://configs.chatbar-ai.com from the app container"
+    assert_includes err, "certificate invalid"
+    assert_includes err, "Saving ChatBar tokens won't work"
+    assert_includes err, "Stripe payments won't work"
+  end
+
+  def test_deploy_warns_about_outbound_access_after_publishing_without_failing
+    server = File.read(File.expand_path("../../deploy/server", __dir__))
+    check = 'if ! "${compose[@]}" exec -T web bash deploy/check-readiness outbound; then'
+    assert_includes server, check
+    assert_operator server.index('check-readiness" https'), :<, server.index(check)
+    assert_operator server.index("ln -sfn"), :<, server.index(check)
+  end
+
   def test_empty_domains_are_rejected
     _, err, status = check("dns", {}, " , ")
     refute status.success?

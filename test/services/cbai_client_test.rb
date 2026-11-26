@@ -11,7 +11,12 @@ class CbaiClientTest < ActiveSupport::TestCase
   test "details converts connection failures into client errors" do
     client = CbaiClient.new(api_key: "key")
     client.stub(:get, ->(*) { raise Net::ReadTimeout }) do
-      assert_raises(CbaiClient::Error) { client.details }
+      error = assert_raises(CbaiClient::Error) { client.details }
+      assert_includes error.message, "ChatBar AI didn't respond in time"
+    end
+    client.stub(:get, ->(*) { raise Errno::ECONNREFUSED }) do
+      error = assert_raises(CbaiClient::Error) { client.details }
+      assert_includes error.message, "this server couldn't connect to dashboard.chatbar-ai.com"
     end
   end
 
