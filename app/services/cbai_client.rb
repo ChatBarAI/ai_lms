@@ -32,8 +32,8 @@ class CbaiClient
     JSON.parse(body)
   rescue JSON::ParserError => e
     raise Error, "Invalid JSON from CBAI: #{e.message}"
-  rescue SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError
-    raise Error, "Could not connect to ChatBar AI"
+  rescue *OutboundConnectionError::ERRORS => e
+    raise Error, OutboundConnectionError.message(e, host: URI.parse(@base_url).host, service: "ChatBar AI")
   end
 
   def self.name_from_details(details)

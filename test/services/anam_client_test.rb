@@ -54,4 +54,11 @@ class AnamClientTest < ActiveSupport::TestCase
       assert_raises(AnamClient::InvalidPersona) { client.verify_persona!("persona-1") }
     end
   end
+
+  test "verify_persona! tells a server that can't reach Anam to check outbound access" do
+    Net::HTTP.stub(:start, ->(*) { raise OpenSSL::SSL::SSLError, "certificate verify failed" }) do
+      error = assert_raises(AnamClient::Error) { AnamClient.new(api_key: "key").verify_persona!("persona-1") }
+      assert_includes error.message, "this server couldn't connect to api.anam.ai (OpenSSL::SSL::SSLError)"
+    end
+  end
 end

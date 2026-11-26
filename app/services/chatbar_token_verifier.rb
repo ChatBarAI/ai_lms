@@ -44,8 +44,8 @@ class ChatbarTokenVerifier
     else
       raise Error, "could not be verified with ChatBar AI (HTTP #{res.code}). Try again shortly"
     end
-  rescue SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
-    raise Error, "could not be verified with ChatBar AI (#{e.class}). Try again shortly"
+  rescue *OutboundConnectionError::ERRORS => e
+    raise Error, "could not be verified: #{OutboundConnectionError.message(e, host: URI.parse(@base_url).host, service: 'ChatBar AI')}"
   end
 
   private

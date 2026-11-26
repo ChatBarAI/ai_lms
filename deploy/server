@@ -489,5 +489,12 @@ for old_release in "${old_releases[@]}"; do
 done
 
 docker image prune -f >/dev/null
+
+# Warn only: some of these services are optional, and the app itself is live.
+echo "Checking outbound HTTPS from the app container..."
+if ! "${compose[@]}" exec -T web bash deploy/check-readiness outbound; then
+  echo "WARNING: The deployment succeeded, but this server can't reach some outside services (listed above). Allow outbound HTTPS (port 443) to them if this instance uses those features." >&2
+fi
+
 "${compose[@]}" ps
 echo "Deployed $release_name to https://$app_domain (instance '$instance')"

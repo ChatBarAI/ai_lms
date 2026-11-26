@@ -62,8 +62,8 @@ class AnamClient
     else
       raise Error, "Anam API error #{res.code}: #{res.body.to_s[0, 200]}"
     end
-  rescue SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Net::OpenTimeout, Net::ReadTimeout => e
-    raise Error, "Anam API network error: #{e.class}: #{e.message}"
+  rescue *OutboundConnectionError::ERRORS => e
+    raise Error, OutboundConnectionError.message(e, host: URI.parse(@base_url).host, service: "Anam")
   end
 
   private
@@ -93,7 +93,7 @@ class AnamClient
         raise Error, "Anam API error #{res.code}: #{res.body.to_s[0, 200]}"
       end
     end
-  rescue SocketError, Errno::ECONNREFUSED, Errno::ETIMEDOUT, Net::OpenTimeout, Net::ReadTimeout => e
-    raise Error, "Anam API network error: #{e.class}: #{e.message}"
+  rescue *OutboundConnectionError::ERRORS => e
+    raise Error, OutboundConnectionError.message(e, host: URI.parse(@base_url).host, service: "Anam")
   end
 end

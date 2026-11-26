@@ -662,6 +662,18 @@ Caddy is not unconditionally restarted. DNS propagation beyond the checked
 resolvers and public reachability from other networks cannot be guaranteed by
 these server-side checks.
 
+Finally, deployment checks outbound HTTPS from inside the web container to the
+outside services the app calls: `configs.chatbar-ai.com` (saving ChatBar
+tokens), `dashboard.chatbar-ai.com` (ChatBar recordings), `api.anam.ai` (Anam)
+and `api.stripe.com` (payments). Any HTTP response counts as reachable. This
+check only warns: the deployment has already succeeded, and an instance that
+doesn't use a service can ignore its line. To re-run it later:
+
+```bash
+docker exec ai_lms-web-1 bash deploy/check-readiness outbound
+# Named instance: docker exec ai_lms_NAME-web-1 bash deploy/check-readiness outbound
+```
+
 For Cloudflare-proxied domains or another reverse proxy that hides the server's
 IP, explicitly skip the DNS-to-server IP validation on each deployment:
 

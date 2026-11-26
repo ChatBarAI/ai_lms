@@ -122,8 +122,41 @@ check_https() {
   fi
 }
 
+# Outside services the app calls from the server, as "host|what breaks without it".
+# Optional services are included: the check only warns, so an instance that
+# doesn't use one can ignore its line.
+OUTBOUND_SERVICES=(
+  "configs.chatbar-ai.com|saving ChatBar tokens"
+  "dashboard.chatbar-ai.com|ChatBar recordings and video import"
+  "api.anam.ai|saving Anam keys and Anam avatars"
+  "api.stripe.com|Stripe payments"
+)
+
+# Run inside the web container, where the app's requests come from. Any HTTP
+# response counts as reachable; only DNS, connection and TLS failures do not.
+# Proxy settings in the environment are honoured, as the app honours them.
+check_outbound() {
+  local entry host purpose response failed=0
+  for entry in "${OUTBOUND_SERVICES[@]}"; do
+    host=${entry%%|*}
+    purpose=${entry#*|}
+    if response=$(curl --silent --show-error --connect-timeout 5 --max-time 10 \
+      --output /dev/null --write-out '%{http_code}' "https://$host/" 2>&1); then
+      echo "Outbound ready: $host"
+    else
+      echo "Cannot reach https://$host from the app container (${response:-no response}). ${purpose^} won't work until outbound HTTPS to $host is allowed." >&2
+      failed=1
+    fi
+  done
+  return "$failed"
+}
+
 main() {
   local mode=${1:-} domain
+  if [[ $mode == outbound ]]; then
+    check_outbound
+    return
+  fi
   local -a entries=() domains=()
   local -A seen=()
   IFS=, read -r -a entries <<< "${2:-}"
@@ -137,7 +170,7 @@ main() {
   case "$mode" in
     dns) check_dns ;;
     https) check_https ;;
-    *) echo "Usage: check-readiness dns|https DOMAIN[,DOMAIN...]" >&2; return 1 ;;
+    *) echo "Usage: check-readiness dns|https DOMAIN[,DOMAIN...] | check-readiness outbound" >&2; return 1 ;;
   esac
 }
 

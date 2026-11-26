@@ -26,6 +26,15 @@ class ChatbarTokenVerifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "a server that can't reach ChatBar is told to check outbound access" do
+    Net::HTTP.stub(:start, ->(*) { raise SocketError, "getaddrinfo: Name or service not known" }) do
+      error = assert_raises(ChatbarTokenVerifier::Error) { ChatbarTokenVerifier.verify!("tok_123") }
+      assert_includes error.message, "this server couldn't connect to configs.chatbar-ai.com"
+      assert_includes error.message, "outbound HTTPS"
+      refute_includes error.message, "Try again shortly"
+    end
+  end
+
   test "rejects malformed tokens without calling ChatBar" do
     Net::HTTP.stub(:start, ->(*) { flunk "should not make a request" }) do
       [ "", "   ", "has space", "../etc", "a?b", "a#b", "a" * 256 ].each do |token|
