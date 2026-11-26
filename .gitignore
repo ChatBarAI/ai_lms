@@ -55,3 +55,6 @@ AGENTS.md
 /config/credentials/development.key
 
 /config/credentials/environment.key
+
+# Written by bin/deploy so the app can report its commit.
+/REVISION

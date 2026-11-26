@@ -1,0 +1,14 @@
+-# Copyright, licence and running commit. Sits at the right of each section's save row.
+- link_class = "hover:text-gray-700 hover:underline"
+%span.ml-auto.text-right.text-xs.text-gray-500
+  = AppVersion::COPYRIGHT
+  %span{ "aria-hidden": "true" } ·
+  = link_to "MIT License", AppVersion::LICENSE_URL, target: "_blank", rel: "noopener", class: link_class
+  %span{ "aria-hidden": "true" } ·
+  - if AppVersion.history_url
+    = link_to AppVersion.history_url, target: "_blank", rel: "noopener", class: "font-mono #{link_class}", title: "Commit history up to #{AppVersion.revision}" do
+      = "Version #{AppVersion.label}"
+    %span{ "aria-hidden": "true" } ·
+    = link_to "What's new", AppVersion.whats_new_url, target: "_blank", rel: "noopener", class: link_class, title: "Commits on main since this version"
+  - else
+    %span.font-mono Version unknown

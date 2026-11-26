@@ -183,7 +183,7 @@ else
 fi
 
 printf -v remote_command \
-  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q %q %q; rm -f %q' \
-  "$deploy_root" "$release" "$remote_archive" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$skip_dns_check" "$instance" "$remote_archive"
+  'set -e; release_dir=%q/releases/%q; mkdir -p "$release_dir"; tar -xzf %q -C "$release_dir"; printf "%%s\\n" %q > "$release_dir/REVISION"; chmod +x "$release_dir/deploy/server"; "$release_dir/deploy/server" "$release_dir" %q %q %q %q %q %q %q; rm -f %q' \
+  "$deploy_root" "$release" "$remote_archive" "$release" "$deploy_root" "$domain" "$requested_domains" "$change_domain" "$remote_key" "$skip_dns_check" "$instance" "$remote_archive"
 
 ssh "${ssh_args[@]}" "$host" "$remote_command"
