@@ -166,7 +166,9 @@ Rails.application.routes.draw do
   end
 
   get "/me" => "home#me", as: :me
-  resource :profile, only: [ :show, :edit, :update ]
+  resource :profile, only: [ :show, :edit, :update ] do
+    patch :browser_time_zone
+  end
 
   # Defines the root path route ("/")
   # root "courses#index"

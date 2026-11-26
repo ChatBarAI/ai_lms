@@ -32,7 +32,7 @@
                 - if video["duration"].present?
                   = " · #{video['duration']}"
                 - if video["createdAt"].present?
-                  = " · created #{Time.zone.at(video['createdAt'].to_i).to_fs(:db)}"
+                  = " · created #{Time.zone.at(video['createdAt'].to_i).strftime("%Y-%m-%d %H:%M %Z")}"
             - if ready
               = button_to "Use as intro video",
                           import_synthesia_video_course_lesson_path(@course, @lesson, video_id: video["id"]),

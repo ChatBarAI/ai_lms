@@ -14,7 +14,7 @@
       = render "shared/account_deletion", user: @user, url: admin_user_path(@user), label: "Delete", button_class: "px-3 py-1.5 rounded bg-red-100 text-red-800 hover:bg-red-200 border border-red-200 text-sm cursor-pointer"
 
 .grid.grid-cols-2.md:grid-cols-4.gap-3.mb-6
-  - tiles = [ [ "Enrolments", @enrollments.size ], [ t("catalog_ui.lessons_done", **terms), @user.completed_lessons_count ], [ "Avg score", (@user.average_score&.round(1) || "—") ], [ "Last activity", @user.last_activity_at&.strftime("%Y-%m-%d") || "—" ] ]
+  - tiles = [ [ "Enrolments", @enrollments.size ], [ t("catalog_ui.lessons_done", **terms), @user.completed_lessons_count ], [ "Avg score", (@user.average_score&.round(1) || "—") ], [ "Last activity", @user.last_activity_at&.in_time_zone&.strftime("%Y-%m-%d") || "—" ] ]
   - tiles.each do |label, value|
     .bg-white.border.border-gray-200.rounded.p-3
       .text-xs.uppercase.tracking-wide.text-gray-500= label
@@ -39,8 +39,8 @@
                 %td.px-3.py-2= link_to e.course.title, admin_course_path(e.course), class: "text-indigo-600 hover:underline"
                 %td.px-3.py-2.text-right #{e.completion_percentage}%
                 %td.px-3.py-2.text-right= e.average_score&.round(1) || "—"
-                %td.px-3.py-2.text-gray-500= e.enrolled_at&.strftime("%Y-%m-%d") || "—"
-                %td.px-3.py-2.text-gray-500= e.last_progress_at&.strftime("%Y-%m-%d") || "—"
+                %td.px-3.py-2.text-gray-500= e.enrolled_at&.in_time_zone&.strftime("%Y-%m-%d") || "—"
+                %td.px-3.py-2.text-gray-500= e.last_progress_at&.in_time_zone&.strftime("%Y-%m-%d") || "—"
       - else
         .px-4.py-3.text-sm.text-gray-500 No enrolments yet.
 
@@ -51,7 +51,7 @@
           - @recent_completions.each do |p|
             %li.px-4.py-2.text-sm.flex.justify-between
               %span= p.lesson&.title
-              %span.text-gray-500= p.completed_at&.strftime("%Y-%m-%d %H:%M")
+              %span.text-gray-500= p.completed_at&.in_time_zone&.strftime("%Y-%m-%d %H:%M %Z (%:z)")
       - else
         .px-4.py-3.text-sm.text-gray-500 No completions yet.
 
@@ -82,7 +82,7 @@
       .font-semibold.text-gray-800.mb-2 Account
       %dl.space-y-1
         %dt.text-xs.uppercase.tracking-wide.text-gray-500 Created
-        %dd= @user.created_at.strftime("%Y-%m-%d")
+        %dd= @user.created_at.in_time_zone.strftime("%Y-%m-%d")
         %dt.text-xs.uppercase.tracking-wide.text-gray-500.mt-2 Sign-in count
         %dd= @user.sign_in_count
         %dt.text-xs.uppercase.tracking-wide.text-gray-500.mt-2 Current sign-in IP

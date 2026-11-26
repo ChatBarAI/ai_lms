@@ -31,7 +31,7 @@
       - if subjects_enabled? && @course.subject
         = @course.subject.name
       - if @course.published?
-        · #{t(".published_on", date: l(@course.published_at.to_date, format: :long))}
+        · #{t(".published_on", date: l(@course.published_at.in_time_zone.to_date, format: :long))}
       - else
         · #{content_tag(:span, t("common.draft"), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800")}
     - if @course.description.present?

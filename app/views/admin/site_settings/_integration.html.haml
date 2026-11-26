@@ -180,7 +180,7 @@
                     %td.py-2.pr-3= process[:tag].presence || "default"
                     %td.py-2.pr-3= process[:queues].presence&.join(", ") || "?"
                     %td.py-2.pr-3= "#{process[:busy]}/#{process[:concurrency]}"
-                    %td.py-2.pr-3= process[:started_at]&.strftime("%Y-%m-%d %H:%M") || "?"
+                    %td.py-2.pr-3= process[:started_at]&.in_time_zone&.strftime("%Y-%m-%d %H:%M %Z (%:z)") || "?"
         - else
           %p.mt-3.text-sm.text-gray-500 No Sidekiq process has heartbeated in this instance's configured Redis DB.
       - else

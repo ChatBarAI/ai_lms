@@ -1,0 +1,6 @@
+en:
+  time_zones:
+    label: Timezone
+    automatic: Automatic (browser)
+    hint: "Currently %{zone}. Automatic follows your device timezone."
+    input_hint: "Enter times in %{zone}."

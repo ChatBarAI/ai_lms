@@ -60,7 +60,7 @@
         - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
         - y = (mini_height - mini_padding - (y_val / 100.0 * mini_plot_height)).round(1)
         - attempt_time = (attempt.completed_at || attempt.submitted_at)
-        - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
+        - attempt_date = attempt_time ? attempt_time.in_time_zone.strftime("%Y-%m-%d %H:%M %Z (%:z)") : "n/a"
         - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
         - if show_attempt_numbers
           - tooltip_text = "Attempt ##{attempt.attempt_number} - #{attempt_score}\n#{attempt_date}"
@@ -118,7 +118,7 @@
           - y_val = attempt.score.present? ? attempt.score.to_f : 0.0
           - y = (graph_height - graph_padding - (y_val / 100.0 * graph_plot_height)).round(1)
           - attempt_time = (attempt.completed_at || attempt.submitted_at)
-          - attempt_date = attempt_time ? attempt_time.strftime("%Y-%m-%d %H:%M") : "n/a"
+          - attempt_date = attempt_time ? attempt_time.in_time_zone.strftime("%Y-%m-%d %H:%M %Z (%:z)") : "n/a"
           - attempt_score = attempt.score.present? ? "#{attempt.score.to_f.round(1)}%" : "Pending"
           - if show_attempt_numbers
             - tooltip_text = "Attempt ##{attempt.attempt_number} - #{attempt_score}\n#{attempt_date}"

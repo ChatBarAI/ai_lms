@@ -22,6 +22,7 @@
     = theme_style_tag
     = theme_mode_script
   %body{ data: { controller: content_for(:body_controllers).presence } }
+    = render "shared/time_zone"
     %nav.site-nav.sticky.top-0.z-40.border-b.border-gray-200
       .max-w-6xl.mx-auto.px-4.py-3.flex.flex-wrap.items-center.justify-between.gap-3
         .flex.flex-wrap.items-center.gap-3

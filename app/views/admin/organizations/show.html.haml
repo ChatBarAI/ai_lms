@@ -80,6 +80,6 @@
             %td.px-3.py-2= u.role
             %td.px-3.py-2.text-right= u.enrollments.size
             %td.px-3.py-2.text-right= u.completed_lessons_count
-            %td.px-3.py-2.text-gray-500= u.last_sign_in_at&.strftime("%Y-%m-%d") || "—"
+            %td.px-3.py-2.text-gray-500= u.last_sign_in_at&.in_time_zone&.strftime("%Y-%m-%d") || "—"
   - else
     .px-4.py-3.text-sm.text-gray-500 No members yet.

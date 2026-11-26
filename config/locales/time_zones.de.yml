@@ -1,0 +1,6 @@
+de:
+  time_zones:
+    label: Zeitzone
+    automatic: Automatisch (Browser)
+    hint: "Aktuell %{zone}. Automatisch verwendet die Zeitzone Ihres Geräts."
+    input_hint: "Zeiten in %{zone} eingeben."

@@ -25,7 +25,9 @@
 
     %div.flex-1
       = f.label :published_at, "Publish at", class: "block text-sm font-medium mb-1"
+      = hidden_field_tag :form_time_zone, Time.zone.tzinfo.identifier
       = f.datetime_local_field :published_at, title: "Leave blank to keep this #{terms[:course_l]} as a draft.", class: "w-full border border-gray-300 rounded px-3 py-2"
+      %p.text-xs.text-gray-500= t("time_zones.input_hint", zone: Time.zone.tzinfo.identifier)
 
     %div.sm:w-40
       = f.label :learning_order, "Learning order", class: "block text-sm font-medium mb-1"

@@ -68,7 +68,9 @@
           = text_field_tag :reason, nil, required: true, class: "w-full border border-gray-300 rounded px-3 py-2"
         %div
           = label_tag :expires_at, t("payments.expires_at"), class: "block text-sm font-medium mb-1"
+          = hidden_field_tag :form_time_zone, Time.zone.tzinfo.identifier
           = datetime_local_field_tag :expires_at, nil, class: "w-full border border-gray-300 rounded px-3 py-2"
+          %p.text-xs.text-gray-500= t("time_zones.input_hint", zone: Time.zone.tzinfo.identifier)
       .mt-6.flex.items-center.gap-2.border-t.border-gray-200.pt-4
         = submit_tag t("payments.grant"), class: "px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
 

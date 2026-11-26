@@ -3,7 +3,7 @@
   .text-sm
     %span.font-semibold.text-gray-900= user.display_name
     %span.ml-1.text-gray-600= learning_report_user(user)
-  .text-xs.text-gray-500= answer.updated_at.strftime("%Y-%m-%d %H:%M")
+  .text-xs.text-gray-500= answer.updated_at.in_time_zone.strftime("%Y-%m-%d %H:%M %Z (%:z)")
 -# Content must sit on the same line as the tag: whitespace-pre-line would render Haml's indentation newline.
 - if answer.answer_text.present?
   .mb-3.rounded-md.border.border-gray-300.bg-gray-50.px-3.py-2.text-sm.text-gray-900.whitespace-pre-line= answer.answer_text
@@ -15,7 +15,7 @@
     %span.text-sm.font-medium.text-gray-700= t("catalog_ui.score_label")
     %span.inline-flex.items-center.rounded-full.border.px-2.5.py-0.5.text-sm.font-semibold{ class: passed ? "border-green-300 bg-green-100 text-green-900" : "border-red-300 bg-red-100 text-red-900" }= "#{answer.ai_score}/10"
     - if answer.scored_at
-      %span.text-xs.text-gray-500= answer.scored_at.strftime("%Y-%m-%d %H:%M")
+      %span.text-xs.text-gray-500= answer.scored_at.in_time_zone.strftime("%Y-%m-%d %H:%M %Z (%:z)")
 - elsif !lesson.manual_marking?
   = render "marking/ai_queued_badge"
 - else

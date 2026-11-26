@@ -26,9 +26,20 @@ class ProfilesController < ApplicationController
     end
   end
 
+  def browser_time_zone
+    zone = params[:time_zone]
+    unless zone.is_a?(String) && TZInfo::Timezone.all_identifiers.include?(zone)
+      return head :unprocessable_entity
+    end
+
+    # This endpoint can only update the signed-in user's detected zone.
+    current_user.update!(browser_time_zone: zone) if current_user.browser_time_zone != zone
+    head :no_content
+  end
+
   private
 
   def profile_params
-    params.require(:user).permit(:name, :avatar, :locale, course_locales: [])
+    params.require(:user).permit(:name, :avatar, :locale, :time_zone, course_locales: [])
   end
 end

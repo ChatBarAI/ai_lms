@@ -101,8 +101,9 @@ en:
     show:
       title: "My profile"
       heading: "My profile"
-      language: "Language: %{language}"
-      course_languages: "%{course} languages: %{languages}"
+      preferences: "Preferences"
+      language: "Language"
+      course_languages: "%{course} languages"
       edit: "Edit profile"
       change_password: "Change password"
     edit:

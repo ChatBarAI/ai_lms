@@ -307,7 +307,7 @@ class Admin::UsersController < Admin::BaseController
   def days_since_last_activity(last_activity_at)
     return nil if last_activity_at.blank?
 
-    (Time.zone.today - last_activity_at.to_date).to_i
+    (Time.zone.today - last_activity_at.in_time_zone.to_date).to_i
   end
 
   def active_last_30_days?(last_activity_at)

@@ -34,23 +34,24 @@
       %div{ class: report_empty_class } No ratings yet.
 
 .grid.grid-cols-1.lg:grid-cols-2.lg:items-start.gap-4
-  %div{ class: "#{report_card_class} overflow-hidden" }
+  %div{ class: "#{report_card_class} min-w-0 overflow-hidden" }
     %h2{ class: report_card_heading_class } Recent attempts
     - if @recent_attempts.any?
-      %table.w-full.text-sm
-        %thead.bg-gray-50
-          %tr
-            %th.text-left{ class: report_th_class } User
-            %th.text-left{ class: report_th_class } Status
-            %th.text-right{ class: report_th_class } Score
-            %th.text-left{ class: report_th_class } Updated
-        %tbody.divide-y.divide-gray-200
-          - @recent_attempts.each do |p|
+      .overflow-x-auto
+        %table.w-full.table-fixed.text-sm{ class: "min-w-[28rem]" }
+          %thead.bg-gray-50
             %tr
-              %td.px-4.py-2.text-gray-900= learning_report_user(p.enrollment.user)
-              %td.px-4.py-2.text-gray-800= p.status.humanize
-              %td.px-4.py-2.text-right.font-medium.text-gray-900= p.score || "—"
-              %td.px-4.py-2.text-gray-600.whitespace-nowrap= p.updated_at.strftime("%Y-%m-%d %H:%M")
+              %th.text-left{ class: "#{report_th_class} w-[34%]" } User
+              %th.text-left{ class: "#{report_th_class} w-[22%]" } Status
+              %th.text-right{ class: "#{report_th_class} w-[14%]" } Score
+              %th.text-left{ class: "#{report_th_class} w-[30%]" } Updated
+          %tbody.divide-y.divide-gray-200
+            - @recent_attempts.each do |p|
+              %tr
+                %td.px-4.py-2.text-gray-900.break-all= learning_report_user(p.enrollment.user)
+                %td.px-4.py-2.text-gray-800= p.status.humanize
+                %td.px-4.py-2.text-right.font-medium.text-gray-900= p.score || "—"
+                %td.px-4.py-2.text-gray-600= p.updated_at.in_time_zone.strftime("%Y-%m-%d %H:%M %Z (%:z)")
     - else
       %div{ class: report_empty_class } No attempts yet.
 

@@ -98,7 +98,9 @@
 
       %div.flex-1
         = f.label :published_at, "Publish at", class: "block text-sm font-medium mb-1"
+        = hidden_field_tag :form_time_zone, Time.zone.tzinfo.identifier
         = f.datetime_local_field :published_at, title: t("catalog_ui.lesson_draft_hint", **terms), class: "w-full border border-gray-300 rounded px-3 h-10"
+        %p.text-xs.text-gray-500= t("time_zones.input_hint", zone: Time.zone.tzinfo.identifier)
 
       %div.flex-1
         = f.label :pass_mark, "Pass mark % (optional)", class: "block text-sm font-medium mb-1"

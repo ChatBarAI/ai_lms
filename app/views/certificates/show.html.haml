@@ -28,7 +28,7 @@
     .flex.items-end.justify-between.text-xs.text-gray-400
       %div
         %p.mb-1 Issued on
-        %p.font-medium.text-gray-600= l(@certificate.issued_at.to_date, format: :long)
+        %p.font-medium.text-gray-600= l(@certificate.issued_on, format: :long)
       - if setting.certificate_signatory_name.present?
         %div.text-right
           %p.mb-1 &nbsp;

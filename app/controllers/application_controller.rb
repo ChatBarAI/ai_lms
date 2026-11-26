@@ -4,6 +4,7 @@ class ApplicationController < ActionController::Base
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   allow_browser versions: :modern
 
+  around_action :switch_time_zone
   around_action :switch_locale
   before_action :refresh_terminology
   before_action :refresh_mailer_configuration
@@ -84,6 +85,18 @@ class ApplicationController < ActionController::Base
 
   def refresh_mailer_configuration
     MailerConfiguration.ensure_fresh!
+  end
+
+  # Scope the zone to this request; never leak one user's zone to another.
+  def switch_time_zone(&action)
+    zone = current_user&.effective_time_zone || "UTC"
+    # A form may predate a browser-zone change in this or another tab. Interpret
+    # its wall-clock inputs using the zone in which the form was rendered.
+    form_zone = params[:form_time_zone]
+    if !request.get? && current_user && form_zone.is_a?(String) && TZInfo::Timezone.all_identifiers.include?(form_zone)
+      zone = form_zone
+    end
+    Time.use_zone(zone, &action)
   end
 
   def switch_locale(&action)

@@ -16,6 +16,7 @@
     = theme_style_tag
     = theme_mode_script
   %body{ class: "bg-[var(--page-bg)] text-[var(--page-fg)]", data: { controller: "admin-sidebar" } }
+    = render "shared/time_zone"
     = render "admin/sidebar"
     .admin-content
       %header.sticky.top-0.z-40.flex.items-center.gap-3.px-4.py-2.lg:hidden{ class: "bg-[var(--admin-nav-bg)] text-[var(--admin-nav-fg)]" }

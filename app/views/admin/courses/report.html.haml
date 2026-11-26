@@ -82,6 +82,6 @@
             %td.px-4.py-2.text-gray-900= learning_report_user(e.user)
             %td.px-4.py-2.text-right.text-gray-900= e.lessons_completed_count
             %td.px-4.py-2.text-right.text-gray-900= e.average_score&.round(1) || "—"
-            %td.px-4.py-2.text-gray-600.whitespace-nowrap= e.last_progress_at&.strftime("%Y-%m-%d") || "—"
+            %td.px-4.py-2.text-gray-600.whitespace-nowrap= e.last_progress_at&.in_time_zone&.strftime("%Y-%m-%d") || "—"
   - else
     %div{ class: report_empty_class } No enrolments yet.

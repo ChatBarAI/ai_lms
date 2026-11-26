@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_24_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_26_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -106,7 +106,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_24_100000) do
     t.index ["user_id", "course_id", "status"], name: "effective_course_grants"
     t.index ["user_id"], name: "index_course_entitlements_on_user_id"
     t.check_constraint "expires_at IS NULL OR expires_at > starts_at", name: "entitlement_time_window"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'revoked'::character varying]::text[])", name: "entitlement_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'suspended'::character varying::text, 'revoked'::character varying::text])", name: "entitlement_status"
   end
 
   create_table "course_prerequisites", force: :cascade do |t|
@@ -143,7 +143,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_24_100000) do
     t.index ["slug"], name: "index_courses_on_slug", unique: true
     t.index ["subject_id"], name: "index_courses_on_subject_id"
     t.check_constraint "access_policy::text = 'free'::text OR price_minor > 0 AND price_currency IS NOT NULL", name: "paid_course_price"
-    t.check_constraint "access_policy::text = ANY (ARRAY['free'::character varying, 'entitlement_required'::character varying]::text[])", name: "course_access_policy"
+    t.check_constraint "access_policy::text = ANY (ARRAY['free'::character varying::text, 'entitlement_required'::character varying::text])", name: "course_access_policy"
   end
 
   create_table "enrollments", force: :cascade do |t|
@@ -570,6 +570,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_24_100000) do
     t.string "locale", default: "en", null: false
     t.string "course_locales", default: ["en", "de"], null: false, array: true
     t.datetime "email_verified_at"
+    t.string "time_zone"
+    t.string "browser_time_zone"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["organization_id"], name: "index_users_on_organization_id"
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true

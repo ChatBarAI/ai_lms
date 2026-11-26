@@ -16,7 +16,7 @@
       - if show_completion_details
         - completed_at = enrollment&.completion_summary_at
         - if completed_at
-          %p.mt-1.text-xs.text-gray-600= t("learning_completion.completed_on", date: l(completed_at.to_date, format: :long))
+          %p.mt-1.text-xs.text-gray-600= t("learning_completion.completed_on", date: l(completed_at.in_time_zone.to_date, format: :long))
           - if enrollment.enrolled_at && completed_at >= enrollment.enrolled_at
             %p.text-xs.text-gray-600= t("learning_completion.elapsed", duration: distance_of_time_in_words(enrollment.enrolled_at, completed_at))
         - else

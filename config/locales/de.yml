@@ -107,8 +107,9 @@ de:
     show:
       title: "Mein Profil"
       heading: "Mein Profil"
-      language: "Sprache: %{language}"
-      course_languages: "Sprachen für %{courses}: %{languages}"
+      preferences: "Einstellungen"
+      language: "Sprache"
+      course_languages: "Sprachen für %{courses}"
       edit: "Profil bearbeiten"
       change_password: "Passwort ändern"
     edit:

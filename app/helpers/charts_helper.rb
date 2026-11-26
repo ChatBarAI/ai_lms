@@ -33,7 +33,7 @@ module ChartsHelper
       label_str =
         case label
         when Date     then label.strftime("%Y-%m-%d")
-        when Time, DateTime, ActiveSupport::TimeWithZone then label.to_date.strftime("%Y-%m-%d")
+        when Time, DateTime, ActiveSupport::TimeWithZone then label.in_time_zone.to_date.strftime("%Y-%m-%d")
         else label.to_s
         end
       [ label_str, value.to_f ]

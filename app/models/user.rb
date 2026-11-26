@@ -32,6 +32,9 @@ class User < ApplicationRecord
   validates :avatar, content_type: %w[image/png image/jpeg image/gif image/webp],
                      size: { less_than: 5.megabytes }
 
+  validates :time_zone, :browser_time_zone,
+            inclusion: { in: ->(_) { TZInfo::Timezone.all_identifiers } }, allow_blank: true
+
   validates :email, presence: true
   validates :locale, presence: true, inclusion: { in: SUPPORTED_LOCALES.keys }
   validates :course_locales, presence: true
@@ -124,6 +127,10 @@ class User < ApplicationRecord
 
   def display_name
     name.presence || email
+  end
+
+  def effective_time_zone
+    [ time_zone, browser_time_zone ].find { |zone| zone.present? && TZInfo::Timezone.all_identifiers.include?(zone) } || "UTC"
   end
 
   def locale_name

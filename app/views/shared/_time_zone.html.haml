@@ -1,0 +1,2 @@
+- if user_signed_in?
+  %div{ data: { controller: "time-zone", time_zone_url_value: browser_time_zone_profile_path, time_zone_saved_value: current_user.browser_time_zone.to_s, time_zone_effective_value: current_user.effective_time_zone, time_zone_manual_value: current_user.time_zone.present?, time_zone_refresh_value: request.get? } }

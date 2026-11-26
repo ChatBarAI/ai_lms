@@ -20,6 +20,10 @@ class Certificate < ApplicationRecord
   before_validation :set_issued_at, on: :create
   before_validation :generate_token, on: :create
 
+  def issued_on
+    issued_at.in_time_zone(user.effective_time_zone).to_date
+  end
+
   def self.ransackable_attributes(auth_object = nil)
     %w[course_id created_at id issued_at token updated_at user_id]
   end

@@ -4,11 +4,13 @@ class BrandedDeviseMailer < Devise::Mailer
   # Written in the recipient's language, not that of whoever triggered it
   # (an admin, or a visitor's browser on the public form).
   def reset_password_instructions(record, token, opts = {})
-    I18n.with_locale(recipient_locale(record)) do
-      prepare_branding(record)
-      @password_action = record.initial_password_setup? ? "set" : "reset"
-      opts = opts.merge(subject: I18n.t("devise.views.passwords.#{@password_action}.subject", brand: @brand_name)) unless opts.key?(:subject)
-      super(record, token, opts)
+    Time.use_zone(record.effective_time_zone) do
+      I18n.with_locale(recipient_locale(record)) do
+        prepare_branding(record)
+        @password_action = record.initial_password_setup? ? "set" : "reset"
+        opts = opts.merge(subject: I18n.t("devise.views.passwords.#{@password_action}.subject", brand: @brand_name)) unless opts.key?(:subject)
+        super(record, token, opts)
+      end
     end
   end
 

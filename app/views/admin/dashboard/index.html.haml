@@ -1,18 +1,18 @@
 - content_for :title, "Dashboard"
 
-.flex.items-center.justify-between.mb-6
+.flex.flex-wrap.items-center.justify-between.gap-3.mb-6
   %h1.text-2xl.font-bold Dashboard
-  = form_with url: admin_root_path, method: :get, local: true, class: "flex items-center gap-2 text-sm", data: { controller: "auto-submit" } do
+  = form_with url: admin_root_path, method: :get, local: true, class: "flex flex-wrap items-center gap-2 text-sm", data: { controller: "auto-submit" } do
     = label_tag :organization_id, "Org", class: "text-gray-600"
     = select_tag :organization_id,
         options_from_collection_for_select(@organizations, :id, :name, @organization&.id),
         include_blank: "All",
-        class: "border border-gray-300 rounded px-2 py-1 bg-white",
+        class: "border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus-visible:ring-2 focus-visible:ring-indigo-500",
         data: { action: "change->auto-submit#submit" }
-    = label_tag :range, "Range (days)", class: "text-gray-600 ml-2"
+    = label_tag :range, "Range (days)", class: "text-gray-600 sm:ml-2"
     = select_tag :range,
         options_for_select([ [ "7", 7 ], [ "30", 30 ], [ "90", 90 ], [ "365", 365 ] ], @range_days),
-        class: "border border-gray-300 rounded px-2 py-1 bg-white",
+        class: "border border-gray-300 rounded-lg px-2 py-1.5 bg-white focus-visible:ring-2 focus-visible:ring-indigo-500",
         data: { action: "change->auto-submit#submit" }
 
 - if (marking = pending_marking_summary)
@@ -21,25 +21,25 @@
 .grid.grid-cols-2.md:grid-cols-3.lg:grid-cols-6.gap-3.mb-6
   - tiles = [ [ "Users", @total_users ], [ "Active (#{@range_days}d)", @active_users ], [ "Enrolments", @total_enrollments ], [ "Completions (MTD)", @completions_this_month ], [ "Avg completion %", @avg_completion ], [ t("catalog_ui.catalog_totals", **terms), "#{@total_courses} · #{@total_lessons}" ] ]
   - tiles.each do |label, value|
-    .bg-white.border.border-gray-200.rounded.p-3
+    .bg-white.border.border-gray-200.rounded-xl.shadow-sm.p-4
       .text-xs.uppercase.tracking-wide.text-gray-500= label
       .text-2xl.font-semibold.mt-1= value
 
 .grid.grid-cols-1.lg:grid-cols-2.gap-4.mb-6
-  .bg-white.border.border-gray-200.rounded.p-4
+  .bg-white.border.border-gray-200.rounded-xl.shadow-sm.p-5
     %h2.font-semibold.mb-2 Sign-ins (last #{@range_days} days)
     = svg_chart @sign_ins_per_day, type: :line, color: "#4f46e5"
-  .bg-white.border.border-gray-200.rounded.p-4
+  .bg-white.border.border-gray-200.rounded-xl.shadow-sm.p-5
     %h2.font-semibold.mb-2 Enrolments per week (last #{@range_days} days)
     = svg_chart @enrollments_per_week, type: :column, color: "#0ea5e9"
-  .bg-white.border.border-gray-200.rounded.p-4
+  .bg-white.border.border-gray-200.rounded-xl.shadow-sm.p-5
     %h2.font-semibold.mb-2= t("catalog_ui.weekly_completions", **terms, days: @range_days)
     = svg_chart @completions_per_week, type: :column, color: "#16a34a"
-  .bg-white.border.border-gray-200.rounded.p-4
+  .bg-white.border.border-gray-200.rounded-xl.shadow-sm.p-5
     %h2.font-semibold.mb-2= t("catalog_ui.top_courses", **terms)
     = svg_chart @top_courses_by_enrollment, type: :bar, color: "#f59e0b"
 
-.bg-white.border.border-gray-200.rounded.p-4
+.bg-white.border.border-gray-200.rounded-xl.shadow-sm.p-5
   %h2.font-semibold.mb-2= t("catalog_ui.top_lessons", **terms)
   - if @top_rated_lessons.any?
     = svg_chart @top_rated_lessons.transform_values { |v| v.to_f.round(2) }, type: :bar, color: "#ef4444", max: 5

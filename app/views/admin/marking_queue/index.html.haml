@@ -67,6 +67,6 @@
                 %td.px-3.py-2= render "marking/ai_queued_badge"
                 %td.px-3.py-2.text-right.text-gray-700= lesson.pending_learners_count
                 %td.px-3.py-2.text-right.text-gray-700= lesson.pending_free_text_answers_count
-                %td.px-3.py-2.text-gray-500= lesson.latest_pending_answer_at&.strftime("%Y-%m-%d %H:%M") || "—"
+                %td.px-3.py-2.text-gray-500= lesson.latest_pending_answer_at&.in_time_zone&.strftime("%Y-%m-%d %H:%M %Z (%:z)") || "—"
                 %td.px-3.py-2.text-right
                   = link_to "Open report", learning_lesson_report_path(lesson.course, lesson), class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 transition-colors"

@@ -66,7 +66,7 @@ class CertificatePdfService
     {
       "name"           => @user.name.presence || @user.email,
       "course_title"   => @course.title,
-      "date"           => I18n.l(@cert.issued_at.to_date, format: :long),
+      "date"           => I18n.l(@cert.issued_on, format: :long),
       "certificate_no" => "Certificate No: #{@cert.token}"
     }
   end

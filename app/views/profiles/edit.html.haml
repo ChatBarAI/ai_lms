@@ -14,6 +14,13 @@
       = f.select :locale, User::SUPPORTED_LOCALES.map { |code, label| [label, code] }, {}, class: "block w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       %p.text-xs.text-gray-500= t(".language_hint")
 
+    .space-y-1
+      = f.label :time_zone, t("time_zones.label"), class: "block text-sm font-medium text-gray-700"
+      = f.select :time_zone, [[t("time_zones.automatic"), ""]] + TZInfo::Timezone.all_identifiers.sort.map { |zone| [zone, zone] }, {}, class: "block w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
+      %p.text-xs.text-gray-500= t("time_zones.hint", zone: current_user.effective_time_zone)
+      - @user.errors.full_messages_for(:time_zone).each do |message|
+        %p.text-sm.text-red-700= message
+
     .space-y-2
       %p.block.text-sm.font-medium.text-gray-700= t(".course_languages", **terms)
       .flex.flex-wrap.gap-x-5.gap-y-2

@@ -16,7 +16,7 @@
         %dd.font-medium.text-gray-900= @course.title
       %div.flex.justify-between.py-2
         %dt.text-gray-500 Issued on
-        %dd.font-medium.text-gray-900= l(@certificate.issued_at.to_date, format: :long)
+        %dd.font-medium.text-gray-900= l(@certificate.issued_on, format: :long)
       %div.flex.justify-between.py-2
         %dt.text-gray-500 Certificate No.
         %dd.font-mono.text-gray-600= @certificate.token

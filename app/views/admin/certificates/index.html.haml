@@ -30,7 +30,7 @@
             %div= cert.user.name.presence || cert.user.email
             %div.text-xs.text-gray-400= cert.user.email if cert.user.name.present?
           %td.px-3.py-2= cert.course.title
-          %td.px-3.py-2.text-gray-500= l(cert.issued_at.to_date, format: :long)
+          %td.px-3.py-2.text-gray-500= l(cert.issued_on, format: :long)
           %td.px-3.py-2.font-mono.text-xs.text-gray-400= cert.token
           %td.px-3.py-2.text-right
             .flex.flex-wrap.justify-end.gap-2

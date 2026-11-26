@@ -107,7 +107,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "html[lang=?]", "de"
     assert_match(/Mein Profil/, response.body)
-    assert_match(/Sprache: Deutsch/, response.body)
+    assert_select "dt", text: "Sprache"
+    assert_select "dd", text: "Deutsch"
   end
 
   test "anonymous home page lists public recent courses only" do
