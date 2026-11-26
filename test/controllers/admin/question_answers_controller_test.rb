@@ -73,13 +73,13 @@ class Admin::QuestionAnswersControllerTest < ActionDispatch::IntegrationTest
 
     get admin_root_path
     assert_select "[role=status] a[href=?]", admin_marking_queue_path
-    assert_select "nav a[href=?] span", admin_marking_queue_path, text: "1"
+    assert_select "nav a[href=?] [data-nav-badge]", admin_marking_queue_path, text: "1"
 
     lessons(:intro).update!(cbai_api_key: "test-key")
     get admin_root_path
     assert_select "[role=status]", count: 0
     assert_select "nav a[href=?]", admin_marking_queue_path
-    assert_select "nav a[href=?] span", admin_marking_queue_path, count: 0
+    assert_select "nav a[href=?] [data-nav-badge]", admin_marking_queue_path, count: 0
   end
 
   test "module report shows pending marking per lesson" do
