@@ -22,7 +22,7 @@ module BrandingHelper
     invert_class = site_setting.invert_logo_on_dark? ? " dark:invert" : ""
     options = { alt: site_brand_name, class: "h-8 w-auto#{invert_class}" }.merge(html_options)
     if site_setting.logo.attached?
-      image_tag site_setting.logo, options
+      image_tag image_variant(site_setting.logo, :logo), options
     else
       image_tag "default-logo.png", options
     end

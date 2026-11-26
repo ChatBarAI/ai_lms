@@ -18,13 +18,41 @@ class ImageVariantsHelperTest < ActionView::TestCase
     assert_equal 255, image[3].getpoint(1500, 10).first.round, "right half should stay opaque"
   end
 
-  test "PNG sources use near-lossless WebP, other formats lossy" do
-    png = ActiveStorage::Blob.new(content_type: "image/png")
-    jpeg = ActiveStorage::Blob.new(content_type: "image/jpeg")
+  test "every preset converts to lossy WebP at Q80 with metadata stripped" do
+    ImageVariantsHelper::IMAGE_VARIANT_PRESETS.each_key do |preset|
+      transformations = image_variant_transformations(preset)
 
-    assert_equal true, image_variant_transformations(png, :large)[:saver][:near_lossless]
-    assert_nil image_variant_transformations(jpeg, :large)[:saver][:near_lossless]
-    assert_equal :webp, image_variant_transformations(jpeg, :thumb)[:format]
+      assert_equal :webp, transformations[:format]
+      assert_equal({ strip: true, Q: 80 }, transformations[:saver])
+    end
+  end
+
+  test "a large photo saved as PNG shrinks well below 1 MB" do
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(noisy_png(3000, 2000)), filename: "photo.png", content_type: "image/png")
+    assert_operator blob.byte_size, :>, 1.megabyte
+
+    variant = image_variant(blob, :large).processed
+
+    assert_operator variant.image.blob.byte_size, :<, 1.megabyte
+    assert_operator variant.image.blob.byte_size, :<, blob.byte_size / 4
+  end
+
+  test "accepts a blob, as used for images in lesson text" do
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(transparent_png(2048, 1024)), filename: "body.png", content_type: "image/png")
+
+    variant = image_variant(blob, :embed).processed
+    image = Vips::Image.new_from_buffer(variant.download, "")
+
+    assert_equal "image/webp", variant.image.blob.content_type
+    assert_equal [ 1024, 512 ], [ image.width, image.height ]
+  end
+
+  test "the site logo is resized to the logo preset" do
+    SiteSetting.current.logo.attach(io: StringIO.new(transparent_png(2000, 500)), filename: "logo.png", content_type: "image/png")
+
+    image = Vips::Image.new_from_buffer(image_variant(SiteSetting.current.logo, :logo).processed.download, "")
+
+    assert_equal [ 512, 128 ], [ image.width, image.height ]
   end
 
   test "GIFs are served as the original so animation is not lost" do
@@ -55,6 +83,12 @@ class ImageVariantsHelperTest < ActionView::TestCase
   end
 
   private
+
+  # Photo-like content: smooth noise doesn't compress well as PNG.
+  def noisy_png(width, height)
+    noise = Vips::Image.gaussnoise(width / 8, height / 8, mean: 128, sigma: 50).resize(8, kernel: :linear)
+    noise.bandjoin([ noise * 0.8, noise * 0.6 ]).cast(:uchar).copy(interpretation: :srgb).pngsave_buffer
+  end
 
   def transparent_png(width, height)
     rgb = Vips::Image.black(width, height, bands: 3) + [ 200, 80, 40 ]
