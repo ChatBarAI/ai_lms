@@ -47,11 +47,11 @@
                 = link_to t("layouts.application.my_learning"), me_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 = link_to t("layouts.application.my_profile"), profile_path, class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.instructor? || current_user.admin?
+                  = link_to t("layouts.application.my_courses", **terms), courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
                   = link_to marking_queue_path, class: "flex items-center justify-between gap-2 px-4 py-2 text-sm hover:bg-gray-50" do
-                    %span= t("catalog_ui.needs_marking", **terms)
+                    %span= t("layouts.application.marking")
                     - if pending_marking_summary
                       %span.rounded-full.bg-amber-500.px-1.5.text-xs.font-semibold.text-white= pending_marking_summary[:answers]
-                  = link_to t("layouts.application.my_courses", **terms), courses_path(mine: 1), class: "block px-4 py-2 text-sm hover:bg-gray-50"
                 - if current_user.admin?
                   = link_to "Admin", admin_root_path, class: "block px-4 py-2 text-sm text-indigo-600 hover:bg-gray-50"
                 .border-t.border-gray-100.mt-1.pt-1
