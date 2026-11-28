@@ -34,6 +34,11 @@ class DeployOptionsTest < Minitest::Test
         *'"$release_dir/deploy/server"'*)
           printf '%s' "$command" > "$COMMAND_LOG"
           printf '%s\n' "$@" > "$SSH_LOG"
+          exit "${DEPLOY_SSH_STATUS:-0}"
+          ;;
+        *'rmdir '*)
+          printf '%s\n' "$@" > "$SSH_LOG.cleanup"
+          exit "${CLEANUP_SSH_STATUS:-0}"
           ;;
       esac
     SH
@@ -65,6 +70,25 @@ class DeployOptionsTest < Minitest::Test
     assert_equal "false", arguments[6]
     assert_equal "false", arguments[4]
     assert_equal "/tmp/ai_lms-deploy.TEST1234/production.key", arguments[5]
+  end
+
+  def test_deployment_keeps_connection_alive_and_cleanup_is_noninteractive
+    server_arguments
+    arguments = File.read(@env.fetch("SSH_LOG"))
+    assert_includes arguments, "ConnectTimeout=15\n"
+    assert_includes arguments, "ServerAliveInterval=15\n"
+    assert_includes arguments, "ServerAliveCountMax=3\n"
+    assert_includes File.read("#{@env.fetch('SSH_LOG')}.cleanup"), "BatchMode=yes\n"
+  end
+
+  def test_connection_failure_is_reported_and_cleanup_preserves_exit_status
+    out, err, status = Open3.capture3(
+      @env.merge("DEPLOY_SSH_STATUS" => "255", "CLEANUP_SSH_STATUS" => "1"),
+      "bash", SCRIPT, "root@server.example.com", "lms.example.com"
+    )
+    assert_equal 255, status.exitstatus, "#{out}\n#{err}"
+    assert_includes err, "Deployment did not complete (exit 255)"
+    assert_includes File.read("#{@env.fetch('SSH_LOG')}.cleanup"), "BatchMode=yes\n"
   end
 
   def test_checkout_without_a_key_can_deploy

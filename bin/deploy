@@ -131,25 +131,37 @@ ssh_control_dir=$(mktemp -d)
 ssh_control_path="$ssh_control_dir/control"
 ssh_args=(
   -p "$ssh_port"
+  -o ConnectTimeout=15
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=3
   -o ControlMaster=auto
   -o ControlPersist=60
   -o "ControlPath=$ssh_control_path"
 )
 scp_args=(
   -P "$ssh_port"
+  -o ConnectTimeout=15
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=3
   -o ControlMaster=auto
   -o ControlPersist=60
   -o "ControlPath=$ssh_control_path"
 )
 
 cleanup() {
+  local status=$?
   rm -f "$archive"
   if [[ $remote_stage =~ ^/tmp/ai_lms-deploy\.[A-Za-z0-9]+$ ]]; then
-    ssh "${ssh_args[@]}" "$host" \
+    # Cleanup must never ask for another password or hide the deploy's status.
+    ssh "${ssh_args[@]}" -o BatchMode=yes "$host" \
       "rm -f '$remote_stage/source.tar.gz' '$remote_stage/production.key'; rmdir '$remote_stage' 2>/dev/null || true" \
       >/dev/null 2>&1 || true
   fi
   rm -rf -- "$ssh_control_dir"
+  if [[ $status -ne 0 ]]; then
+    echo "Deployment did not complete (exit $status). Check the output above; remote services may still be running. Verify with bin/check-deploy and bin/instances before retrying." >&2
+  fi
+  exit "$status"
 }
 trap cleanup EXIT
 
